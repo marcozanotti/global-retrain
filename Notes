@@ -1,0 +1,38 @@
+Notes
+
+Competition datasets - the same horizons expected in the competitons are used
+For global models, lag is chosen as (1.25 * seasonality)
+
+Due to high space and computational requirements, the lag is chosen as 50 
+for solar 10 minutes dataset and 10 (1.25 * forecast_horizon) for kaggle 
+web traffic weekly dataset
+
+Due to short series length, lag is chosen as 10 for dominick dataset and 
+6 for solar weekly dataset (1.25 * forecast_horizon)
+
+For multi-seasonal datasets, the seasonality corresponding with the weekly 
+frequency is chosen for lag calculation
+
+If it was not possible due to computational complexity or short series 
+length, then we consider the seasonality corresponding with daily freqency 
+for lag calculation
+
+
+
+
+
+
+Seasonality values corresponding with the frequencies: minutely, 10_minutes, 
+half_hourly, hourly, daily, weekly, monthly, quarterly and yearly
+Consider multiple seasonalities for frequencies less than daily
+SEASONALITY_MAP = {
+   "minutely": [1440, 10080, 525960],
+   "10_minutes": [144, 1008, 52596],
+   "half_hourly": [48, 336, 17532],
+   "hourly": [24, 168, 8766],
+   "daily": 7,
+   "weekly": 365.25/7,
+   "monthly": 12,
+   "quarterly": 4,
+   "yearly": 1
+}
