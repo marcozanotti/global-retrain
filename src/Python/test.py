@@ -1,6 +1,7 @@
 # Model testing
 
 import os
+import time
 import pandas as pd
 import numpy as np
 from pytimetk import glimpse
@@ -19,13 +20,9 @@ os.environ['NIXTLA_ID_AS_COL'] = '1'
 
 # download_dataset('m5')
 np.random.seed(1992)
-train_df, test_df = get_dataset('m5', samples = 10) # just a sample of 10 time series
+train_df, test_df = get_dataset('m5', samples = 8) # just a sample of 8 time series
 train_df.glimpse()
 test_df.glimpse()
-
-
-# Plotting data -----------------------------------------------------------
-# plot_series(train_df).show()
 
 
 # Parameters --------------------------------------------------------------
@@ -34,8 +31,22 @@ test_df.glimpse()
 freq = 'D'
 # define the forecasting horizon
 horizon = 28
+# define the length of the test window
+test_window = horizon * 3 # 28 * 13 = last year
+# define the window for retraining
+retrain_window = 1
 # define the confidence levels
-levels = [60, 70, 80, 85, 90, 95, 99]
+levels = [90] # [60, 70, 80, 85, 90, 95, 99]
+
+
+# Prepare data ------------------------------------------------------------
+# combine train and test dataframes
+data = combine_train_test(train_df, test_df)
+train_df, test_df = split_train_test(data, test_window)
+
+plot_series(data).show()
+plot_series(train_df).show()
+plot_series(test_df).show()
 
 
 # Local Models ------------------------------------------------------------
@@ -53,21 +64,26 @@ models = [
 fallback_model = SeasonalNaive(season_length = 7)
 
 # fit and predict with retraining
-preds_df = retrain_model(
+preds_df, actual_df, time_df, tot_time = retrain_model(
+    data = data,
     models = models,
     fallback_model = fallback_model,  
-    train_df = train_df, 
-    test_df = test_df, 
     freq = freq, 
-    levels = levels, 
+    levels = levels,
+    test_window = test_window,
     horizon = horizon,
-    retrain_window = 1
+    retrain_window = retrain_window
 )
+preds_df.glimpse()
+actual_df.glimpse()
+time_df
+tot_time
 
 
 plot_series(
-    train_df, preds_df,
-    level = [80, 90],
+    actual_df.query('sample == 28').drop(columns = ['sample'], axis = 1),
+    preds_df.query('sample == 28').drop(columns = ['sample'], axis = 1),
+    level = [90],
     max_ids = 4, 
     max_insample_length = horizon * 5, 
     engine = 'plotly'

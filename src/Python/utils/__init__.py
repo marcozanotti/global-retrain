@@ -4,6 +4,7 @@ from .collect_data import (
 )
 
 from .fit_models import (
+    split_train_test,
     combine_train_test,   
     retrain_model
 )
