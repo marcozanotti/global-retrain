@@ -1,6 +1,7 @@
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pandas_flavor as pf
 
 # from datasetsforecast.m3 import M3
 # from datasetsforecast.m4 import M4
@@ -83,6 +84,32 @@ def get_dataset(dataset_name, frequency = None, samples = None):
 
     return train_df, test_df
 
+@pf.register_dataframe_method
+def remove_series(data, min_series_length):
+
+    """Function to remove series from the data based on their length.
+
+    Args:
+        data (pd.DataFrame): Input dataframe in Nixtla's format.
+        min_series_length (int): Minimum length of series to be kept.
+
+    Returns:
+        pd.DataFrame: dataframe with series removed.
+    """
+
+    print('Removing series...')
+    series_length = data.groupby('unique_id')['y'].count()
+    remove_ids = series_length[series_length < min_series_length].index.tolist()
+    res_df = data[~data['unique_id'].isin(remove_ids)]
+
+    n_series = len(series_length)
+    n_series_to_remove = len(remove_ids)
+    p_series_to_remove = n_series_to_remove / n_series * 100
+    print(f'Removed {n_series_to_remove} series out of {n_series} ({p_series_to_remove:.1f}%)')
+
+    return res_df
+
+@pf.register_dataframe_method
 def get_static_features(data, dataset_name):
 
     """Function to add static features to the data.

@@ -1,4 +1,13 @@
-Notes
+TODO:
+
+- store m5 whole data (train + test with static features and removed series) 
+into a parquet file
+- save model results to parquet files
+- function to evaluate results from parquet files
+
+
+
+NOTE:
 
 Competition datasets - the same horizons expected in the competitons are used
 For global models, lag is chosen as (1.25 * seasonality)

@@ -1,6 +1,7 @@
 from .collect_data import (
     download_dataset, 
     get_dataset,
+    remove_series,
     get_static_features
 )
 

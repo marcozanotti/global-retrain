@@ -4,13 +4,15 @@ import os
 import time
 import pandas as pd
 import numpy as np
-from pytimetk import glimpse
 
 from mlforecast import MLForecast
 from mlforecast.lag_transforms import (
     RollingMean, ExpandingMean
 )
 from mlforecast.utils import PredictionIntervals
+from sklearn.preprocessing import FunctionTransformer
+from mlforecast.target_transforms import GlobalSklearnTransformer
+# from mlforecast.target_transforms import LocalStandardScaler, LocalMinMaxScaler, Differences
 from utilsforecast.plotting import plot_series
 
 from src.Python.utils import *
@@ -23,21 +25,23 @@ os.environ['NIXTLA_ID_AS_COL'] = '1'
 
 # download_dataset('m5')
 np.random.seed(1992)
-m5_train_df, m5_test_df = get_dataset('m5', samples = 8) # just a sample of 8 time series
+m5_train_df, m5_test_df = get_dataset('m5', samples = 1000) # just a sample of 8 time series
 
 
 # Parameters --------------------------------------------------------------
 
 # define the frequency of the data
 freq = 'D'
+# define the minimum series length
+min_series_length = 365 * 1
 # define the forecasting horizon
 horizon = 28
 # define the length of the test window
-test_window = horizon * 2 # 28 * 13 = last year
+test_window = horizon * 3 # 28 * 13 = last year
 # define the window for retraining
 retrain_window = 7
 # define the confidence levels
-levels = [90] # [60, 70, 80, 85, 90, 95, 99]
+levels = [60, 70, 80, 85, 90, 95, 99] # [60, 70, 80, 85, 90, 95, 99]
 # define the conformal inference method
 intervals = PredictionIntervals(h = horizon, n_windows = 4, method = 'conformal_distribution')
 # NOTE: n_windows * h should be less than the count of data elements in your time series sequence.
@@ -51,6 +55,7 @@ get_retrain_ids(test_window, horizon, retrain_window)
 # Prepare data ------------------------------------------------------------
 # combine train and test dataframes
 data = combine_train_test(m5_train_df, m5_test_df)
+data = remove_series(data, min_series_length)
 data = get_static_features(data, 'm5')
 plot_series(data).show()
 
@@ -69,6 +74,9 @@ from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
 from sklearn.neural_network import MLPRegressor
+
+# define target transformation
+Log1p = FunctionTransformer(func = np.log1p, inverse_func = np.expm1)
 
 
 # * Linear Regression -----------------------------------------------------
@@ -89,7 +97,7 @@ engine = MLForecast(
     models = models,
     freq = freq, 
     num_threads = 1,
-    # target_transforms = [Log1p, LocalStandardScaler()],
+    target_transforms = [GlobalSklearnTransformer(Log1p)],
     lags = [1] + [7 * (i+1) for i in range(8)],
     lag_transforms = {
         1: [ExpandingMean()],
@@ -99,7 +107,6 @@ engine = MLForecast(
     },
     date_features = ['year', 'quarter', 'month', 'week', 'dayofweek', 'day']
 )
-# engine.preprocess(train_df, static_features = [])
 # engine.preprocess(train_df, static_features = ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id'])
 
 # fit and predict with retraining
@@ -111,7 +118,8 @@ in_sample_df, out_sample_df, time_df = retrain_ml_model(
     retrain_window = retrain_window,
     levels = levels,
     intervals = intervals,
-    static_features = ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id']
+    static_features = ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id'],
+    store_in_sample_results = False
 )
 in_sample_df
 out_sample_df

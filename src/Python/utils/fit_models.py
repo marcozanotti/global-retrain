@@ -277,7 +277,8 @@ def retrain_ml_model(
     retrain_window = 1,
     levels = [60, 70, 80, 85, 90, 95, 99],
     intervals = None, 
-    static_features = []
+    static_features = [],
+    store_in_sample_results = False
 ):
 
     """Function to retrain the ML model and predict with retrained model.
@@ -296,7 +297,7 @@ def retrain_ml_model(
     Returns:
         pd.DataFrame: predictions made by the retrained models.
     """
-    
+
     # define the model name
     model_name = list(engine.models.keys())[0]
 
@@ -358,16 +359,17 @@ def retrain_ml_model(
 
             tot_sample_time = end_predict_time - start_fit_time
 
-            # extract in-sample results from the model only when fitting
-            print('Extracting fitted values and residuals...')
-            in_sample_df_tmp = fit_tmp.fcst_fitted_values_.copy()
-            in_sample_df_tmp['sample'] = i
-            in_sample_df = pd.concat([in_sample_df, in_sample_df_tmp], axis = 0)
+            if store_in_sample_results:
+                # extract in-sample results from the model only when fitting
+                print('Extracting fitted values...')
+                in_sample_df_tmp = fit_tmp.fcst_fitted_values_.copy()
+                in_sample_df_tmp['sample'] = i
+                in_sample_df = pd.concat([in_sample_df, in_sample_df_tmp], axis = 0)
                 
         else:
 
             # update the mlforecast object with the new data 
-            # fundamental to roll predictions without fitting !!!!!
+            # NOTE: fundamental to roll predictions without fitting !!!!!
             update_df = train_df_tmp.groupby('unique_id').tail(1)
             engine.update(update_df)
 
@@ -396,6 +398,6 @@ def retrain_ml_model(
 
     end_time = time.time()
     tot_time = end_time - start_time
-    print(f'Total computing time: {tot_time:.3f} seconds')
+    print(f'Total computing time: {tot_time:.1f} seconds')
 
     return in_sample_df, out_sample_df, time_df
