@@ -23,7 +23,7 @@ os.environ['NIXTLA_ID_AS_COL'] = '1'
 
 # download_dataset('m5')
 np.random.seed(1992)
-train_df, test_df = get_dataset('m5', samples = 8) # just a sample of 8 time series
+m5_train_df, m5_test_df = get_dataset('m5', samples = 8) # just a sample of 8 time series
 
 
 # Parameters --------------------------------------------------------------
@@ -50,11 +50,13 @@ get_retrain_ids(test_window, horizon, retrain_window)
 
 # Prepare data ------------------------------------------------------------
 # combine train and test dataframes
-data = combine_train_test(train_df, test_df)
+data = combine_train_test(m5_train_df, m5_test_df)
+data = get_static_features(data, 'm5')
 plot_series(data).show()
-# train_df, test_df = split_train_test(data, test_window)
-# plot_series(train_df).show()
-# plot_series(test_df).show()
+
+train_df, test_df = split_train_test(data, test_window)
+plot_series(train_df).show()
+plot_series(test_df).show()
 
 
 # Global ML Models --------------------------------------------------------
@@ -72,6 +74,14 @@ from sklearn.neural_network import MLPRegressor
 # * Linear Regression -----------------------------------------------------
 
 # define the models
+# model_params = {
+#     'verbose': -1,
+#     'num_threads': 4,
+#     'force_col_wise': True,
+#     'num_leaves': 256,
+#     'n_estimators': 50,
+# }
+# models = [LGBMRegressor(**model_params)]
 models = [LinearRegression()]
 
 # instantiate the MLForecast class
@@ -80,7 +90,7 @@ engine = MLForecast(
     freq = freq, 
     num_threads = 1,
     # target_transforms = [Log1p, LocalStandardScaler()],
-    lags = [7, 14, 21, 28],
+    lags = [1] + [7 * (i+1) for i in range(8)],
     lag_transforms = {
         1: [ExpandingMean()],
         7: [RollingMean(7), RollingMean(14), RollingMean(28)],
@@ -90,7 +100,7 @@ engine = MLForecast(
     date_features = ['year', 'quarter', 'month', 'week', 'dayofweek', 'day']
 )
 # engine.preprocess(train_df, static_features = [])
-
+# engine.preprocess(train_df, static_features = ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id'])
 
 # fit and predict with retraining
 in_sample_df, out_sample_df, time_df = retrain_ml_model(
@@ -100,7 +110,8 @@ in_sample_df, out_sample_df, time_df = retrain_ml_model(
     horizon = horizon,
     retrain_window = retrain_window,
     levels = levels,
-    intervals = intervals
+    intervals = intervals,
+    static_features = ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id']
 )
 in_sample_df
 out_sample_df
@@ -118,6 +129,3 @@ plot_series(
 ).show()
 # NOTE: the in_sample_df stores only fitting values for the re-training
 # times. So plots with fitted values can be done only every retrain period.
-
-
-engine.models.keys()

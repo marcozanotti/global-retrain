@@ -8,6 +8,7 @@ import numpy as np
 # M4.download('data') 
 
 def download_dataset(dataset_name, frequency = None, save = True):
+
     """Function to download and save different time series datasets.
 
     Args:
@@ -39,8 +40,8 @@ def download_dataset(dataset_name, frequency = None, save = True):
 
     return train_df, test_df
 
-
 def get_dataset(dataset_name, frequency = None, samples = None):
+
     """Function to load saved datasets.
 
     Args:
@@ -82,4 +83,37 @@ def get_dataset(dataset_name, frequency = None, samples = None):
 
     return train_df, test_df
 
+def get_static_features(data, dataset_name):
 
+    """Function to add static features to the data.
+
+    Args:
+        data (pd.DataFrame): Input dataframe in Nixtla's format.
+        dataset_name (string): Name of the dataset (e.g., 'm5', 'm4').
+    
+    Returns:
+        pd.DataFrame: dataframe with static features added.
+    """
+
+    if dataset_name == 'm5':
+        
+        static_df = data['unique_id'].apply(lambda x: pd.Series(str(x).split("_")))
+        
+        static_df['item_id'] = static_df[0] + "_" + static_df[1] + "_" + static_df[2]
+        static_df['item_id'] = static_df['item_id'].astype('category').cat.codes
+        static_df['dept_id'] = static_df[0] + "_" + static_df[1]
+        static_df['dept_id'] = static_df['dept_id'].astype('category').cat.codes
+        static_df['cat_id'] = static_df[0]
+        static_df['cat_id'] = static_df['cat_id'].astype('category').cat.codes
+        static_df['store_id'] = static_df[3] + "_" + static_df[4]
+        static_df['store_id'] = static_df['store_id'].astype('category').cat.codes
+        static_df['state_id'] = static_df[3]
+        static_df['state_id'] = static_df['state_id'].astype('category').cat.codes
+        
+        static_df = static_df.drop(columns = [0, 1, 2, 3, 4], axis = 1)
+        res_df = pd.concat([data, static_df], axis = 1)
+
+    else:
+        raise(f'Unknown dataset {dataset_name}')
+
+    return res_df

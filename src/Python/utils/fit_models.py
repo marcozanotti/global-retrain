@@ -276,7 +276,8 @@ def retrain_ml_model(
     horizon, 
     retrain_window = 1,
     levels = [60, 70, 80, 85, 90, 95, 99],
-    intervals = None
+    intervals = None, 
+    static_features = []
 ):
 
     """Function to retrain the ML model and predict with retrained model.
@@ -295,8 +296,6 @@ def retrain_ml_model(
     Returns:
         pd.DataFrame: predictions made by the retrained models.
     """
-
-    # TODO: add static features
     
     # define the model name
     model_name = list(engine.models.keys())[0]
@@ -321,10 +320,13 @@ def retrain_ml_model(
 
         # define the training data
         train_df_tmp = combine_train_test(train_df, test_df.groupby('unique_id').head(i))
+
         # define the testing data
         test_df_tmp = test_df.groupby('unique_id').head(i + horizon).reset_index(drop = True)
         ds_to_remove = train_df_tmp["ds"].drop_duplicates()
         test_df_tmp = test_df_tmp.loc[~test_df_tmp['ds'].isin(ds_to_remove)]
+        # remove static features because they are used in fitting only
+        X_df_tmp = test_df_tmp.drop(columns = static_features, axis = 1)
         
         if i in fitting_ids:
 
@@ -335,13 +337,13 @@ def retrain_ml_model(
             if intervals == None:
                 fit_tmp = engine.fit(
                     df = train_df_tmp, 
-                    static_features = [], # static_features = ['id', 'item_id', 'dept_id', 'cat_id', 'store_id', 'state_id']
+                    static_features = static_features,
                     fitted = True
                 )
             else:
                 fit_tmp = engine.fit(
                     df = train_df_tmp, 
-                    static_features = [], # static_features = ['id', 'item_id', 'dept_id', 'cat_id', 'store_id', 'state_id']
+                    static_features = static_features,
                     fitted = True,
                     prediction_intervals = intervals
                 )
@@ -371,7 +373,7 @@ def retrain_ml_model(
 
             print('Predicting with pre-trained model...')
             start_predict_time = time.time()
-            preds_df_tmp = fit_tmp.predict(h = horizon, X_df = test_df_tmp, level = levels)
+            preds_df_tmp = fit_tmp.predict(h = horizon, X_df = X_df_tmp, level = levels)
             end_predict_time = time.time()
 
             tot_sample_time = end_predict_time - start_predict_time
@@ -379,7 +381,7 @@ def retrain_ml_model(
         # add actual out-of-sample to results
         out_sample_df_tmp = preds_df_tmp.copy()
         out_sample_df_tmp['sample'] = i
-        out_sample_df_tmp = out_sample_df_tmp.merge(test_df_tmp)
+        out_sample_df_tmp = out_sample_df_tmp.merge(X_df_tmp)
         out_sample_df = pd.concat([out_sample_df, out_sample_df_tmp], axis = 0)
         
         # store computing time information for each sample
