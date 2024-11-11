@@ -18,10 +18,6 @@ length, then we consider the seasonality corresponding with daily freqency
 for lag calculation
 
 
-
-
-
-
 Seasonality values corresponding with the frequencies: minutely, 10_minutes, 
 half_hourly, hourly, daily, weekly, monthly, quarterly and yearly
 Consider multiple seasonalities for frequencies less than daily
@@ -36,3 +32,6 @@ SEASONALITY_MAP = {
    "quarterly": 4,
    "yearly": 1
 }
+
+
+Aggregate M5 to weekly and monthly to test on those frequencies
