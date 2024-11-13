@@ -1,9 +1,8 @@
 TODO:
 
-- store m5 whole data (train + test with static features and removed series) 
-into a parquet file
 - save model results to parquet files
 - function to evaluate results from parquet files
+- capire che feature usare per m5
 
 
 

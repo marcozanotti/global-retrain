@@ -28,25 +28,6 @@ def split_train_test(data, test_window):
 
     return train_df, test_df
 
-
-def combine_train_test(train_df, test_df):
-
-    """Function to combine train and test dataframes.
-
-    Args:
-        train_df (pd.DataFrame): training data in the Nixtla format.
-        test_df (pd.DataFrame): test data in the Nixtla format.
-
-    Returns:
-        pd.DataFrame: combined train and test dataframes.
-    """
-
-    combined_df = pd.concat([train_df, test_df], axis = 0, ignore_index = True)
-    combined_df = combined_df.sort_values(by = ['unique_id', 'ds']).reset_index(drop = True)
-
-    return combined_df
-
-
 def get_retrain_ids(test_window, horizon, retrain_window = 1):
 
     """Function to get the retrain ids.
@@ -60,7 +41,6 @@ def get_retrain_ids(test_window, horizon, retrain_window = 1):
     """
 
     return list(range(0, (test_window - horizon + 1), retrain_window))
-
 
 def extact_fitted_and_residuals(fitted_model, train_df):
 
@@ -92,7 +72,6 @@ def extact_fitted_and_residuals(fitted_model, train_df):
     res = pd.concat([train_df, fitted_res, residuals_res], axis = 1)
 
     return res
-
 
 def extract_model_parameters(fitted_model, in_sample_df):
     """Function to extract model parameters from the fitted model.
@@ -133,7 +112,6 @@ def extract_model_parameters(fitted_model, in_sample_df):
     params_df = pd.concat([params_df, model_params], axis = 1)
 
     return params_df
-
 
 def retrain_ets_model(
     data,
@@ -268,7 +246,6 @@ def retrain_ets_model(
 
     return in_sample_df, params_df, out_sample_df, time_df, tot_time
 
-
 def retrain_ml_model(
     data,
     engine, 
@@ -298,8 +275,11 @@ def retrain_ml_model(
         pd.DataFrame: predictions made by the retrained models.
     """
 
+    print('==========================================')
+    
     # define the model name
     model_name = list(engine.models.keys())[0]
+    print(f'START: forecasting with {model_name}...')    
 
     # split the data into train and test dataframes
     train_df, test_df = split_train_test(data, test_window)
@@ -399,5 +379,8 @@ def retrain_ml_model(
     end_time = time.time()
     tot_time = end_time - start_time
     print(f'Total computing time: {tot_time:.1f} seconds')
+
+    print('END')
+    print('==========================================')
 
     return in_sample_df, out_sample_df, time_df

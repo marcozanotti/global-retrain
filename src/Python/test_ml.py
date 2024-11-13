@@ -1,9 +1,8 @@
 # Model testing
 
 import os
-import time
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from mlforecast import MLForecast
 from mlforecast.lag_transforms import (
@@ -21,47 +20,41 @@ pd.set_option("display.max_rows", 4)
 os.environ['NIXTLA_ID_AS_COL'] = '1'
 
 
-# Import data -------------------------------------------------------------
-
-# download_dataset('m5')
-np.random.seed(1992)
-m5_train_df, m5_test_df = get_dataset('m5', samples = 1000) # just a sample of 8 time series
-
-
 # Parameters --------------------------------------------------------------
 
-# define the frequency of the data
+# the frequency of the data
 freq = 'D'
-# define the minimum series length
+# the minimum length of each series
 min_series_length = 365 * 1
-# define the forecasting horizon
+# the forecasting horizon
 horizon = 28
-# define the length of the test window
+# the length of the test window
 test_window = horizon * 3 # 28 * 13 = last year
-# define the window for retraining
+# the window for retraining (ex. 7 means retraining every 7 periods)
 retrain_window = 7
-# define the confidence levels
+# the confidence levels for prediction intervals
 levels = [60, 70, 80, 85, 90, 95, 99] # [60, 70, 80, 85, 90, 95, 99]
-# define the conformal inference method
-intervals = PredictionIntervals(h = horizon, n_windows = 4, method = 'conformal_distribution')
+# the type of conformal inference method
 # NOTE: n_windows * h should be less than the count of data elements in your time series sequence.
-# NOTE: Also value of n_windows should be at least 2 or more.
+# NOTE: n_windows should be at least 2 or more.
 # NOTE: n_windows / retrain_window should be an integer.
 # NOTE: method = 'conformal_distribution' or 'conformal_error'.
+intervals = PredictionIntervals(h = horizon, n_windows = 4, method = 'conformal_distribution')
 
+# check how many times the model will be retrained
 get_retrain_ids(test_window, horizon, retrain_window)
+len(get_retrain_ids(test_window, horizon, retrain_window))
 
 
-# Prepare data ------------------------------------------------------------
-# combine train and test dataframes
-data = combine_train_test(m5_train_df, m5_test_df)
-data = remove_series(data, min_series_length)
-data = get_static_features(data, 'm5')
-plot_series(data).show()
+# Load data ---------------------------------------------------------------
 
-train_df, test_df = split_train_test(data, test_window)
-plot_series(train_df).show()
-plot_series(test_df).show()
+np.random.seed(1992)
+# just a sample of 100 time series
+data = get_data(
+    file = 'data/m5/m5_daily_prep.parquet', 
+    min_series_length = min_series_length,
+    samples = 100
+)
 
 
 # Global ML Models --------------------------------------------------------
@@ -127,6 +120,17 @@ time_df
 time_df.iloc[get_retrain_ids(test_window, horizon, retrain_window)]
 time_df['total_sample_time'].sum() # total computing time in seconds
 
+
+plot_series(
+    out_sample_df.query('sample == 7').drop(columns = ['sample', 'y'], axis = 1),
+    level = [90],
+    max_ids = 4, 
+    max_insample_length = horizon * 5, 
+    engine = 'plotly'
+).show()
+
+# NOTE: the in_sample_df stores only fitting values for the re-training
+# times. So plots with fitted values can be done only every retrain period.
 plot_series(
     in_sample_df.query('sample == 7').drop(columns = ['sample'], axis = 1),
     out_sample_df.query('sample == 7').drop(columns = ['sample', 'y'], axis = 1),
@@ -135,5 +139,3 @@ plot_series(
     max_insample_length = horizon * 5, 
     engine = 'plotly'
 ).show()
-# NOTE: the in_sample_df stores only fitting values for the re-training
-# times. So plots with fitted values can be done only every retrain period.

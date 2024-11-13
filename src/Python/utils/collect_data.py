@@ -1,4 +1,5 @@
 
+import os
 import numpy as np
 import pandas as pd
 import pandas_flavor as pf
@@ -8,14 +9,13 @@ import pandas_flavor as pf
 # M3.download('data')
 # M4.download('data') 
 
-def download_dataset(dataset_name, frequency = None, save = True):
+def download_data(dataset_name, frequency, save = True):
 
     """Function to download and save different time series datasets.
 
     Args:
         dataset_name (string): Name of the dataset (e.g., 'm5', 'm4').
         frequency (string, optional): The frequency of the data (e.g., 'daily', 'weekly'). 
-        Defaults to None.
         save (bool, optional): Whether to save data or not. Train and test detasets
         are saved in data/_dataset_name/ as .parquet files. Defaults to True.
 
@@ -25,7 +25,6 @@ def download_dataset(dataset_name, frequency = None, save = True):
 
     print(f'Downloading {dataset_name} train and test data...')
     if dataset_name == 'm5':
-        frequency = 'daily'
         train_df = pd.read_parquet('https://m5-benchmarks.s3.amazonaws.com/data/train/target.parquet') \
             .rename(columns = {'item_id': 'unique_id', 'timestamp': 'ds', 'demand': 'y'})
         test_df = pd.read_parquet('https://m5-benchmarks.s3.amazonaws.com/data/test/target.parquet') \
@@ -34,6 +33,7 @@ def download_dataset(dataset_name, frequency = None, save = True):
         raise(f'Unknown dataset {dataset_name}')
 
     if save:
+        print(f'Saving {dataset_name} train and test data...')
         train_name = f'data/{dataset_name}/train_{frequency}.parquet'
         test_name = f'data/{dataset_name}/test_{frequency}.parquet'
         train_df.to_parquet(train_name)
@@ -41,48 +41,24 @@ def download_dataset(dataset_name, frequency = None, save = True):
 
     return train_df, test_df
 
-def get_dataset(dataset_name, frequency = None, samples = None):
+@pf.register_dataframe_method
+def combine_train_test(train_df, test_df):
 
-    """Function to load saved datasets.
+    """Function to combine train and test dataframes.
 
     Args:
-        dataset_name (string): Name of the dataset (e.g., 'm5', 'm4').
-        frequency (string, optional): The frequency of the data (e.g., 'daily', 'weekly'). 
-        Defaults to None.
+        train_df (pd.DataFrame): training data in the Nixtla's format.
+        test_df (pd.DataFrame): test data in the Nixtla format.
 
     Returns:
-        pd.DataFrame: training and test dataframes.
+        pd.DataFrame: combined train and test dataframes.
     """
 
-    if dataset_name == 'm5':
-        frequency = 'daily'
+    print('Combining train and test data...')
+    combined_df = pd.concat([train_df, test_df], axis = 0, ignore_index = True)
+    combined_df = combined_df.sort_values(by = ['unique_id', 'ds']).reset_index(drop = True)
 
-    train_name = f'data/{dataset_name}/train_{frequency}.parquet'
-    test_name = f'data/{dataset_name}/test_{frequency}.parquet'
-
-    print(f'Reading {dataset_name} train data...')
-    train_df = pd.read_parquet(train_name)
-    train_df['ds'] = pd.to_datetime(train_df['ds'])
-    train_df['unique_id'] = train_df['unique_id'].astype(str)
-
-    print(f'Reading {dataset_name} test data...')
-    test_df = pd.read_parquet(test_name)
-    test_df['ds'] = pd.to_datetime(test_df['ds'])
-    test_df['unique_id'] = test_df['unique_id'].astype(str)
-
-    if samples is not None:
-        print(f'Sampling {samples} series from train and test data...')
-        uids = train_df['unique_id'].unique()
-        # np.random.seed(0)
-        sample_uids = np.random.choice(uids, size = samples, replace = False)
-        train_df = train_df[train_df['unique_id'] \
-            .isin(sample_uids)] \
-            .reset_index(drop = True)
-        test_df = test_df[test_df['unique_id'] \
-            .isin(sample_uids)] \
-            .reset_index(drop = True)
-
-    return train_df, test_df
+    return combined_df
 
 @pf.register_dataframe_method
 def remove_series(data, min_series_length):
@@ -97,7 +73,7 @@ def remove_series(data, min_series_length):
         pd.DataFrame: dataframe with series removed.
     """
 
-    print('Removing series...')
+    print(f'Removing series shorter than {min_series_length}...')
     series_length = data.groupby('unique_id')['y'].count()
     remove_ids = series_length[series_length < min_series_length].index.tolist()
     res_df = data[~data['unique_id'].isin(remove_ids)]
@@ -122,10 +98,21 @@ def get_static_features(data, dataset_name):
         pd.DataFrame: dataframe with static features added.
     """
 
+    print(f'Extracting static features from {dataset_name} dataset...')
+
+    # get splitted unique ids
+    static_df = data['unique_id'] \
+        .drop_duplicates() \
+        .apply(lambda x: pd.Series(str(x).split("_"))) \
+        .reset_index(drop = True)
+    
     if dataset_name == 'm5':
-        
-        static_df = data['unique_id'].apply(lambda x: pd.Series(str(x).split("_")))
-        
+
+        static_df['unique_id'] = static_df[0] + "_" \
+            + static_df[1] + "_" \
+            + static_df[2] + "_" \
+            + static_df[3] + "_" \
+            + static_df[4]
         static_df['item_id'] = static_df[0] + "_" + static_df[1] + "_" + static_df[2]
         static_df['item_id'] = static_df['item_id'].astype('category').cat.codes
         static_df['dept_id'] = static_df[0] + "_" + static_df[1]
@@ -136,11 +123,104 @@ def get_static_features(data, dataset_name):
         static_df['store_id'] = static_df['store_id'].astype('category').cat.codes
         static_df['state_id'] = static_df[3]
         static_df['state_id'] = static_df['state_id'].astype('category').cat.codes
-        
         static_df = static_df.drop(columns = [0, 1, 2, 3, 4], axis = 1)
-        res_df = pd.concat([data, static_df], axis = 1)
 
     else:
         raise(f'Unknown dataset {dataset_name}')
 
+    res_df = pd.merge(data, static_df, how = 'left', on = 'unique_id')
+
     return res_df
+
+@pf.register_dataframe_method
+def sampling_data(data, samples = 1000):
+
+    """Function to sample dataframes.
+
+    Args:
+        data (pd.DataFrame): Input dataframe in Nixtla's format.
+        samples (int, optional): Number of samples to be taken. Defaults to 1000.
+    
+    Returns:
+        pd.DataFrame: sampled dataframe.
+    """
+
+    print(f'Sampling {samples} series from data...')
+    ids = data['unique_id'].unique()
+    sample_ids = np.random.choice(ids, size = samples, replace = False)
+    res_df = data[data['unique_id'] \
+        .isin(sample_ids)] \
+        .reset_index(drop = True)
+
+    return res_df
+
+def prepare_data(dataset_name, frequency, static_features = True, save = True):
+
+    """Function to prepare saved datasets.
+
+    Args:
+        dataset_name (string): Name of the dataset (e.g., 'm5', 'm4').
+        frequency (string, optional): The frequency of the data (e.g., 'daily', 'weekly'). 
+        static_features (bool, optional): Whether to include static features. Defaults to True.
+        save (bool, optional): Whether to save the processed dataset. Defaults to False.
+
+    Returns:
+        pd.DataFrame: full dataframe.
+    """
+
+    train_name = f'data/{dataset_name}/train_{frequency}.parquet'
+    test_name = f'data/{dataset_name}/test_{frequency}.parquet'
+
+    print(f'Reading {dataset_name} train data...')
+    train_df = pd.read_parquet(train_name)
+    train_df['ds'] = pd.to_datetime(train_df['ds'])
+    train_df['unique_id'] = train_df['unique_id'].astype(str)
+
+    print(f'Reading {dataset_name} test data...')
+    test_df = pd.read_parquet(test_name)
+    test_df['ds'] = pd.to_datetime(test_df['ds'])
+    test_df['unique_id'] = test_df['unique_id'].astype(str)
+
+    res_df = combine_train_test(train_df, test_df)
+
+    if static_features:
+        res_df = get_static_features(res_df, dataset_name)
+
+    if save:
+        print('Saving processed dataset...')
+        res_df.to_parquet(f'data/{dataset_name}/{dataset_name}_{frequency}_prep.parquet')
+
+    return res_df
+
+def get_data(file, min_series_length = None, samples = None):
+
+    """Function to load the data.
+
+    Args:
+        file (string): Path to the dataset file.
+        min_series_length (int, optional): Minimum length of series to be included. 
+        Defaults to None.
+        samples (int, optional): Number of samples to be included. Defaults to None.
+
+    Returns:
+        pd.Dataframe: The data.
+    """
+
+    file_name = os.path.split(file)[1].removesuffix('.parquet')
+
+    print(f'Reading {file_name} dataset...')
+    res_df = pd.read_parquet(file)
+
+    if min_series_length is not None:
+        res_df = remove_series(res_df, min_series_length)
+
+    if samples is not None:
+        res_df = sampling_data(res_df, samples)        
+
+    return res_df
+
+
+
+
+
+
