@@ -9,7 +9,67 @@ import pandas_flavor as pf
 # M3.download('data')
 # M4.download('data') 
 
-def download_data(dataset_name, frequency, save = True):
+def create_file_name(name_list):
+
+    """Function to create a file name from a list of names.
+
+    Args:
+        name_list (list): List of names to be used to create the file name.
+    
+    Returns:
+        string: The file name.
+    """
+    file_name = '_'.join(name_list)
+    return file_name
+
+@pf.register_dataframe_method
+def save_data(data, path, name_list, ext = '.parquet'):
+
+    """Function to save dataframes.
+
+    Args:
+        data (pd.DataFrame): Data to be saved.
+        path (string): Path to the directory where to save the data.
+        name_list (list): List of names to be used to create the file name.
+        ext (string, optional): File extension (default is '.parquet').
+    """
+
+    file_name = create_file_name(name_list)
+    print(f'Saving {file_name} dataset...')
+
+    if ext == '.parquet':
+        data.to_parquet(f'{path}{file_name}{ext}')
+    elif ext == '.csv':
+        data.to_csv(f'{path}{file_name}{ext}')
+    else:
+        raise(f'Unsupported file extension {ext}. Only .parquet and .csv are allowed')
+
+def load_data(path, name_list, ext = '.parquet'):
+
+    """Function to load the data.
+
+    Args:
+        path (string): Path to the directory where to save the data.
+        name_list (list): List of names to be used to create the file name.
+        ext (string, optional): File extension (default is '.parquet').
+
+    Returns:
+        pd.Dataframe: The data.
+    """
+
+    file_name = create_file_name(name_list)
+    print(f'Loading {file_name} dataset...')
+
+    if ext == '.parquet':
+        res_df = pd.read_parquet(f'{path}{file_name}{ext}')
+    elif ext == '.csv':
+        res_df = pd.read_csv(f'{path}{file_name}{ext}')
+    else:
+        raise(f'Unsupported file extension {ext}. Only .parquet and .csv are allowed')
+
+    return res_df
+
+def download_data(dataset_name, frequency, save = True, ext = '.parquet'):
 
     """Function to download and save different time series datasets.
 
@@ -18,26 +78,33 @@ def download_data(dataset_name, frequency, save = True):
         frequency (string, optional): The frequency of the data (e.g., 'daily', 'weekly'). 
         save (bool, optional): Whether to save data or not. Train and test detasets
         are saved in data/_dataset_name/ as .parquet files. Defaults to True.
+        ext (string, optional): File extension (default is '.parquet').
 
     Returns:
         pd.DataFrame: training and test dataframes.
     """
 
-    print(f'Downloading {dataset_name} train and test data...')
     if dataset_name == 'm5':
+        print(f'Downloading {dataset_name} train dataset...')
         train_df = pd.read_parquet('https://m5-benchmarks.s3.amazonaws.com/data/train/target.parquet') \
             .rename(columns = {'item_id': 'unique_id', 'timestamp': 'ds', 'demand': 'y'})
+        print(f'Downloading {dataset_name} test dataset...')
         test_df = pd.read_parquet('https://m5-benchmarks.s3.amazonaws.com/data/test/target.parquet') \
             .rename(columns = {'item_id': 'unique_id', 'timestamp': 'ds', 'demand': 'y'})
     else:
         raise(f'Unknown dataset {dataset_name}')
 
     if save:
-        print(f'Saving {dataset_name} train and test data...')
-        train_name = f'data/{dataset_name}/train_{frequency}.parquet'
-        test_name = f'data/{dataset_name}/test_{frequency}.parquet'
-        train_df.to_parquet(train_name)
-        test_df.to_parquet(test_name)
+        save_data(
+            train_df, path = f'data/{dataset_name}/', 
+            name_list = [dataset_name, frequency, 'train'],
+            ext = ext
+        )
+        save_data(
+            test_df, path = f'data/{dataset_name}/', 
+            name_list = [dataset_name, frequency, 'test'],
+            ext = ext
+        )
 
     return train_df, test_df
 
@@ -154,7 +221,7 @@ def sampling_data(data, samples = 1000):
 
     return res_df
 
-def prepare_data(dataset_name, frequency, static_features = True, save = True):
+def prepare_data(dataset_name, frequency, static_features = True, save = True, ext = '.parquet'):
 
     """Function to prepare saved datasets.
 
@@ -163,21 +230,25 @@ def prepare_data(dataset_name, frequency, static_features = True, save = True):
         frequency (string, optional): The frequency of the data (e.g., 'daily', 'weekly'). 
         static_features (bool, optional): Whether to include static features. Defaults to True.
         save (bool, optional): Whether to save the processed dataset. Defaults to False.
+        ext (string, optional): Extension of the saved files. Defaults to '.parquet'.
 
     Returns:
         pd.DataFrame: full dataframe.
     """
 
-    train_name = f'data/{dataset_name}/train_{frequency}.parquet'
-    test_name = f'data/{dataset_name}/test_{frequency}.parquet'
-
-    print(f'Reading {dataset_name} train data...')
-    train_df = pd.read_parquet(train_name)
+    train_df = load_data(
+        path = f'data/{dataset_name}/', 
+        name_list = [dataset_name, frequency, 'train'], 
+        ext = ext
+    )
     train_df['ds'] = pd.to_datetime(train_df['ds'])
     train_df['unique_id'] = train_df['unique_id'].astype(str)
 
-    print(f'Reading {dataset_name} test data...')
-    test_df = pd.read_parquet(test_name)
+    test_df = load_data(
+        path = f'data/{dataset_name}/', 
+        name_list = [dataset_name, frequency, 'test'],
+        ext = ext
+    )
     test_df['ds'] = pd.to_datetime(test_df['ds'])
     test_df['unique_id'] = test_df['unique_id'].astype(str)
 
@@ -187,17 +258,22 @@ def prepare_data(dataset_name, frequency, static_features = True, save = True):
         res_df = get_static_features(res_df, dataset_name)
 
     if save:
-        print('Saving processed dataset...')
-        res_df.to_parquet(f'data/{dataset_name}/{dataset_name}_{frequency}_prep.parquet')
+        save_data(
+            res_df, path = f'data/{dataset_name}/', 
+            name_list = [dataset_name, frequency, 'prep'],
+            ext = ext
+        )
 
     return res_df
 
-def get_data(file, min_series_length = None, samples = None):
+def get_data(path, name_list, ext = '.parquet', min_series_length = None, samples = None):
 
-    """Function to load the data.
+    """Function to get the data.
 
     Args:
-        file (string): Path to the dataset file.
+        path (string): Path to the directory where to save the data.
+        name_list (list): List of names to be used to create the file name.
+        ext (string, optional): File extension (default is '.parquet').
         min_series_length (int, optional): Minimum length of series to be included. 
         Defaults to None.
         samples (int, optional): Number of samples to be included. Defaults to None.
@@ -206,10 +282,7 @@ def get_data(file, min_series_length = None, samples = None):
         pd.Dataframe: The data.
     """
 
-    file_name = os.path.split(file)[1].removesuffix('.parquet')
-
-    print(f'Reading {file_name} dataset...')
-    res_df = pd.read_parquet(file)
+    res_df = load_data(path, name_list, ext)
 
     if min_series_length is not None:
         res_df = remove_series(res_df, min_series_length)
@@ -218,9 +291,4 @@ def get_data(file, min_series_length = None, samples = None):
         res_df = sampling_data(res_df, samples)        
 
     return res_df
-
-
-
-
-
 

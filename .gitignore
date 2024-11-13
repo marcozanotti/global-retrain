@@ -41,6 +41,7 @@ venv.bak/
 
 # Data
 data/
+results/
 
 # ML Results
 catboost_info/
