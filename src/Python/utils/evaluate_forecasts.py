@@ -39,7 +39,7 @@ def evaluate_point_forecasts(
 
     for s in samples:
 
-        print(f'Samlple {s} of {n_samples}...')
+        # print(f'Samlple {s} of {n_samples}...')
         fcst_df_tmp = fcst_df[fcst_df['sample'] == s]
         eval_df_tmp = evaluate(
             fcst_df_tmp, 

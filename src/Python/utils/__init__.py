@@ -21,6 +21,5 @@ from .fit_models import (
 
 from .evaluate_forecasts import (
     evaluate_point_forecasts,
-    aggregate_metrics,
     evaluate_model
 )
