@@ -415,6 +415,11 @@ def retrain_ml_model(
     time_df['horizon'] = horizon
     time_df['retrain_window'] = retrain_window
 
+    # reset indexes
+    in_sample_df = in_sample_df.reset_index(drop = True)
+    out_sample_df = out_sample_df.reset_index(drop = True)
+    time_df = time_df.reset_index(drop = True)
+
     end_time = time.time()
     tot_time = end_time - start_time
     print(f'Total computing time: {tot_time:.1f} seconds')

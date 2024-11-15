@@ -292,3 +292,32 @@ def get_data(path, name_list, ext = '.parquet', min_series_length = None, sample
 
     return res_df
 
+@pf.register_dataframe_method
+def aggregate_data(data, group_columns, aggregate_function = 'mean'):
+
+    """Function to aggregate evaluation metrics.
+
+    Args:
+        data (pd.DataFrame): dataframe to aggregate.
+        group_columns (list): list of columns to group by.
+        aggregate_function (str, optional): function to use to aggregate. 
+        Defaults to 'mean'.
+    
+    Returns:
+        pd.DataFrame: dataframe with aggregated data.
+    """
+
+    print('Aggregating data...')
+    data['unique_id'] = None
+    data_agg = data \
+        .drop(columns = 'unique_id') \
+        .groupby(group_columns) \
+        .agg(aggregate_function) \
+        .reset_index()
+    
+    if 'rmse' in data.columns:
+        data_agg['rm_mse'] = np.sqrt(data_agg['mse'])
+    if 'msse' in data.columns:
+        data_agg['rm_msse'] = np.sqrt(data_agg['msse'])
+
+    return data_agg

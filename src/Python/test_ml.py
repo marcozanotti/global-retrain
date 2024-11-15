@@ -1,7 +1,6 @@
 # Model testing
 
 import os
-import time
 import numpy as np
 import pandas as pd
 
@@ -150,3 +149,5 @@ save_data(
     ],
     ext = '.parquet'
 )
+
+
