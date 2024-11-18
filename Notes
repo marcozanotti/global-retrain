@@ -1,9 +1,8 @@
 TODO:
 
-- rimuovere test_window e horizon dai parametri di salvataggio ma lasciarli nei df
-- correggere aggregate data per time_df
+- RMSSE
 - capire che feature usare per m5
-
+- how to evaluate prediction intervals?
 
 
 NOTE:
@@ -29,17 +28,17 @@ for lag calculation
 Seasonality values corresponding with the frequencies: minutely, 10_minutes, 
 half_hourly, hourly, daily, weekly, monthly, quarterly and yearly
 Consider multiple seasonalities for frequencies less than daily
-SEASONALITY_MAP = {
-   "minutely": [1440, 10080, 525960],
-   "10_minutes": [144, 1008, 52596],
-   "half_hourly": [48, 336, 17532],
-   "hourly": [24, 168, 8766],
-   "daily": 7,
-   "weekly": 365.25/7,
-   "monthly": 12,
-   "quarterly": 4,
-   "yearly": 1
-}
+# SEASONALITY_MAP = {
+#    "minutely": [1440, 10080, 525960],
+#    "10_minutes": [144, 1008, 52596],
+#    "half_hourly": [48, 336, 17532],
+#    "hourly": [24, 168, 8766],
+#    "daily": 7,
+#    "weekly": 365.25/7,
+#    "monthly": 12,
+#    "quarterly": 4,
+#    "yearly": 1
+# }
 
 
 Aggregate M5 to weekly and monthly to test on those frequencies

@@ -12,18 +12,15 @@ pd.set_option("display.max_rows", 4)
 os.environ['NIXTLA_ID_AS_COL'] = '1'
 
 
-# TODO:
-# - RMSSE
-# - generalizzare su ciascun file
-
-
 # Parameters --------------------------------------------------------------
 
 # parameters for file management
 dataset_name = 'm5'
 frequency = 'daily'
 model_name = 'LinearRegression'
+retrain_window = 7
 min_series_length = 365 * 1
+metrics = [bias, mae, mse, rmse, partial(mase, seasonality = 7)]
 
 
 # Load data ---------------------------------------------------------------
@@ -38,31 +35,78 @@ data = get_data(
     samples = 100
 )
 
-out_sample_df = pd.read_parquet('results/m5/m5_daily_outsample_LinearRegression_56_28_7.parquet') \
-    .reset_index(drop = True)
+out_sample_df = load_data(
+    'results/m5/', 
+    name_list = [dataset_name, frequency, 'outsample', model_name, retrain_window]
+)
 
-time_df = pd.read_parquet('results/m5/m5_daily_time_LinearRegression_56_28_7.parquet') \
-    .reset_index(drop = True)
+time_df = load_data(
+    'results/m5/', 
+    name_list = [dataset_name, frequency, 'time', model_name, retrain_window]
+)
 
 
 # Evaluation --------------------------------------------------------------
 
-
-metrics = [bias, mae, mse, rmse, partial(mase, seasonality = 7)]
-
 evaluation_df = out_sample_df \
     .evaluate_point_forecasts(metrics = metrics, train_df = data) \
     .aggregate_data(
-        group_columns = ['sample', 'method', 'test_window', 'horizon','retrain_window']
+        group_columns = ['sample', 'method', 'test_window', 'horizon','retrain_window'],
+        drop_columns = ['unique_id']
     )
-
 
 time_df \
     .aggregate_data(
-        group_columns = ['method', 'test_window', 'horizon','retrain_window'],
-        aggregate_function = 'sum'
+        group_columns = ['method', 'test_window', 'horizon', 'retrain_window'],
+        drop_columns = ['sample'],
+        aggregate_function = np.sum
     )
-time_df['total_fit_time'].unique().sum()
+
+
+# Evaluate the whole model ------------------------------------------------
+
+eval_df = evaluate_model(
+    model_name = model_name,
+    analysis_type = 'outsample',
+    dataset_name = dataset_name, 
+    frequency = frequency, 
+    metrics = metrics, 
+    train_df = data
+)
+
+eval_df_agg = evaluate_model(
+    model_name = model_name,
+    analysis_type = 'outsample',
+    dataset_name = dataset_name, 
+    frequency = frequency, 
+    metrics = metrics, 
+    train_df = data, 
+    group_columns = ['sample', 'method', 'test_window', 'horizon', 'retrain_window'],
+    drop_columns = ['unique_id']
+)
+
+time_df = evaluate_model(
+    model_name = model_name,
+    analysis_type = 'time',
+    dataset_name = dataset_name, 
+    frequency = frequency, 
+    metrics = metrics, 
+    train_df = data
+)
+
+time_df_agg = evaluate_model(
+    model_name = model_name,
+    analysis_type = 'time',
+    dataset_name = dataset_name, 
+    frequency = frequency, 
+    metrics = metrics, 
+    train_df = data, 
+    group_columns = ['method', 'test_window', 'horizon', 'retrain_window'],
+    drop_columns = ['sample'],
+    aggregate_function = np.sum
+)
+
+
 
 
 

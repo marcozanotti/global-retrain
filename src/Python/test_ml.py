@@ -122,8 +122,7 @@ save_data(
     out_sample_df, 
     path = f'results/{dataset_name}/', 
     name_list = [
-        dataset_name, frequency, 'outsample', model_name,
-        str(test_window), str(horizon), str(retrain_window)
+        dataset_name, frequency, 'outsample', model_name, str(retrain_window)
     ],
     ext = '.parquet'
 )
@@ -133,8 +132,7 @@ save_data(
     in_sample_df, 
     path = f'results/{dataset_name}/', 
     name_list = [
-        dataset_name, frequency, 'insample', model_name,
-        str(test_window), str(horizon), str(retrain_window)
+        dataset_name, frequency, 'insample', model_name, str(retrain_window)
     ],
     ext = '.parquet'
 )
@@ -144,8 +142,7 @@ save_data(
     time_df, 
     path = f'results/{dataset_name}/', 
     name_list = [
-        dataset_name, frequency, 'time', model_name,
-        str(test_window), str(horizon), str(retrain_window)
+        dataset_name, frequency, 'time', model_name, str(retrain_window)
     ],
     ext = '.parquet'
 )
