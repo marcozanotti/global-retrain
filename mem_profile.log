@@ -1,0 +1,99 @@
+Filename: /home/marco/Desktop/Projects/TimeSeries-projects/global-retrain/src/Python/utils/fit_models.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   273   2388.1 MiB   2388.1 MiB           1   @profile(stream = mem_logs)
+   274                                         def retrain_ml_model(
+   275                                             data,
+   276                                             engine, 
+   277                                             test_window,
+   278                                             horizon, 
+   279                                             retrain_window = 1,
+   280                                             levels = [60, 70, 80, 85, 90, 95, 99],
+   281                                             intervals = None, 
+   282                                             static_features = [],
+   283                                             store_in_sample_results = False
+   284                                         ):
+   285                                         
+   286                                             """Function to retrain the ML model and predict with retrained model.
+   287                                         
+   288                                             Args:
+   289                                                 data (pd.DataFrame): training and testing data in the Nixtla's format.
+   290                                                 engine (MLForecast class): ML model engine.
+   291                                                 test_window (int): length of the test window.
+   292                                                 horizon (int): forecasting horizon.
+   293                                                 retrain_window (int, optional): window for retraining. Defaults to 1.
+   294                                                 levels (list): confidence levels for the predictions. Defaults to
+   295                                                 [60, 70, 80, 85, 90, 95, 99].
+   296                                                 intervals (PredictionIntervals, optional): conformal inference method. 
+   297                                                 Defaults to PredictionIntervals(h = horizon, n_windows = 2).
+   298                                         
+   299                                             Returns:
+   300                                                 pd.DataFrame: predictions made by the retrained models.
+   301                                             """
+   302                                         
+   303   2388.1 MiB      0.0 MiB           1       print('===============================================================')
+   304   2388.1 MiB      0.0 MiB           1       print('---------------------------- START ----------------------------')
+   305                                             
+   306                                             # define the model name
+   307   2388.1 MiB      0.0 MiB           1       model_name = get_model_name(engine)
+   308   2388.1 MiB      0.0 MiB           1       print(model_name)
+   309                                         
+   310                                             # split the data into train and test dataframes
+   311   3624.4 MiB   1236.3 MiB           1       train_df, test_df = split_train_test(data, test_window)
+   312                                         
+   313                                             # define the fitting times
+   314   3624.4 MiB      0.0 MiB           1       fitting_ids = get_retrain_ids(test_window, horizon, retrain_window)
+   315   3624.4 MiB      0.0 MiB           1       n_fitting = len(fitting_ids) # int(np.round(test_window / retrain_window, 0))
+   316                                             
+   317                                             # initialize the dataframes
+   318   3624.4 MiB      0.0 MiB           1       in_sample_df = pd.DataFrame()
+   319   3624.4 MiB      0.0 MiB           1       out_sample_df = pd.DataFrame()
+   320   3624.5 MiB      0.1 MiB           1       time_df = pd.DataFrame()
+   321                                             
+   322   3624.5 MiB      0.0 MiB           1       start_time = time.time()
+   323                                         
+   324   9004.4 MiB   -898.1 MiB          30       for i in range(test_window - horizon + 1):
+   325                                                 
+   326   9004.4 MiB   -307.3 MiB          29           print(f'Step {i + 1} of {test_window - horizon + 1}')
+   327                                         
+   328                                                 # define the training data
+   329   8648.5 MiB  -8958.2 MiB          29           train_df_tmp = combine_train_test(train_df, test_df.groupby('unique_id').head(i))
+   330                                         
+   331                                                 # define the testing data
+   332   8648.5 MiB   -155.5 MiB          29           test_df_tmp = test_df.groupby('unique_id').head(i + horizon).reset_index(drop = True)
+   333   9005.2 MiB   9942.7 MiB          29           ds_to_remove = train_df_tmp["ds"].drop_duplicates()
+   334   9005.2 MiB   -288.8 MiB          29           test_df_tmp = test_df_tmp.loc[~test_df_tmp['ds'].isin(ds_to_remove)]
+   335                                                 # remove static features because they are used in fitting only
+   336   9005.2 MiB   -253.1 MiB          29           X_df_tmp = test_df_tmp.drop(columns = static_features, axis = 1)
+   337                                                 
+   338   9005.2 MiB   -253.1 MiB          29           if i in fitting_ids:
+   339                                         
+   340                                                     # re-train the model
+   341   9005.2 MiB     -1.5 MiB           5               print(f'Fitting: t = {i}, {int(i / retrain_window + 1)} of {n_fitting}...')
+   342   9005.2 MiB      0.0 MiB           5               start_fit_time = time.time()
+   343                                         
+   344   9005.2 MiB      0.0 MiB           5               if intervals == None:
+   345                                                         fit_tmp = engine.fit(
+   346                                                             df = train_df_tmp, 
+   347                                                             static_features = static_features,
+   348                                                             fitted = store_in_sample_results
+   349                                                         )
+   350                                                     else:
+   351   9005.2 MiB   -705.0 MiB          10                   fit_tmp = engine.fit(
+   352   9005.2 MiB      0.0 MiB           5                       df = train_df_tmp, 
+   353   9005.2 MiB      0.0 MiB           5                       static_features = static_features,
+   354   9005.2 MiB      0.0 MiB           5                       fitted = store_in_sample_results,
+   355   9005.2 MiB      0.0 MiB           5                       prediction_intervals = intervals
+   356                                                         )
+   357                                         
+   358   8381.2 MiB  -1011.0 MiB           5               end_fit_time = time.time()
+   359                                         
+   360                                                     # predict out-of-sample with the models
+   361   8381.2 MiB      0.0 MiB           5               print('Predicting...')
+   362   8381.2 MiB      0.0 MiB           5               start_predict_time = time.time()
+   363   8381.2 MiB    207.0 MiB           5               preds_df_tmp = fit_tmp.predict(h = horizon, level = levels)
+   364   8381.2 MiB      0.0 MiB           5               end_predict_time = time.time()
+   365                                         
+   366   8381.2 MiB      0.0 MiB           5               tot_sample_time = end_predict_time - start_fit_time
+   367                                         

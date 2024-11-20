@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from statsforecast import StatsForecast
 from src.Python.utils.collect_data import combine_train_test
+# from memory_profiler import profile
 
 
 def split_train_test(data, test_window):
@@ -21,11 +22,13 @@ def split_train_test(data, test_window):
     train_df = data \
         .groupby('unique_id') \
         .head(-test_window) \
-        .sort_values(by = ['unique_id', 'ds']).reset_index(drop = True)
+        .sort_values(by = ['unique_id', 'ds']) \
+        .reset_index(drop = True)
     test_df = data \
         .groupby('unique_id') \
         .tail(test_window) \
-        .sort_values(by = ['unique_id', 'ds']).reset_index(drop = True)
+        .sort_values(by = ['unique_id', 'ds']) \
+        .reset_index(drop = True)
 
     return train_df, test_df
 
@@ -266,6 +269,8 @@ def retrain_ets_model(
 
     return in_sample_df, params_df, out_sample_df, time_df, tot_time
 
+# mem_logs = open('mem_profile.log', 'a')
+# @profile(stream = mem_logs)
 def retrain_ml_model(
     data,
     engine, 
