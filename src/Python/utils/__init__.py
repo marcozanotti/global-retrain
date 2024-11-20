@@ -12,6 +12,12 @@ from .collect_data import (
     aggregate_data
 )
 
+
+from .custom_feats import (
+    is_weekend,
+    is_workday
+)
+
 from .fit_models import (
     split_train_test, 
     get_retrain_ids,

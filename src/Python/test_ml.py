@@ -84,17 +84,23 @@ engine = MLForecast(
     models = models,
     freq = freq, 
     num_threads = 1,
-    target_transforms = [GlobalSklearnTransformer(Log1p)],
+    # target_transforms = [GlobalSklearnTransformer(Log1p)],
     lags = [1] + [7 * (i+1) for i in range(8)],
     lag_transforms = {
-        1: [ExpandingMean()],
-        7: [RollingMean(7), RollingMean(14), RollingMean(28)],
-        14: [RollingMean(7), RollingMean(14), RollingMean(28)],
-        28: [RollingMean(7), RollingMean(14), RollingMean(28)],
+        1: [RollingMean(7), RollingMean(14), RollingMean(30), ExpandingMean()],
+        7: [RollingMean(7), RollingMean(14), RollingMean(30)],
+        14: [RollingMean(7), RollingMean(14), RollingMean(30)],
+        30: [RollingMean(7), RollingMean(14), RollingMean(30)]
     },
-    date_features = ['year', 'quarter', 'month', 'week', 'dayofweek', 'day']
+    date_features = [
+        'year', 'quarter', 'month', 'week', 
+        'dayofweek', 'day', is_weekend
+    ]
 )
-# engine.preprocess(train_df, static_features = ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id'])
+# engine.preprocess(
+#     train_df, 
+#     static_features = ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id']
+# )
 
 # fit and predict with retraining
 in_sample_df, out_sample_df, time_df = retrain_ml_model(
@@ -106,7 +112,7 @@ in_sample_df, out_sample_df, time_df = retrain_ml_model(
     levels = levels,
     intervals = intervals,
     static_features = ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id'],
-    store_in_sample_results = True
+    store_in_sample_results = False
 )
 in_sample_df
 out_sample_df
