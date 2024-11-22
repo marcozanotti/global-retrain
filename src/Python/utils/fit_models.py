@@ -1,4 +1,5 @@
 
+import gc
 import time
 import numpy as np
 import pandas as pd
@@ -313,27 +314,29 @@ def retrain_ml_model(
     # define the fitting times
     fitting_ids = get_retrain_ids(test_window, horizon, retrain_window)
     n_fitting = len(fitting_ids) # int(np.round(test_window / retrain_window, 0))
+    n_loops = test_window - horizon + 1
     
     # initialize the dataframes
     in_sample_df = pd.DataFrame()
     out_sample_df = pd.DataFrame()
     time_df = pd.DataFrame()
-    
+
     start_time = time.time()
 
-    for i in range(test_window - horizon + 1):
+    for i in range(n_loops):
         
-        print(f'Step {i + 1} of {test_window - horizon + 1}')
+        print(f'Step {i + 1} of {n_loops}')
 
         # define the training data
         train_df_tmp = combine_train_test(train_df, test_df.groupby('unique_id').head(i))
 
         # define the testing data
-        test_df_tmp = test_df.groupby('unique_id').head(i + horizon).reset_index(drop = True)
-        ds_to_remove = train_df_tmp["ds"].drop_duplicates()
+        test_df_tmp = test_df.groupby('unique_id').head(i + horizon)
+        test_df_tmp.reset_index(drop = True, inplace = True)
+        ds_to_remove = train_df_tmp["ds"].unique()
         test_df_tmp = test_df_tmp.loc[~test_df_tmp['ds'].isin(ds_to_remove)]
         # remove static features because they are used in fitting only
-        X_df_tmp = test_df_tmp.drop(columns = static_features, axis = 1)
+        test_df_tmp.drop(columns = static_features, axis = 1, inplace = True)
         
         if i in fitting_ids:
 
@@ -360,7 +363,7 @@ def retrain_ml_model(
             # predict out-of-sample with the models
             print('Predicting...')
             start_predict_time = time.time()
-            preds_df_tmp = fit_tmp.predict(h = horizon, level = levels)
+            out_sample_df_tmp = fit_tmp.predict(h = horizon, level = levels)
             end_predict_time = time.time()
 
             tot_sample_time = end_predict_time - start_fit_time
@@ -369,29 +372,29 @@ def retrain_ml_model(
                 # extract in-sample results from the model only when fitting
                 print('Extracting fitted values...')
                 in_sample_df_tmp = fit_tmp.fcst_fitted_values_ \
-                    .rename(columns = {model_name: 'fit'}) \
-                    .copy()
+                    .rename(columns = {model_name: 'fit'})
                 in_sample_df_tmp['sample'] = i
                 in_sample_df = pd.concat([in_sample_df, in_sample_df_tmp], axis = 0)
+                del in_sample_df_tmp
                 
         else:
 
             # update the mlforecast object with the new data 
             # NOTE: fundamental to roll predictions without fitting !!!!!
-            update_df = train_df_tmp.groupby('unique_id').tail(1)
-            engine.update(update_df)
+            engine.update(train_df_tmp.groupby('unique_id').tail(1))
 
             print('Predicting with pre-trained model...')
             start_predict_time = time.time()
-            preds_df_tmp = fit_tmp.predict(h = horizon, X_df = X_df_tmp, level = levels)
+            out_sample_df_tmp = fit_tmp.predict(h = horizon, X_df = test_df_tmp, level = levels)
             end_predict_time = time.time()
 
             tot_sample_time = end_predict_time - start_predict_time
         
         # add actual out-of-sample to results
-        out_sample_df_tmp = preds_df_tmp.copy()
         out_sample_df_tmp['sample'] = i
-        out_sample_df_tmp = out_sample_df_tmp.merge(X_df_tmp)
+        out_sample_df_tmp = out_sample_df_tmp.merge(
+            test_df_tmp, how = 'left', on = ['unique_id', 'ds'], copy = False
+        )
         out_sample_df = pd.concat([out_sample_df, out_sample_df_tmp], axis = 0)
         
         # store computing time information for each sample
@@ -402,6 +405,10 @@ def retrain_ml_model(
             'total_sample_time': tot_sample_time
         })
         time_df = pd.concat([time_df, time_df_tmp], axis = 0)
+
+        del train_df_tmp, ds_to_remove, test_df_tmp, out_sample_df_tmp, time_df_tmp
+        if (i % 10) == 0:
+            gc.collect() # call gc once every 10 iterations to avoid overhead
 
     # format column names
     out_sample_df.columns = out_sample_df.columns.str.replace(model_name, 'fcst')

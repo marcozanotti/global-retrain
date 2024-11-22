@@ -8,7 +8,7 @@ TODO:
 # FIXME:
 1. oom problems, possibili soluzioni
     - pulire environment ad ogni iterazione e chiamare gc
-    - evitare di autoincrementare df, come?? lista?
+    - modificare inplace dove possibile
     - salvare preds (e fitted) ad ogni iterazione su fs
     - calcolare direttamente le metriche e storare solo quelle ad ogni iterazione 
 

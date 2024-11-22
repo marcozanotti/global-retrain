@@ -126,7 +126,8 @@ def combine_train_test(train_df, test_df):
 
     print('Combining train and test data...')
     combined_df = pd.concat([train_df, test_df], axis = 0, ignore_index = True)
-    combined_df = combined_df.sort_values(by = ['unique_id', 'ds']).reset_index(drop = True)
+    combined_df.sort_values(by = ['unique_id', 'ds'], inplace = True)
+    combined_df.reset_index(drop = True, inplace = True)
 
     return combined_df
 
