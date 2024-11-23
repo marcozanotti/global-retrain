@@ -19,7 +19,8 @@ def split_train_test(data, test_window):
     Returns:
         pd.DataFrame: training and test dataframes.
     """
-
+    
+    print('Splitting data into train and test...')
     train_df = data \
         .groupby('unique_id') \
         .head(-test_window) \

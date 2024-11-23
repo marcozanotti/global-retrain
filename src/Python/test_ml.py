@@ -34,11 +34,11 @@ model_name = 'LinearRegression'
 # the frequency of the data
 freq = 'D'
 # the minimum length of each series
-min_series_length = 365 * 1
+min_series_length = 365 * 2
 # the forecasting horizon
 horizon = 28
 # the length of the test window
-test_window = horizon * 2 # 28 * 13 = last year
+test_window = horizon * 13 # 28 * 13 = last year
 # the window for retraining (ex. 7 means retraining every 7 periods)
 retrain_window = 7
 # the confidence levels for prediction intervals
@@ -111,8 +111,7 @@ in_sample_df, out_sample_df, time_df = retrain_ml_model(
     retrain_window = retrain_window,
     levels = levels,
     intervals = intervals,
-    static_features = ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id'],
-    store_in_sample_results = False
+    static_features = ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id']
 )
 in_sample_df
 out_sample_df
