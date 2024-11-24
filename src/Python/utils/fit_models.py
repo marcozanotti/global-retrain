@@ -4,7 +4,7 @@ import time
 import numpy as np
 import pandas as pd
 from statsforecast import StatsForecast
-from src.Python.utils.collect_data import combine_train_test
+from utils.collect_data import combine_train_test
 # from memory_profiler import profile
 
 
@@ -317,20 +317,18 @@ def retrain_ml_model(
     n_fitting = len(fitting_ids) # int(np.round(test_window / retrain_window, 0))
     n_loops = test_window - horizon + 1
     
-    # initialize the dataframes
-    in_sample_df = pd.DataFrame()
-    out_sample_df = pd.DataFrame()
-    time_df = pd.DataFrame()
+    # # initialize the dataframes
+    # in_sample_df = pd.DataFrame()
+    # out_sample_df = pd.DataFrame()
+    # time_df = pd.DataFrame()
 
     start_time = time.time()
 
     for i in range(n_loops):
         
         print(f'Step {i + 1} of {n_loops}')
-
         # define the training data
         train_df_tmp = combine_train_test(train_df, test_df.groupby('unique_id').head(i))
-
         # define the testing data
         test_df_tmp = test_df.groupby('unique_id').head(i + horizon)
         test_df_tmp.reset_index(drop = True, inplace = True)
@@ -375,7 +373,14 @@ def retrain_ml_model(
                 in_sample_df_tmp = fit_tmp.fcst_fitted_values_ \
                     .rename(columns = {model_name: 'fit'})
                 in_sample_df_tmp['sample'] = i
-                in_sample_df = pd.concat([in_sample_df, in_sample_df_tmp], axis = 0)
+
+                # SPOSTATO QUI LE COLONNE EXTRA CHE PRIMA METTEVI ALLA FINE
+                in_sample_df_tmp['method'] = model_name
+                in_sample_df_tmp['test_window'] = test_window
+                in_sample_df_tmp['horizon'] = horizon
+
+                in_sample_df_tmp.to_parquet(f'results/in_sample_df_step{i+1}.parquet')
+                # in_sample_df = pd.concat([in_sample_df, in_sample_df_tmp], axis = 0)
                 del in_sample_df_tmp
                 
         else:
@@ -396,7 +401,15 @@ def retrain_ml_model(
         out_sample_df_tmp = out_sample_df_tmp.merge(
             test_df_tmp, how = 'left', on = ['unique_id', 'ds'], copy = False
         )
-        out_sample_df = pd.concat([out_sample_df, out_sample_df_tmp], axis = 0)
+
+        # SPOSTATO QUI LE COLONNE EXTRA CHE PRIMA METTEVI ALLA FINE
+        out_sample_df_tmp['method'] = model_name
+        out_sample_df_tmp['test_window'] = test_window
+        out_sample_df_tmp['horizon'] = horizon
+        out_sample_df_tmp['retrain_window'] = retrain_window
+
+        out_sample_df_tmp.to_parquet(f'results/out_sample_df_step{i+1}.parquet')
+        # out_sample_df = pd.concat([out_sample_df, out_sample_df_tmp], axis = 0)
         
         # store computing time information for each sample
         time_df_tmp = pd.DataFrame({
@@ -405,33 +418,43 @@ def retrain_ml_model(
             'total_predict_time': [end_predict_time - start_predict_time],
             'total_sample_time': tot_sample_time
         })
-        time_df = pd.concat([time_df, time_df_tmp], axis = 0)
+
+        # SPOSTATO QUI LE COLONNE EXTRA CHE PRIMA METTEVI ALLA FINE
+        time_df_tmp['method'] = model_name
+        time_df_tmp['test_window'] = test_window
+        time_df_tmp['horizon'] = horizon
+        time_df_tmp['retrain_window'] = retrain_window
+        
+        time_df_tmp.to_parquet(f'results/time_df_step{i+1}.parquet')
+        # time_df = pd.concat([time_df, time_df_tmp], axis = 0)
 
         del train_df_tmp, ds_to_remove, test_df_tmp, out_sample_df_tmp, time_df_tmp
         if (i % 10) == 0:
             gc.collect() # call gc once every 10 iterations to avoid overhead
 
-    # format column names
-    out_sample_df.columns = out_sample_df.columns.str.replace(model_name, 'fcst')
-    
-    # add additional columns to the dataframes for tracking parameters
-    in_sample_df['method'] = model_name
-    in_sample_df['test_window'] = test_window
-    in_sample_df['horizon'] = horizon
-    in_sample_df['retrain_window'] = retrain_window
-    out_sample_df['method'] = model_name
-    out_sample_df['test_window'] = test_window
-    out_sample_df['horizon'] = horizon
-    out_sample_df['retrain_window'] = retrain_window
-    time_df['method'] = model_name
-    time_df['test_window'] = test_window
-    time_df['horizon'] = horizon
-    time_df['retrain_window'] = retrain_window
+    ## COMMENTATO PERCHE' ORA LE COLONNE SONO GIA NEI PARQUET
 
-    # reset indexes
-    in_sample_df = in_sample_df.reset_index(drop = True)
-    out_sample_df = out_sample_df.reset_index(drop = True)
-    time_df = time_df.reset_index(drop = True)
+    # # format column names
+    # out_sample_df.columns = out_sample_df.columns.str.replace(model_name, 'fcst')
+    
+    # # add additional columns to the dataframes for tracking parameters
+    # in_sample_df['method'] = model_name
+    # in_sample_df['test_window'] = test_window
+    # in_sample_df['horizon'] = horizon
+    # in_sample_df['retrain_window'] = retrain_window
+    # out_sample_df['method'] = model_name
+    # out_sample_df['test_window'] = test_window
+    # out_sample_df['horizon'] = horizon
+    # out_sample_df['retrain_window'] = retrain_window
+    # time_df['method'] = model_name
+    # time_df['test_window'] = test_window
+    # time_df['horizon'] = horizon
+    # time_df['retrain_window'] = retrain_window
+
+    # # reset indexes
+    # in_sample_df = in_sample_df.reset_index(drop = True)
+    # out_sample_df = out_sample_df.reset_index(drop = True)
+    # time_df = time_df.reset_index(drop = True)
 
     end_time = time.time()
     tot_time = end_time - start_time
@@ -439,5 +462,3 @@ def retrain_ml_model(
 
     print('----------------------------- END -----------------------------')
     print('===============================================================')
-
-    return in_sample_df, out_sample_df, time_df

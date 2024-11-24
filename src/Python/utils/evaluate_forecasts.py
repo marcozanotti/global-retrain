@@ -7,7 +7,7 @@ import pandas_flavor as pf
 from utilsforecast.losses import bias, mae, mse, rmse
 from utilsforecast.evaluation import evaluate
 
-from src.Python.utils import *
+from utils import *
 
 
 @pf.register_dataframe_method

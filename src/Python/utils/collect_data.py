@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import pandas_flavor as pf
+import gc
 
 # from datasetsforecast.m3 import M3
 # from datasetsforecast.m4 import M4
@@ -65,6 +66,8 @@ def load_data(path, name_list, ext = '.parquet'):
 
     if ext == '.parquet':
         res_df = pd.read_parquet(f'{path}{file_name}{ext}')
+        res_df['item_id'] = res_df['item_id'].astype('int8')
+        res_df['y'] = res_df['y'].astype('float16')
     elif ext == '.csv':
         res_df = pd.read_csv(f'{path}{file_name}{ext}')
     else:
@@ -154,6 +157,9 @@ def remove_series(data, min_series_length):
     p_series_to_remove = n_series_to_remove / n_series * 100
     print(f'Removed {n_series_to_remove} series out of {n_series} ({p_series_to_remove:.1f}%)')
 
+    print('Cleaning memory')
+    del series_length, remove_ids, n_series, n_series_to_remove, p_series_to_remove
+    gc.collect()
     return res_df
 
 @pf.register_dataframe_method
