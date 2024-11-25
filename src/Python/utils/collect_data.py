@@ -3,18 +3,20 @@ import os
 import numpy as np
 import pandas as pd
 import pandas_flavor as pf
+import pyarrow.parquet as pq
 
 # from datasetsforecast.m3 import M3
 # from datasetsforecast.m4 import M4
 # M3.download('data')
 # M4.download('data') 
 
-def create_file_name(name_list):
+def create_file_name(name_list, ext = None):
 
     """Function to create a file name from a list of names.
 
     Args:
         name_list (list): List of names to be used to create the file name.
+        ext (str, optional): Extension of the file. Defaults to '.parquet'.
     
     Returns:
         string: The file name.
@@ -23,7 +25,82 @@ def create_file_name(name_list):
         file_name = name_list[0]
     else:
         file_name = '_'.join(str(x) for x in name_list)
+    
+    if ext is not None:
+        file_name += ext
+
     return file_name
+
+def get_file_name(path, name_list, ext = '.parquet', remove_ext = True):
+
+    """Function to get file names from a given path.
+
+    Args:
+        path (string): Path to the directory containing the data files.
+        name_list (list): List of names to be used to filter the files.
+        ext (str, optional): Extension of the files. Defaults to '.parquet'.
+        remove_ext (bool, optional): Whether to remove the extension from the file names. Defaults to True.
+    
+    Returns:
+        list: List of file names.
+    """
+
+    file_names = os.listdir(path)
+    for n in name_list:
+        file_names = list(filter(lambda x: n in x, file_names))
+    if remove_ext:
+        file_names = [s.replace(ext, "") for s in file_names]
+
+    return file_names
+
+def combine_and_save_files(path_to_read, path_to_write, name_list, ext = '.parquet'):
+
+    """Function to combine and save multiple files into a single file.
+
+    Args:
+        path_to_read (string): Path to the directory containing the data files.
+        path_to_write (string): Path to the directory where to save the combined file.
+        name_list (list): List of names to be used to filter the files.
+        ext (str, optional): Extension of the files. Defaults to '.parquet'.
+    """
+
+    print('Combining and saving files...')
+
+    files = get_file_name(
+        path = path_to_read, name_list = name_list,
+        ext = ext, remove_ext = False
+    )
+    write_file_name = create_file_name(name_list = name_list, ext = ext) 
+
+    if ext == '.parquet':
+        if files:
+            schema = pq.ParquetFile(path_to_read + files[0]).schema_arrow
+            with pq.ParquetWriter(path_to_write + write_file_name, schema = schema) as writer:
+                for f in files:
+                    writer.write_table(pq.read_table(path_to_read + f, schema = schema))
+    else:
+        raise ValueError(f'Unsupported extension {ext}')
+
+    return
+
+def remove_file(path, name_list, ext = '.parquet'):
+
+    """Function to remove files from a given path.
+
+    Args:
+        path (string): Path to the directory containing the data files.
+        ext (str, optional): Extension of the files. Defaults to '.parquet'.
+    """
+
+    print('Removing files...')
+    files = get_file_name(
+        path = path, name_list = name_list,
+        ext = ext, remove_ext = False
+    )
+    for f in files:
+        os.remove(f'{path}{f}')
+
+    return
 
 @pf.register_dataframe_method
 def save_data(data, path, name_list, ext = '.parquet'):
@@ -36,6 +113,9 @@ def save_data(data, path, name_list, ext = '.parquet'):
         name_list (list): List of names to be used to create the file name.
         ext (string, optional): File extension (default is '.parquet').
     """
+
+    if not os.path.exists(path):
+        os.makedirs(path)
 
     file_name = create_file_name(name_list)
     print(f'Saving {file_name} dataset...')

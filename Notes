@@ -1,16 +1,10 @@
 TODO:
 
+- add create_directory to save function
 - impostare lo script definitivo con tutto il set di dati e con loop per retrain_window
 
 - RMSSE
 - how to evaluate prediction intervals?
-
-# FIXME:
-1. oom problems, possibili soluzioni
-    - pulire environment ad ogni iterazione e chiamare gc
-    - modificare inplace dove possibile
-    - salvare preds (e fitted) ad ogni iterazione su fs
-    - calcolare direttamente le metriche e storare solo quelle ad ogni iterazione 
 
 
 

@@ -38,7 +38,7 @@ min_series_length = 365 * 2
 # the forecasting horizon
 horizon = 28
 # the length of the test window
-test_window = horizon * 13 # 28 * 13 = last year
+test_window = horizon * 2 # 28 * 13 = last year
 # the window for retraining (ex. 7 means retraining every 7 periods)
 retrain_window = 7
 # the confidence levels for prediction intervals
@@ -56,19 +56,6 @@ Log1p = FunctionTransformer(func = np.log1p, inverse_func = np.expm1)
 # check how many times the model will be retrained
 get_retrain_ids(test_window, horizon, retrain_window)
 len(get_retrain_ids(test_window, horizon, retrain_window))
-
-
-# Load data ---------------------------------------------------------------
-
-# a sample of 100 time series
-np.random.seed(1992)
-data = get_data(
-    path = 'data/m5/',
-    name_list = [dataset_name, frequency, 'prep'],
-    ext = '.parquet',
-    min_series_length = min_series_length,
-    # samples = 100
-)
 
 
 # Global ML Models --------------------------------------------------------
@@ -103,53 +90,36 @@ engine = MLForecast(
 # )
 
 # fit and predict with retraining
-in_sample_df, out_sample_df, time_df = retrain_ml_model(
-    data = data,
+np.random.seed(1992)
+retrain_ml_model(
+    dataset_name = dataset_name,
+    frequency = frequency,
     engine = engine,
     test_window = test_window,
     horizon = horizon,
     retrain_window = retrain_window,
     levels = levels,
     intervals = intervals,
-    static_features = ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id']
+    static_features = ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id'],
+    min_series_length = min_series_length,
+    samples = 100,
+    store_in_sample_results = False,
+    ext = '.parquet'
 )
-in_sample_df
+
+
+# Load data ---------------------------------------------------------------
+
+out_sample_df = load_data(
+    path = f'results/{dataset_name}/', 
+    name_list = [dataset_name, frequency, 'outsample', model_name, retrain_window],
+    ext = '.parquet'
+)
 out_sample_df
+
+time_df = load_data(
+    path = f'results/{dataset_name}/', 
+    name_list = [dataset_name, frequency, 'time', model_name, retrain_window],
+    ext = '.parquet'
+)
 time_df
-time_df.iloc[get_retrain_ids(test_window, horizon, retrain_window)]
-time_df['total_sample_time'].sum() # total computing time in seconds
-
-
-# Save results ------------------------------------------------------------
-
-# out-of-sample
-save_data(
-    out_sample_df, 
-    path = f'results/{dataset_name}/', 
-    name_list = [
-        dataset_name, frequency, 'outsample', model_name, str(retrain_window)
-    ],
-    ext = '.parquet'
-)
-
-# in-sample
-save_data(
-    in_sample_df, 
-    path = f'results/{dataset_name}/', 
-    name_list = [
-        dataset_name, frequency, 'insample', model_name, str(retrain_window)
-    ],
-    ext = '.parquet'
-)
-
-# computing time
-save_data(
-    time_df, 
-    path = f'results/{dataset_name}/', 
-    name_list = [
-        dataset_name, frequency, 'time', model_name, str(retrain_window)
-    ],
-    ext = '.parquet'
-)
-
-

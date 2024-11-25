@@ -7,7 +7,7 @@ import pandas_flavor as pf
 from utilsforecast.losses import bias, mae, mse, rmse
 from utilsforecast.evaluation import evaluate
 
-from src.Python.utils import *
+from src.Python.utils.collect_data import *
 
 
 @pf.register_dataframe_method
@@ -93,18 +93,11 @@ def evaluate_model(
 
     print(f'Evaluating {model_name} model on {dataset_name} dataset...')
 
-    files = os.listdir(f'results/{dataset_name}/')
-    file_names = list(
-        filter(
-            lambda x:
-                model_name in x 
-                    and frequency in x
-                    and analysis_type in x 
-                    and ext in x, 
-                files
-        )
+    file_names = get_file_name(
+        path = f'results/{dataset_name}/', 
+        name_list = [model_name, frequency, analysis_type, ext],
+        ext = ext
     )
-    file_names = [s.replace(ext, "") for s in file_names]
 
     if analysis_type == 'outsample':
         print(f'Evaluating outsample results...')
