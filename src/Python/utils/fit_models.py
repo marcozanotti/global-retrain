@@ -476,25 +476,11 @@ def retrain_ml_model(
             ],
             ext = ext
         )
-        remove_file(
-            path = f'results/{dataset_name}/tmp/',
-            name_list = [
-                dataset_name, frequency, 'insample', model_name, str(retrain_window)
-            ],
-            ext = ext
-        )
-
+    
     # combine and save the outsample tmp files
     combine_and_save_files(
-        path_to_read = f'results/{dataset_name}/tmp/',
+        path_to_read = f'results/{dataset_name}/preds/',
         path_to_write = f'results/{dataset_name}/',
-        name_list = [
-            dataset_name, frequency, 'outsample', model_name, str(retrain_window)
-        ],
-        ext = ext
-    )
-    remove_file(
-        path = f'results/{dataset_name}/tmp/',
         name_list = [
             dataset_name, frequency, 'outsample', model_name, str(retrain_window)
         ],
