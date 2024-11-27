@@ -78,6 +78,7 @@ def combine_and_save_files(path_to_read, path_to_write, name_list, ext = '.parqu
             with pq.ParquetWriter(path_to_write + write_file_name, schema = schema) as writer:
                 for f in files:
                     writer.write_table(pq.read_table(path_to_read + f, schema = schema))
+            print('Done!')
     else:
         raise ValueError(f'Unsupported extension {ext}')
 
@@ -224,7 +225,7 @@ def remove_series(data, min_series_length):
         pd.DataFrame: dataframe with series removed.
     """
 
-    print(f'Removing series shorter than {min_series_length}...')
+    print(f'Removing series shorter than {min_series_length} observaions...')
     series_length = data.groupby('unique_id')['y'].count()
     remove_ids = series_length[series_length < min_series_length].index.tolist()
     res_df = data[~data['unique_id'].isin(remove_ids)]
@@ -232,7 +233,8 @@ def remove_series(data, min_series_length):
     n_series = len(series_length)
     n_series_to_remove = len(remove_ids)
     p_series_to_remove = n_series_to_remove / n_series * 100
-    print(f'Removed {n_series_to_remove} series out of {n_series} ({p_series_to_remove:.1f}%)')
+    tot_series = n_series - n_series_to_remove
+    print(f'Removed {n_series_to_remove} series out of {n_series} ({p_series_to_remove:.1f}%).\nThe final dataset contains {tot_series} series.')
 
     return res_df
 

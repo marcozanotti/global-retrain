@@ -35,7 +35,7 @@ data = get_data(
     path = 'data/m5/', 
     name_list = [dataset_name, frequency, 'prep'],
     ext = '.parquet', 
-    min_series_length = 365
+    min_series_length = 365 * 2
 )
 
 # sampled dataset

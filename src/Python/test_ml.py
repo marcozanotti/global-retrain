@@ -38,9 +38,9 @@ min_series_length = 365 * 2
 # the forecasting horizon
 horizon = 28
 # the length of the test window
-test_window = horizon * 2 # 28 * 13 = last year
+test_window = horizon * 13 # 28 * 13 = last year
 # the window for retraining (ex. 7 means retraining every 7 periods)
-retrain_window = 7
+retrain_window = 7 * 4
 # the confidence levels for prediction intervals
 levels = [60, 70, 80, 85, 90, 95, 99] # [60, 70, 80, 85, 90, 95, 99]
 # the type of conformal inference method
@@ -51,7 +51,7 @@ levels = [60, 70, 80, 85, 90, 95, 99] # [60, 70, 80, 85, 90, 95, 99]
 # - method = 'conformal_distribution' or 'conformal_error'
 intervals = PredictionIntervals(h = horizon, n_windows = 4, method = 'conformal_distribution')
 # define ad hoc target transformations
-Log1p = FunctionTransformer(func = np.log1p, inverse_func = np.expm1)
+# Log1p = FunctionTransformer(func = np.log1p, inverse_func = np.expm1)
 
 # check how many times the model will be retrained
 get_retrain_ids(test_window, horizon, retrain_window)
@@ -90,7 +90,7 @@ engine = MLForecast(
 # )
 
 # fit and predict with retraining
-np.random.seed(1992)
+# np.random.seed(1992)
 retrain_ml_model(
     dataset_name = dataset_name,
     frequency = frequency,
@@ -102,7 +102,7 @@ retrain_ml_model(
     intervals = intervals,
     static_features = ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id'],
     min_series_length = min_series_length,
-    samples = 100,
+    samples = None,
     store_in_sample_results = False,
     ext = '.parquet'
 )
