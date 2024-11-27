@@ -408,7 +408,7 @@ def retrain_ml_model(
                 # save to file
                 save_data(
                     out_sample_df_tmp, 
-                    path = f'results/{dataset_name}/tmp/',
+                    path = f'results/{dataset_name}/{model_name}/fit/tmp/',
                     name_list = [
                         dataset_name, frequency, 'insample', model_name, str(retrain_window), i
                     ],
@@ -445,7 +445,7 @@ def retrain_ml_model(
         # save to file
         save_data(
             out_sample_df_tmp, 
-            path = f'results/{dataset_name}/tmp/',
+            path = f'results/{dataset_name}/{model_name}/preds/tmp/',
             name_list = [
                 dataset_name, frequency, 'outsample', model_name, str(retrain_window), i
             ],
@@ -469,8 +469,8 @@ def retrain_ml_model(
     if store_in_sample_results:
         # combine and save the insample tmp files
         combine_and_save_files(
-            path_to_read = f'results/{dataset_name}/tmp/',
-            path_to_write = f'results/{dataset_name}/',
+            path_to_read = f'results/{dataset_name}/{model_name}/fit/tmp/',
+            path_to_write = f'results/{dataset_name}/{model_name}/fit/',
             name_list = [
                 dataset_name, frequency, 'insample', model_name, str(retrain_window)
             ],
@@ -479,8 +479,8 @@ def retrain_ml_model(
     
     # combine and save the outsample tmp files
     combine_and_save_files(
-        path_to_read = f'results/{dataset_name}/preds/',
-        path_to_write = f'results/{dataset_name}/',
+        path_to_read = f'results/{dataset_name}/{model_name}/preds/tmp/',
+        path_to_write = f'results/{dataset_name}/{model_name}/preds/',
         name_list = [
             dataset_name, frequency, 'outsample', model_name, str(retrain_window)
         ],
@@ -496,7 +496,7 @@ def retrain_ml_model(
     # save to file
     save_data(
         time_df, 
-        path = f'results/{dataset_name}/',
+        path = f'results/{dataset_name}/{model_name}/time/',
         name_list = [
             dataset_name, frequency, 'time', model_name, str(retrain_window)
         ],
