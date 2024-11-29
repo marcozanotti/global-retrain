@@ -306,7 +306,7 @@ def sampling_data(data, samples = 1000):
 
     return res_df
 
-def get_xregs(path, name_list, dataset_name, ext = '.parquet'):
+def get_xregs_data(path, name_list, dataset_name, ext = '.parquet'):
 
     """Function to get external regressors (xregs) for the specified dataset.
 
@@ -379,7 +379,7 @@ def prepare_data(dataset_name, frequency, static_features = True, xregs = True, 
         res_df = get_static_features(res_df, dataset_name)
 
     if xregs:
-        xreg_df = get_xregs(
+        xreg_df = get_xregs_data(
             path = f'data/{dataset_name}/', 
             name_list = [dataset_name, 'xregs'], 
             dataset_name = dataset_name,

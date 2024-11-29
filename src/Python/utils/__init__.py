@@ -10,6 +10,7 @@ from .collect_data import (
     remove_series,
     get_static_features,
     sampling_data,
+    get_xregs_data,
     prepare_data,
     get_data,
     aggregate_data
