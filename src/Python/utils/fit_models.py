@@ -287,6 +287,7 @@ def retrain_ml_model(
     min_series_length = None,
     samples = None,
     store_in_sample_results = False,
+    combine_results = False,
     ext = '.parquet'
 ):
 
@@ -386,7 +387,7 @@ def retrain_ml_model(
             # predict out-of-sample with the models
             print('Predicting...')
             start_predict_time = time.time()
-            out_sample_df_tmp = fit_tmp.predict(h = horizon, level = levels)
+            out_sample_df_tmp = fit_tmp.predict(h = horizon, level = levels, X_df = test_df_tmp)
             end_predict_time = time.time()
 
             tot_sample_time = end_predict_time - start_fit_time
@@ -408,7 +409,7 @@ def retrain_ml_model(
                 # save to file
                 save_data(
                     out_sample_df_tmp, 
-                    path = f'results/{dataset_name}/{model_name}/fit/tmp/',
+                    path = f'results/{dataset_name}/{model_name}/{retrain_window}/fit/tmp/',
                     name_list = [
                         dataset_name, frequency, 'insample', model_name, str(retrain_window), i
                     ],
@@ -424,7 +425,7 @@ def retrain_ml_model(
 
             print('Predicting with pre-trained model...')
             start_predict_time = time.time()
-            out_sample_df_tmp = fit_tmp.predict(h = horizon, X_df = test_df_tmp, level = levels)
+            out_sample_df_tmp = fit_tmp.predict(h = horizon, level = levels, X_df = test_df_tmp)
             end_predict_time = time.time()
 
             tot_sample_time = end_predict_time - start_predict_time
@@ -445,7 +446,7 @@ def retrain_ml_model(
         # save to file
         save_data(
             out_sample_df_tmp, 
-            path = f'results/{dataset_name}/{model_name}/preds/tmp/',
+            path = f'results/{dataset_name}/{model_name}/{retrain_window}/preds/tmp/',
             name_list = [
                 dataset_name, frequency, 'outsample', model_name, str(retrain_window), i
             ],
@@ -465,27 +466,29 @@ def retrain_ml_model(
         if (i % 10) == 0:
             gc.collect() # call gc once every 10 iterations to avoid overhead
 
+    
+    if combine_results:
 
-    if store_in_sample_results:
-        # combine and save the insample tmp files
+        if store_in_sample_results:
+            # combine and save the insample tmp files
+            combine_and_save_files(
+                path_to_read = f'results/{dataset_name}/{model_name}/{retrain_window}/fit/tmp/',
+                path_to_write = f'results/{dataset_name}/{model_name}/{retrain_window}/fit/',
+                name_list = [
+                    dataset_name, frequency, 'insample', model_name, str(retrain_window)
+                ],
+                ext = ext
+            )
+    
+        # combine and save the outsample tmp files
         combine_and_save_files(
-            path_to_read = f'results/{dataset_name}/{model_name}/fit/tmp/',
-            path_to_write = f'results/{dataset_name}/{model_name}/fit/',
+            path_to_read = f'results/{dataset_name}/{model_name}/{retrain_window}/preds/tmp/',
+            path_to_write = f'results/{dataset_name}/{model_name}/{retrain_window}/preds/',
             name_list = [
-                dataset_name, frequency, 'insample', model_name, str(retrain_window)
+                dataset_name, frequency, 'outsample', model_name, str(retrain_window)
             ],
             ext = ext
         )
-    
-    # combine and save the outsample tmp files
-    combine_and_save_files(
-        path_to_read = f'results/{dataset_name}/{model_name}/preds/tmp/',
-        path_to_write = f'results/{dataset_name}/{model_name}/preds/',
-        name_list = [
-            dataset_name, frequency, 'outsample', model_name, str(retrain_window)
-        ],
-        ext = ext
-    )
 
     # add additional columns to the dataframes for tracking parameters
     time_df['method'] = model_name
@@ -496,7 +499,7 @@ def retrain_ml_model(
     # save to file
     save_data(
         time_df, 
-        path = f'results/{dataset_name}/{model_name}/time/',
+        path = f'results/{dataset_name}/{model_name}/{retrain_window}/time/',
         name_list = [
             dataset_name, frequency, 'time', model_name, str(retrain_window)
         ],

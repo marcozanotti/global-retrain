@@ -9,13 +9,16 @@ from mlforecast.lag_transforms import (
     RollingMean, ExpandingMean
 )
 from mlforecast.utils import PredictionIntervals
-from sklearn.preprocessing import FunctionTransformer
-from mlforecast.target_transforms import GlobalSklearnTransformer
+# from sklearn.preprocessing import FunctionTransformer
+# from mlforecast.target_transforms import GlobalSklearnTransformer
 # from mlforecast.target_transforms import LocalStandardScaler, LocalMinMaxScaler, Differences
 from utilsforecast.plotting import plot_series
 
 from sklearn.linear_model import LinearRegression
-from xgboost import XGBRegressor
+# from sklearn.ensemble import RandomForestRegressor
+# from xgboost import XGBRegressor
+# from lightgbm import LGBMRegressor
+# from catboost import CatBoostRegressor
 
 from src.Python.utils import *
 
@@ -30,6 +33,9 @@ dataset_name = 'm5'
 frequency = 'daily'
 model_name = 'LinearRegression'
 # model_name = 'XGBRegressor'
+# model_name = 'RandomForestRegressor'
+# model_name = 'LGBMRegressor'
+# model_name = 'CatBoostRegressor'
 
 # the frequency of the data
 freq = 'D'
@@ -38,11 +44,11 @@ min_series_length = 365 * 2
 # the forecasting horizon
 horizon = 28
 # the length of the test window
-test_window = horizon * 13 # 28 * 13 = last year
+test_window = horizon * 2 # 28 * 13 = last year
 # the window for retraining (ex. 7 means retraining every 7 periods)
-retrain_window = 7 * 4
+retrain_window = 7
 # the confidence levels for prediction intervals
-levels = [60, 70, 80, 85, 90, 95, 99] # [60, 70, 80, 85, 90, 95, 99]
+levels = [50, 60, 70, 80, 90, 95, 99]
 # the type of conformal inference method
 # NOTE: 
 # - n_windows * h should be less than the count of data elements in your time series sequence.
@@ -63,8 +69,11 @@ len(get_retrain_ids(test_window, horizon, retrain_window))
 # * Linear Regression -----------------------------------------------------
 
 # define the models
-models = [LinearRegression()]
-# models = [XGBRegressor()]
+models = [LinearRegression(n_jobs = -1)]
+# models = [XGBRegressor(n_jobs = -1)]
+# models = [RandomForestRegressor(n_jobs = -1)]
+# models = [LGBMRegressor(n_jobs = -1)]
+# models = [CatBoostRegressor()]
 
 # instantiate the MLForecast class
 engine = MLForecast(
@@ -102,23 +111,35 @@ retrain_ml_model(
     intervals = intervals,
     static_features = ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id'],
     min_series_length = min_series_length,
-    samples = None,
+    samples = 100,
     store_in_sample_results = False,
+    combine_results = False,
     ext = '.parquet'
 )
 
 
+# Combine results ---------------------------------------------------------
+
+combine_and_save_files(
+    path_to_read = f'results/{dataset_name}/{model_name}/{retrain_window}/preds/tmp/',
+    path_to_write = f'results/{dataset_name}/{model_name}/{retrain_window}/preds/',
+    name_list = [
+        dataset_name, frequency, 'outsample', model_name, str(retrain_window)
+    ],
+    ext = '.parquet'
+)
+
 # Load data ---------------------------------------------------------------
 
 out_sample_df = load_data(
-    path = f'results/{dataset_name}/', 
+    path = f'results/{dataset_name}/{model_name}/{retrain_window}/preds/', 
     name_list = [dataset_name, frequency, 'outsample', model_name, retrain_window],
     ext = '.parquet'
 )
 out_sample_df
 
 time_df = load_data(
-    path = f'results/{dataset_name}/', 
+    path = f'results/{dataset_name}/{model_name}/{retrain_window}/time/', 
     name_list = [dataset_name, frequency, 'time', model_name, retrain_window],
     ext = '.parquet'
 )

@@ -78,7 +78,6 @@ def combine_and_save_files(path_to_read, path_to_write, name_list, ext = '.parqu
             with pq.ParquetWriter(path_to_write + write_file_name, schema = schema) as writer:
                 for f in files:
                     writer.write_table(pq.read_table(path_to_read + f, schema = schema))
-            print('Done!')
     else:
         raise ValueError(f'Unsupported extension {ext}')
 
@@ -307,7 +306,42 @@ def sampling_data(data, samples = 1000):
 
     return res_df
 
-def prepare_data(dataset_name, frequency, static_features = True, save = True, ext = '.parquet'):
+def get_xregs(path, name_list, dataset_name, ext = '.parquet'):
+
+    """Function to get external regressors (xregs) for the specified dataset.
+
+    Args:
+        path (string): Path to the external regressors directory.
+        name_list (list): List of file names for external regressors.
+        dataset_name (string): Name of the dataset (e.g., 'm5', 'm4').
+        ext (string, optional): Extension of the external regressors files. Defaults to '.parquet'.
+    
+    Returns:
+        pd.DataFrame: dataframe with external regressors.
+    """
+
+    print(f'Extracting external regressors for {dataset_name} dataset...')
+    
+    if dataset_name == 'm5':
+
+        ext = '.csv'
+        xreg_df = load_data(
+            path = path, 
+            name_list = name_list, 
+            ext = ext
+        )
+        xreg_df['event'] = np.where(xreg_df['event_name_1'].isna(), 0, 1)
+        xreg_df['event'] = xreg_df['event'].astype(int)
+        xreg_df['date'] = pd.to_datetime(xreg_df['date'])
+        xreg_df.rename(columns = {'date': 'ds'}, inplace = True)
+        xreg_df = xreg_df[['ds', 'event']]
+
+    else:
+        raise ValueError(f'Unknown dataset {dataset_name}.')
+
+    return xreg_df
+
+def prepare_data(dataset_name, frequency, static_features = True, xregs = True, save = True, ext = '.parquet'):
 
     """Function to prepare saved datasets.
 
@@ -315,6 +349,7 @@ def prepare_data(dataset_name, frequency, static_features = True, save = True, e
         dataset_name (string): Name of the dataset (e.g., 'm5', 'm4').
         frequency (string, optional): The frequency of the data (e.g., 'daily', 'weekly'). 
         static_features (bool, optional): Whether to include static features. Defaults to True.
+        xregs (bool, optional): Whether to include external regressors. Defaults to True.
         save (bool, optional): Whether to save the processed dataset. Defaults to False.
         ext (string, optional): Extension of the saved files. Defaults to '.parquet'.
 
@@ -342,6 +377,15 @@ def prepare_data(dataset_name, frequency, static_features = True, save = True, e
 
     if static_features:
         res_df = get_static_features(res_df, dataset_name)
+
+    if xregs:
+        xreg_df = get_xregs(
+            path = f'data/{dataset_name}/', 
+            name_list = [dataset_name, 'xregs'], 
+            dataset_name = dataset_name,
+            ext = ext
+        )
+        res_df = pd.merge(res_df, xreg_df, how = 'left', on = 'ds')
 
     if save:
         save_data(
