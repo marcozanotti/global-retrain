@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from functools import partial
-from utilsforecast.losses import bias, mae, mse, rmse, mase
+from utilsforecast.losses import bias, mae, mse, rmse, mase, msse, rmsse
 
 from src.Python.utils import *
 
@@ -20,7 +20,13 @@ frequency = 'daily'
 model_name = 'LinearRegression'
 retrain_window = 7
 min_series_length = 365 * 1
-metrics = [bias, mae, mse, rmse, partial(mase, seasonality = 7)]
+metrics = [
+    bias, 
+    mae, mse, rmse, 
+    partial(mase, seasonality = 7),
+    partial(msse, seasonality = 7),
+    partial(rmsse, seasonality = 7)
+]
 
 
 # Load data ---------------------------------------------------------------
