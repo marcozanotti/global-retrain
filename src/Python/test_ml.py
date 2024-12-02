@@ -5,9 +5,7 @@ import numpy as np
 import pandas as pd
 
 from mlforecast import MLForecast
-from mlforecast.lag_transforms import (
-    RollingMean, ExpandingMean
-)
+from mlforecast.lag_transforms import RollingMean, ExpandingMean
 from mlforecast.utils import PredictionIntervals
 # from sklearn.preprocessing import FunctionTransformer
 # from mlforecast.target_transforms import GlobalSklearnTransformer
@@ -55,7 +53,7 @@ levels = [50, 60, 70, 80, 90, 95, 99]
 # - n_windows should be at least 2 or more
 # - n_windows / retrain_window should be an integer
 # - method = 'conformal_distribution' or 'conformal_error'
-intervals = PredictionIntervals(h = horizon, n_windows = 4, method = 'conformal_distribution')
+intervals = PredictionIntervals(h = horizon, n_windows = 4, method = 'conformal_error')
 # define ad hoc target transformations
 # Log1p = FunctionTransformer(func = np.log1p, inverse_func = np.expm1)
 
