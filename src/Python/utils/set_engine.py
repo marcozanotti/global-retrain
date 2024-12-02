@@ -1,0 +1,311 @@
+
+import numpy as np
+import pandas as pd
+
+from mlforecast import MLForecast
+from mlforecast.lag_transforms import RollingMean, ExpandingMean
+# from sklearn.preprocessing import FunctionTransformer
+# from mlforecast.target_transforms import GlobalSklearnTransformer
+# from mlforecast.target_transforms import LocalStandardScaler, LocalMinMaxScaler, Differences
+
+from sklearn.linear_model import LinearRegression, Lasso, Ridge
+from sklearn.ensemble import RandomForestRegressor
+from xgboost import XGBRegressor
+from lightgbm import LGBMRegressor
+from catboost import CatBoostRegressor
+
+from src.Python.utils.custom_feats import *
+
+def get_frequency(frequency):
+    """Function to get the frequency of the dataset.
+
+    Args:
+        frequency (str): frequency of the dataset.
+    
+    Returns:
+        str: frequency.
+    """
+
+    print('Defining frequency...')
+
+    if frequency == 'hourly':
+        freq = 'H'
+    elif frequency == 'daily':
+        freq = 'D'
+    elif frequency == 'weekly':
+        freq = 'W'
+    elif frequency == 'monthly':
+        freq = 'M'
+    elif frequency == 'quarterly':
+        freq = 'Q'
+    elif frequency == 'yearly':
+        freq = 'Y'
+    else:
+        raise ValueError(f'Invalid frequency: {frequency}')
+
+    return freq
+
+def get_target_transforms(model_name):
+    """Function to get the target transforms for the dataset.
+
+    Args:
+        model_name (str): name of the model.
+    
+    Returns:
+        list: target transforms.
+    """
+
+    print('Defining target trasformations...')
+
+    # Log1p = FunctionTransformer(func = np.log1p, inverse_func = np.expm1)
+    # target_transforms = [GlobalSklearnTransformer(Log1p)],
+
+    if model_name == 'LinearRegression':
+
+        target_transforms = None
+    
+    elif model_name == 'Lasso':
+
+        target_transforms = None
+    
+    elif model_name == 'Ridge':
+
+        target_transforms = None
+    
+    elif model_name == 'RandomForestRegressor':
+
+        target_transforms = None
+    
+    elif model_name == 'XGBRegressor':
+
+        target_transforms = None
+    
+    elif model_name == 'LGBMRegressor':
+
+        target_transforms = None
+    
+    elif model_name == 'CatBoostRegressor':
+
+        target_transforms = None
+    
+    else:
+        raise ValueError(f'Invalid model: {model_name}')
+
+    return target_transforms
+
+def get_lags(dataset_name, frequency):
+    """Function to get the lags for the dataset.
+
+    Args:
+        dataset_name (str): name of the dataset.
+        frequency (str): frequency of the dataset.
+    
+    Returns:
+        list: lags.
+    """
+
+    print('Defining lags...')
+
+    if dataset_name == 'm5':
+
+        if frequency == 'daily':
+
+            lags = [1] + [7 * (i+1) for i in range(8)]
+        
+        else:
+            raise ValueError(f'Invalid frequency: {frequency}')        
+
+    else:
+        raise ValueError(f'Invalid dataset: {dataset_name}')
+
+    return lags
+
+def get_lag_transforms(dataset_name, frequency):
+    """Function to get the lag transforms for the dataset.
+
+    Args:
+        dataset_name (str): name of the dataset.
+        frequency (str): frequency of the dataset.
+    
+    Returns:
+        dict: lag transforms.
+    """
+
+    print('Defining lag trasformations...')
+
+    if dataset_name == 'm5':
+
+        if frequency == 'daily':
+
+            lag_transforms = {
+                1: [RollingMean(7), RollingMean(14), RollingMean(30), ExpandingMean()],
+                7: [RollingMean(7), RollingMean(14), RollingMean(30)],
+                14: [RollingMean(7), RollingMean(14), RollingMean(30)],
+                30: [RollingMean(7), RollingMean(14), RollingMean(30)]
+            }
+
+        else:
+            raise ValueError(f'Invalid frequency: {frequency}')
+
+    else:
+        raise ValueError(f'Invalid dataset: {dataset_name}')
+
+    return lag_transforms
+
+def get_date_features(dataset_name, frequency):
+    """Function to get the date features for the dataset.
+
+    Args:
+        dataset_name (str): name of the dataset.
+        frequency (str): frequency of the dataset.
+    
+    Returns:
+        list: date features.
+    """
+
+    print('Defining date features...')
+
+    if dataset_name == 'm5':
+
+        if frequency == 'daily':
+
+            date_features = ['year', 'quarter', 'month', 'week', 'dayofweek', 'day', is_weekend]
+
+        else:
+            raise ValueError(f'Invalid frequency: {frequency}')
+
+    else:
+        raise ValueError(f'Invalid dataset: {dataset_name}')
+
+    return date_features
+
+def get_model_type(model_name):
+    """Function to get the model type for the dataset.
+
+    Args:
+        model_name (str): name of the model.
+    
+    Returns:
+        str: model type.
+    """
+    
+    sf = ['ETS', 'ARIMA']
+    ml = [
+        'LinearRegression', 'Lasso', 'Ridge', 
+        'RandomForestRegressor', 
+        'XGBRegressor', 'LGBMRegressor', 'CatBoostRegressor' 
+    ]
+    dl = ['MLP', 'KAN', 'LSTM', 'TCN', 'NBEATS', 'NHITS', 'DeepAR']
+
+    if model_name in sf:
+        model_type = 'sf'
+    elif model_name in ml:
+        model_type ='ml'
+    elif model_name in dl:
+        model_type = 'dl'
+    else:
+        raise ValueError(f'Invalid model: {model_name}')
+
+    return model_type
+
+def set_model(model_name, model_params = None):
+    """Function to get the models for the dataset.
+
+    Args:
+        model_name (str): name of the model.
+        model_params (dict, optional): parameters for the model. Defaults to None.
+    
+    Returns:
+        list: model.
+    """
+
+    print('Defining the model...')
+
+    if model_name == 'LinearRegression':
+
+        model = [LinearRegression(n_jobs = -1)]
+    
+    elif model_name == 'Lasso':
+
+        model = [Lasso()]
+    
+    elif model_name == 'Ridge':
+
+        model = [Ridge()]
+
+    elif model_name == 'RandomForestRegressor':
+
+        model = [RandomForestRegressor(n_jobs = -1)]
+    
+    elif model_name == 'XGBRegressor':
+
+        model = [XGBRegressor(n_jobs = -1)]
+    
+    elif model_name == 'LGBMRegressor':
+
+        model = [LGBMRegressor(n_jobs = -1)]
+    
+    elif model_name == 'CatBoostRegressor':
+
+        model = [CatBoostRegressor()]
+
+    else:
+        raise ValueError(f'Invalid model: {model_name}')
+
+    return model
+
+def set_engine(model_name, dataset_name, frequency, model_params = None):
+
+    """Function to set the engine based on the model name.
+
+    Args:
+        model_name (str): name of the model.
+        dataset_name (str): name of the dataset.
+        frequency (str): frequency of the dataset.
+        model_params (dict, optional): parameters for the model. Defaults to None.
+    
+    Returns:
+        StatsForecast: StatsForecast engine.
+        MLForecast: MLForecast engine.
+    """
+
+    print('Setting the engine...')
+    model_type = get_model_type(model_name)
+    model = set_model(model_name)
+    freq = get_frequency(frequency)
+    target_transforms = get_target_transforms(model_name)
+    lags = get_lags(dataset_name, frequency)
+    lag_transforms = get_lag_transforms(dataset_name, frequency)
+    date_features = get_date_features(dataset_name, frequency)
+
+    if model_type =='sf':
+
+        raise ValueError(f'Not yet implemented for model {model_name}')
+
+    elif model_type == 'ml':
+
+        engine = MLForecast(
+            models = model,
+            freq = freq, 
+            num_threads = 12, # FIXME: detect cores
+            target_transforms = target_transforms,
+            lags = lags,
+            lag_transforms = lag_transforms,
+            date_features = date_features
+        )
+    
+    elif model_type == 'dl':
+
+        raise ValueError(f'Not yet implemented for model {model_name}')
+    
+    else:
+        raise ValueError(f'Invalid model: {model_name}')
+
+    return engine
+    
+
+
+
+
+        
+

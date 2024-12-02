@@ -1,14 +1,15 @@
 TODO:
 
-- aggiungere encoding per categorical variables
-https://nixtlaverse.nixtla.io/mlforecast/docs/how-to-guides/sklearn_pipelines.html
+- aggiungere logging
+- FIXME: detect cores in set_engine
 - definire i parametri di RF, XGB, LGBM, CatBoost, MLP
-
-- impostare lo script definitivo (per modello) con tutto il set di dati e con loop per retrain_window
 
 - testare DL (MLP, KAN, LSTM, TCN, NBEATS, NHITS, DeepAR)
 - how to evaluate prediction intervals?
 - wilcoxon signed rank test 0.05 (daily retail  demand forecasting)
+
+- aggiungere encoding per categorical variables
+https://nixtlaverse.nixtla.io/mlforecast/docs/how-to-guides/sklearn_pipelines.html
 
 
 NOTE:

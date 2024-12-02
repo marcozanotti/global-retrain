@@ -6,7 +6,7 @@ import pandas as pd
 import pyarrow.parquet as pq
 from statsforecast import StatsForecast
 from src.Python.utils.collect_data import *
-# from memory_profiler import profile
+from src.Python.utils.set_engine import *
 
 
 def split_train_test(data, test_window):
@@ -46,8 +46,8 @@ def get_retrain_ids(test_window, horizon, retrain_window = 1):
     Returns:
         list: list of retrain ids.
     """
-
-    return list(range(0, (test_window - horizon + 1), retrain_window))
+    res = list(range(0, (test_window - horizon + 1), retrain_window))
+    return res
 
 def get_model_name(engine):
 
@@ -272,8 +272,6 @@ def retrain_ets_model(
 
     return in_sample_df, params_df, out_sample_df, time_df, tot_time
 
-# mem_logs = open('mem_profile.log', 'a')
-# @profile(stream = mem_logs)
 def retrain_ml_model(
     dataset_name,
     frequency,
@@ -281,7 +279,7 @@ def retrain_ml_model(
     test_window,
     horizon, 
     retrain_window = 1,
-    levels = [60, 70, 80, 85, 90, 95, 99],
+    levels = [50, 60, 70, 80, 90, 95, 99],
     intervals = None, 
     static_features = [],
     min_series_length = None,
@@ -324,7 +322,7 @@ def retrain_ml_model(
 
     # define the model name
     model_name = get_model_name(engine)
-    print(f'---- [ {model_name} ] ----')
+    print(f'---- Model: {model_name} ---- Retrain Window: {retrain_window} ----')
 
     # load the dataset
     data = get_data(
@@ -512,5 +510,81 @@ def retrain_ml_model(
 
     print('----------------------------- END -----------------------------')
     print('===============================================================')
+
+    return
+
+def retrain_model(
+    model_names,
+    retrain_scenarios,
+    dataset_name,
+    frequency,
+    test_window,
+    horizon, 
+    levels = [50, 60, 70, 80, 90, 95, 99],
+    intervals = None, 
+    static_features = [],
+    min_series_length = None,
+    samples = None,
+    store_in_sample_results = False,
+    combine_results = False,
+    ext = '.parquet'
+):
+
+    """Function to retrain the models and predict with retrained models
+    for different retraining scenarios.
+
+    Args:
+        model_names (list): names of the ML models to be used.
+        retrain_scenarios (list): scenarios for retraining.
+        dataset_name (str): name of the dataset (e.g., 'm5', 'm4').
+        frequency (str): frequency of the data (e.g., 'daily', 'weekly').
+        engine (MLForecast class): ML model engine.
+        test_window (int): length of the test window.
+        horizon (int): forecasting horizon.
+        levels (list): confidence levels for the predictions. Defaults to
+        [60, 70, 80, 85, 90, 95, 99].
+        intervals (PredictionIntervals, optional): conformal inference method. 
+        Defaults to PredictionIntervals(h = horizon, n_windows = 2).
+        static_features (list, optional): static features to include in the model.
+        Defaults to [].
+        min_series_length (int, optional): minimum length of the series.
+        Defaults to None.
+        samples (int, optional): number of samples to generate. Defaults to None.
+        store_in_sample_results (bool, optional): store in-sample results.
+        Defaults to False.
+        ext (str, optional): file extension for storing results. Defaults to '.parquet'.
+
+    Returns:
+        pd.DataFrame: predictions made by the retrained models.
+    """
+
+    for m in model_names:
+        
+        model_type = get_model_type(m)
+        engine_tmp = set_engine(m, dataset_name, frequency)
+
+        for scenario in retrain_scenarios:
+
+            if model_type == 'ml':
+
+                retrain_ml_model(
+                    dataset_name = dataset_name,
+                    frequency = frequency,
+                    engine = engine_tmp,
+                    test_window = test_window,
+                    horizon = horizon,
+                    retrain_window = scenario,
+                    levels = levels,
+                    intervals = intervals,
+                    static_features = static_features,
+                    min_series_length = min_series_length,
+                    samples = samples,
+                    store_in_sample_results = store_in_sample_results,
+                    combine_results = combine_results,
+                    ext = ext
+                )
+            
+            else:
+                raise ValueError('Not yet implemented.')
 
     return
