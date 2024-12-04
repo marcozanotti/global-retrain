@@ -13,10 +13,10 @@ from mlforecast.utils import PredictionIntervals
 from utilsforecast.plotting import plot_series
 
 from sklearn.linear_model import LinearRegression
-# from sklearn.ensemble import RandomForestRegressor
-# from xgboost import XGBRegressor
-# from lightgbm import LGBMRegressor
-# from catboost import CatBoostRegressor
+from sklearn.ensemble import RandomForestRegressor
+from xgboost import XGBRegressor
+from lightgbm import LGBMRegressor
+from catboost import CatBoostRegressor
 
 from src.Python.utils import *
 

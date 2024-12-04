@@ -1,13 +1,13 @@
 
-import os
 import numpy as np
 import pandas as pd
 import pandas_flavor as pf
-
 from utilsforecast.losses import bias, mae, mse, rmse
 from utilsforecast.evaluation import evaluate
-
 from src.Python.utils.collect_data import *
+
+import logging
+module_logger = logging.getLogger('evaluate_forecasts')
 
 
 @pf.register_dataframe_method
@@ -30,7 +30,7 @@ def evaluate_point_forecasts(
         pd.DataFrame: dataframe with evaluation results for each metric.
     """
 
-    print('Evaluating point forecasts...')
+    module_logger.info('Evaluating point forecasts...')
     fcst_df = out_sample_df.copy()
     samples = list(fcst_df['sample'].unique())
     n_samples = len(samples)
@@ -39,7 +39,7 @@ def evaluate_point_forecasts(
 
     for s in samples:
 
-        # print(f'Samlple {s} of {n_samples}...')
+        # module_logger.info(f'Samlple {s} of {n_samples}...')
         fcst_df_tmp = fcst_df[fcst_df['sample'] == s]
         eval_df_tmp = evaluate(
             fcst_df_tmp, 
@@ -91,7 +91,7 @@ def evaluate_model(
         pd.DataFrame: dataframe with evaluation results for each metric.
     """
 
-    print(f'Evaluating {model_name} model on {dataset_name} dataset...')
+    module_logger.info(f'Evaluating {model_name} model on {dataset_name} dataset...')
 
     file_names = get_file_name(
         path = f'results/{dataset_name}/', 
@@ -100,9 +100,9 @@ def evaluate_model(
     )
 
     if analysis_type == 'outsample':
-        print(f'Evaluating outsample results...')
+        module_logger.info(f'Evaluating outsample results...')
     elif analysis_type == 'time':
-        print(f'Evaluating time results...')
+        module_logger.info(f'Evaluating time results...')
     else:
         raise ValueError(f'Invalid analysis type {analysis_type}.')
         

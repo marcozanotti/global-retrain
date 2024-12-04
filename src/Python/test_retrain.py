@@ -1,5 +1,6 @@
 
 import os
+from time import gmtime, strftime
 import pandas as pd
 from mlforecast.utils import PredictionIntervals
 from src.Python.utils import *
@@ -28,6 +29,14 @@ min_series_length = 365 * 2
 for scenario in retrain_scenarios:
     print(get_retrain_ids(test_window, horizon, scenario))
 
+# logging configuration
+log_file = create_file_name(
+    name_list = [dataset_name, frequency, strftime("%Y%m%d_%H%M%S", gmtime())], 
+    ext = '.log'
+)
+configure_logging(log_file)
+logger = create_logger()
+
 
 # Fitting -----------------------------------------------------------------
 
@@ -43,3 +52,6 @@ retrain_model(
     min_series_length = min_series_length,
     samples = 100
 )
+
+# stop logging
+stop_logger(logger)

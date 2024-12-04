@@ -5,6 +5,9 @@ import pandas as pd
 import pandas_flavor as pf
 import pyarrow.parquet as pq
 
+import logging
+module_logger = logging.getLogger('collect_data')
+
 # from datasetsforecast.m3 import M3
 # from datasetsforecast.m4 import M4
 # M3.download('data')
@@ -64,7 +67,7 @@ def combine_and_save_files(path_to_read, path_to_write, name_list, ext = '.parqu
         ext (str, optional): Extension of the files. Defaults to '.parquet'.
     """
 
-    print('Combining and saving files...')
+    module_logger.info('Combining and saving files...')
 
     files = get_file_name(
         path = path_to_read, name_list = name_list,
@@ -92,7 +95,7 @@ def remove_file(path, name_list, ext = '.parquet'):
         ext (str, optional): Extension of the files. Defaults to '.parquet'.
     """
 
-    print('Removing files...')
+    module_logger.info('Removing files...')
     files = get_file_name(
         path = path, name_list = name_list,
         ext = ext, remove_ext = False
@@ -118,7 +121,7 @@ def save_data(data, path, name_list, ext = '.parquet'):
         os.makedirs(path)
 
     file_name = create_file_name(name_list)
-    print(f'Saving {file_name} dataset...')
+    module_logger.info(f'Saving {file_name} dataset...')
 
     if ext == '.parquet':
         data.to_parquet(f'{path}{file_name}{ext}')
@@ -141,7 +144,7 @@ def load_data(path, name_list, ext = '.parquet'):
     """
 
     file_name = create_file_name(name_list)
-    print(f'Loading {file_name} dataset...')
+    module_logger.info(f'Loading {file_name} dataset...')
 
     if ext == '.parquet':
         res_df = pd.read_parquet(f'{path}{file_name}{ext}')
@@ -168,10 +171,10 @@ def download_data(dataset_name, frequency, save = True, ext = '.parquet'):
     """
 
     if dataset_name == 'm5':
-        print(f'Downloading {dataset_name} train dataset...')
+        module_logger.info(f'Downloading {dataset_name} train dataset...')
         train_df = pd.read_parquet('https://m5-benchmarks.s3.amazonaws.com/data/train/target.parquet') \
             .rename(columns = {'item_id': 'unique_id', 'timestamp': 'ds', 'demand': 'y'})
-        print(f'Downloading {dataset_name} test dataset...')
+        module_logger.info(f'Downloading {dataset_name} test dataset...')
         test_df = pd.read_parquet('https://m5-benchmarks.s3.amazonaws.com/data/test/target.parquet') \
             .rename(columns = {'item_id': 'unique_id', 'timestamp': 'ds', 'demand': 'y'})
     else:
@@ -204,7 +207,7 @@ def combine_train_test(train_df, test_df):
         pd.DataFrame: combined train and test dataframes.
     """
 
-    print('Combining train and test data...')
+    module_logger.info('Combining train and test data...')
     combined_df = pd.concat([train_df, test_df], axis = 0, ignore_index = True)
     combined_df.sort_values(by = ['unique_id', 'ds'], inplace = True)
     combined_df.reset_index(drop = True, inplace = True)
@@ -224,7 +227,7 @@ def remove_series(data, min_series_length):
         pd.DataFrame: dataframe with series removed.
     """
 
-    print(f'Removing series shorter than {min_series_length} observaions...')
+    module_logger.info(f'Removing series shorter than {min_series_length} observaions...')
     series_length = data.groupby('unique_id')['y'].count()
     remove_ids = series_length[series_length < min_series_length].index.tolist()
     res_df = data[~data['unique_id'].isin(remove_ids)]
@@ -233,7 +236,8 @@ def remove_series(data, min_series_length):
     n_series_to_remove = len(remove_ids)
     p_series_to_remove = n_series_to_remove / n_series * 100
     tot_series = n_series - n_series_to_remove
-    print(f'Removed {n_series_to_remove} series out of {n_series} ({p_series_to_remove:.1f}%).\nThe final dataset contains {tot_series} series.')
+    module_logger.info(f'Removed {n_series_to_remove} series out of {n_series} ({p_series_to_remove:.1f}%).')
+    module_logger.info(f'The final dataset contains {tot_series} series.')
 
     return res_df
 
@@ -250,7 +254,7 @@ def get_static_features(data, dataset_name):
         pd.DataFrame: dataframe with static features added.
     """
 
-    print(f'Extracting static features from {dataset_name} dataset...')
+    module_logger.info(f'Extracting static features from {dataset_name} dataset...')
 
     # get splitted unique ids
     static_df = data['unique_id'] \
@@ -297,7 +301,7 @@ def sampling_data(data, samples = 1000):
         pd.DataFrame: sampled dataframe.
     """
 
-    print(f'Sampling {samples} series from data...')
+    module_logger.info(f'Sampling {samples} series from data...')
     ids = data['unique_id'].unique()
     sample_ids = np.random.choice(ids, size = samples, replace = False)
     res_df = data[data['unique_id'] \
@@ -320,7 +324,7 @@ def get_xregs_data(path, name_list, dataset_name, ext = '.parquet'):
         pd.DataFrame: dataframe with external regressors.
     """
 
-    print(f'Extracting external regressors for {dataset_name} dataset...')
+    module_logger.info(f'Extracting external regressors for {dataset_name} dataset...')
     
     if dataset_name == 'm5':
 
@@ -439,7 +443,7 @@ def aggregate_data(data, group_columns, drop_columns = None, aggregate_function 
 
     data_agg = data.copy()
 
-    print('Aggregating data...')
+    module_logger.info('Aggregating data...')
     if drop_columns is not None:
         data_agg = data_agg.drop(columns = drop_columns)
 

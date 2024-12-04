@@ -1,8 +1,6 @@
 TODO:
 
-- aggiungere logging
-- FIXME: detect cores in set_engine
-- definire i parametri di RF, XGB, LGBM, CatBoost, MLP
+- inserire i parametri in set_model e set_engine
 
 - testare DL (MLP, KAN, LSTM, TCN, NBEATS, NHITS, DeepAR)
 - how to evaluate prediction intervals?

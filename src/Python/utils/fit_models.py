@@ -8,6 +8,9 @@ from statsforecast import StatsForecast
 from src.Python.utils.collect_data import *
 from src.Python.utils.set_engine import *
 
+import logging
+module_logger = logging.getLogger('fit_models')
+
 
 def split_train_test(data, test_window):
 
@@ -21,7 +24,7 @@ def split_train_test(data, test_window):
         pd.DataFrame: training and test dataframes.
     """
     
-    print('Splitting data into train and test...')
+    module_logger.info('Splitting data into train and test...')
     train_df = data \
         .groupby('unique_id') \
         .head(-test_window) \
@@ -195,7 +198,7 @@ def retrain_ets_model(
 
     for i in range(test_window - horizon):
         
-        print(f'Step {i + 1} of {test_window - horizon}')
+        module_logger.info(f'Step {i + 1} of {test_window - horizon}')
 
         # define the training data
         train_df_tmp = combine_train_test(train_df, test_df.groupby('unique_id').head(i))
@@ -213,13 +216,13 @@ def retrain_ets_model(
         if i == 0:
 
             # fit the models
-            print('Fitting...')
+            module_logger.info('Fitting...')
             start_fit_time = time.time()
             fit_tmp = eng.fit(df = train_df_tmp) # prediction_intervals = intervals_tmp
             end_fit_time = time.time()
 
             # predict out-of-sample with the models
-            print('Predicting...')
+            module_logger.info('Predicting...')
             start_predict_time = time.time()
             preds_df_tmp = fit_tmp.predict(h = horizon, level = levels)
             end_predict_time = time.time()
@@ -227,11 +230,11 @@ def retrain_ets_model(
         else:
 
             if i in retrain_ids:
-                print('Re-training...')
-                print('Refitting 1 of n_refit')
+                module_logger.info('Re-training...')
+                module_logger.info('Refitting 1 of n_refit')
 
             else:
-                print('Predicting with pre-trained model...')
+                module_logger.info('Predicting with pre-trained model...')
         
 
         # add sample information
@@ -241,12 +244,12 @@ def retrain_ets_model(
         out_sample_df_tmp.insert(0, 'sample', (i + 1))
 
         # extract in-sample results from the models
-        print('Extracting fitted values and residuals...')
+        module_logger.info('Extracting fitted values and residuals...')
         in_sample_df_tmp = extact_fitted_and_residuals(fit_tmp, in_sample_df_tmp)
         in_sample_df = pd.concat([in_sample_df, train_df_tmp], axis = 0)        
 
         # extract model parameters for each series
-        print('Extracting model parameters...')
+        module_logger.info('Extracting model parameters...')
         params_df_tmp = extract_model_parameters(fit_tmp, in_sample_df_tmp)
         params_df = pd.concat([params_df, params_df_tmp], axis = 0)
 
@@ -268,7 +271,7 @@ def retrain_ets_model(
 
     end_time = time.time()
     tot_time = end_time - start_time
-    print(f'Total computing time: {tot_time:.3f} seconds')
+    module_logger.info(f'Total computing time: {tot_time:.3f} seconds')
 
     return in_sample_df, params_df, out_sample_df, time_df, tot_time
 
@@ -315,14 +318,12 @@ def retrain_ml_model(
         pd.DataFrame: predictions made by the retrained models.
     """
 
-    print('===============================================================')
-    print('---------------------------- START ----------------------------')
-    
+    module_logger.info('---------------------------------------------------------------')
     start_time = time.time()
 
     # define the model name
     model_name = get_model_name(engine)
-    print(f'---- Model: {model_name} ---- Retrain Window: {retrain_window} ----')
+    module_logger.info(f'---- Model: {model_name} ---- Retrain Window: {retrain_window} ----')
 
     # load the dataset
     data = get_data(
@@ -347,7 +348,7 @@ def retrain_ml_model(
 
     for i in range(n_loops):
         
-        print(f'Step {i + 1} of {n_loops}')
+        module_logger.info(f'Step {i + 1} of {n_loops}')
 
         # define the training data
         train_df_tmp = combine_train_test(train_df, test_df.groupby('unique_id').head(i))
@@ -363,7 +364,7 @@ def retrain_ml_model(
         if i in fitting_ids:
 
             # re-train the model
-            print(f'Fitting: t = {i}, {int(i / retrain_window + 1)} of {n_fitting}...')
+            module_logger.info(f'Fitting: t = {i}, {int(i / retrain_window + 1)} of {n_fitting}...')
             start_fit_time = time.time()
 
             if intervals == None:
@@ -383,7 +384,7 @@ def retrain_ml_model(
             end_fit_time = time.time()
 
             # predict out-of-sample with the models
-            print('Predicting...')
+            module_logger.info('Predicting...')
             start_predict_time = time.time()
             out_sample_df_tmp = fit_tmp.predict(h = horizon, level = levels, X_df = test_df_tmp)
             end_predict_time = time.time()
@@ -393,7 +394,7 @@ def retrain_ml_model(
             if store_in_sample_results:
 
                 # extract in-sample results from the model only when fitting
-                print('Extracting fitted values...')
+                module_logger.info('Extracting fitted values...')
                 in_sample_df_tmp = fit_tmp.fcst_fitted_values_
                 # add additional columns to the dataframes for tracking parameters
                 in_sample_df_tmp['sample'] = i
@@ -421,7 +422,7 @@ def retrain_ml_model(
             # NOTE: fundamental to roll predictions without fitting !!!!!
             engine.update(train_df_tmp.groupby('unique_id').tail(1))
 
-            print('Predicting with pre-trained model...')
+            module_logger.info('Predicting with pre-trained model...')
             start_predict_time = time.time()
             out_sample_df_tmp = fit_tmp.predict(h = horizon, level = levels, X_df = test_df_tmp)
             end_predict_time = time.time()
@@ -506,10 +507,7 @@ def retrain_ml_model(
 
     end_time = time.time()
     tot_time = end_time - start_time
-    print(f'Total computing time: {tot_time:.1f} seconds')
-
-    print('----------------------------- END -----------------------------')
-    print('===============================================================')
+    module_logger.info(f'Total computing time: {tot_time:.1f} seconds')
 
     return
 
@@ -559,8 +557,13 @@ def retrain_model(
     """
 
     for m in model_names:
+
+        module_logger.info('===============================================================')
+        module_logger.info('---------------------------- START ----------------------------')
         
         model_type = get_model_type(m)
+        module_logger.info(f'---- Model type: {model_type}, Model name: {m} ----')
+        
         engine_tmp = set_engine(m, dataset_name, frequency)
 
         for scenario in retrain_scenarios:
@@ -586,5 +589,8 @@ def retrain_model(
             
             else:
                 raise ValueError('Not yet implemented.')
+        
+        module_logger.info('----------------------------- END -----------------------------')
+        module_logger.info('===============================================================')
 
     return

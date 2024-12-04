@@ -44,3 +44,9 @@ from .evaluate_forecasts import (
     evaluate_point_forecasts,
     evaluate_model
 )
+
+from .utilities import (
+    configure_logging,
+    create_logger,
+    stop_logger
+)

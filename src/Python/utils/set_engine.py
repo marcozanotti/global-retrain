@@ -1,20 +1,22 @@
 
+import os
 import numpy as np
 import pandas as pd
-
 from mlforecast import MLForecast
 from mlforecast.lag_transforms import RollingMean, ExpandingMean
 # from sklearn.preprocessing import FunctionTransformer
 # from mlforecast.target_transforms import GlobalSklearnTransformer
 # from mlforecast.target_transforms import LocalStandardScaler, LocalMinMaxScaler, Differences
-
 from sklearn.linear_model import LinearRegression, Lasso, Ridge
 from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
-
 from src.Python.utils.custom_feats import *
+
+import logging
+module_logger = logging.getLogger('set_engine')
+
 
 def get_frequency(frequency):
     """Function to get the frequency of the dataset.
@@ -26,7 +28,7 @@ def get_frequency(frequency):
         str: frequency.
     """
 
-    print('Defining frequency...')
+    module_logger.info('Defining frequency...')
 
     if frequency == 'hourly':
         freq = 'H'
@@ -55,7 +57,7 @@ def get_target_transforms(model_name):
         list: target transforms.
     """
 
-    print('Defining target trasformations...')
+    module_logger.info('Defining target trasformations...')
 
     # Log1p = FunctionTransformer(func = np.log1p, inverse_func = np.expm1)
     # target_transforms = [GlobalSklearnTransformer(Log1p)],
@@ -104,7 +106,7 @@ def get_lags(dataset_name, frequency):
         list: lags.
     """
 
-    print('Defining lags...')
+    module_logger.info('Defining lags...')
 
     if dataset_name == 'm5':
 
@@ -131,7 +133,7 @@ def get_lag_transforms(dataset_name, frequency):
         dict: lag transforms.
     """
 
-    print('Defining lag trasformations...')
+    module_logger.info('Defining lag trasformations...')
 
     if dataset_name == 'm5':
 
@@ -163,7 +165,7 @@ def get_date_features(dataset_name, frequency):
         list: date features.
     """
 
-    print('Defining date features...')
+    module_logger.info('Defining date features...')
 
     if dataset_name == 'm5':
 
@@ -219,7 +221,7 @@ def set_model(model_name, model_params = None):
         list: model.
     """
 
-    print('Defining the model...')
+    module_logger.info('Defining the model...')
 
     if model_name == 'LinearRegression':
 
@@ -269,7 +271,7 @@ def set_engine(model_name, dataset_name, frequency, model_params = None):
         MLForecast: MLForecast engine.
     """
 
-    print('Setting the engine...')
+    module_logger.info('Setting the engine...')
     model_type = get_model_type(model_name)
     model = set_model(model_name)
     freq = get_frequency(frequency)
@@ -287,7 +289,7 @@ def set_engine(model_name, dataset_name, frequency, model_params = None):
         engine = MLForecast(
             models = model,
             freq = freq, 
-            num_threads = 12, # FIXME: detect cores
+            num_threads = os.cpu_count(),
             target_transforms = target_transforms,
             lags = lags,
             lag_transforms = lag_transforms,
@@ -302,10 +304,4 @@ def set_engine(model_name, dataset_name, frequency, model_params = None):
         raise ValueError(f'Invalid model: {model_name}')
 
     return engine
-    
-
-
-
-
-        
 
