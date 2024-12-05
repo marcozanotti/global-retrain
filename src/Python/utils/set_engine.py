@@ -1,7 +1,5 @@
 
 import os
-import numpy as np
-import pandas as pd
 from mlforecast import MLForecast
 from mlforecast.lag_transforms import RollingMean, ExpandingMean
 # from sklearn.preprocessing import FunctionTransformer
@@ -31,17 +29,17 @@ def get_frequency(frequency):
     module_logger.info('Defining frequency...')
 
     if frequency == 'hourly':
-        freq = 'H'
+        freq = ['H', 24]
     elif frequency == 'daily':
-        freq = 'D'
+        freq = ['D', 7]
     elif frequency == 'weekly':
-        freq = 'W'
+        freq = ['W', 52]
     elif frequency == 'monthly':
-        freq = 'M'
+        freq = ['M',12]
     elif frequency == 'quarterly':
-        freq = 'Q'
+        freq = ['Q', 4]
     elif frequency == 'yearly':
-        freq = 'Y'
+        freq = ['Y', 1]
     else:
         raise ValueError(f'Invalid frequency: {frequency}')
 
@@ -210,6 +208,77 @@ def get_model_type(model_name):
 
     return model_type
 
+def get_default_model_params(model_name):
+    """Function to get the default parameters for the models.
+
+    Args:
+        model_name (str): name of the model.
+    
+    Returns:
+        dict: default model parameters.
+    """
+
+    module_logger.info('Defining default model parameters...')
+
+    if model_name == 'LinearRegression':
+
+        model_params = {
+            model_name: {'n_jobs': -1}
+        }
+    
+    elif model_name == 'Lasso':
+
+        model_params = {
+            model_name: {}
+        }
+    
+    elif model_name == 'Ridge':
+
+        model_params = {
+            model_name: {}
+        }
+    
+    elif model_name == 'RandomForestRegressor':
+
+        model_params = {
+            model_name: {
+                'n_estimators': 100,
+                'n_jobs': -1
+            }
+        }
+    
+    elif model_name == 'XGBRegressor':
+
+        model_params = {
+            model_name: {
+                'n_estimators': 100,
+                'n_jobs': -1
+            }
+        }
+    
+    elif model_name == 'LGBMRegressor':
+
+        model_params = {
+            model_name: {
+                'n_estimators': 100,
+                'n_jobs': -1
+            }
+        }
+
+    elif model_name == 'CatBoostRegressor':
+
+        model_params = {
+            model_name: {
+                'n_estimators': 100,
+                'thread_count': -1
+            }
+        }
+    
+    else:
+        raise ValueError(f'Invalid model: {model_name}')
+
+    return model_params
+
 def set_model(model_name, model_params = None):
     """Function to get the models for the dataset.
 
@@ -222,34 +291,37 @@ def set_model(model_name, model_params = None):
     """
 
     module_logger.info('Defining the model...')
+    if model_params is None:
+        model_params = get_default_model_params(model_name)[model_name]
+    module_logger.info(f'Model parameters: {model_params}')
 
     if model_name == 'LinearRegression':
 
-        model = [LinearRegression(n_jobs = -1)]
+        model = [LinearRegression(**model_params)]
     
     elif model_name == 'Lasso':
 
-        model = [Lasso()]
+        model = [Lasso(**model_params)]
     
     elif model_name == 'Ridge':
 
-        model = [Ridge()]
+        model = [Ridge(**model_params)]
 
     elif model_name == 'RandomForestRegressor':
 
-        model = [RandomForestRegressor(n_jobs = -1)]
+        model = [RandomForestRegressor(**model_params)]
     
     elif model_name == 'XGBRegressor':
 
-        model = [XGBRegressor(n_jobs = -1)]
+        model = [XGBRegressor(**model_params)]
     
     elif model_name == 'LGBMRegressor':
 
-        model = [LGBMRegressor(n_jobs = -1)]
+        model = [LGBMRegressor(**model_params)]
     
     elif model_name == 'CatBoostRegressor':
 
-        model = [CatBoostRegressor()]
+        model = [CatBoostRegressor(**model_params)]
 
     else:
         raise ValueError(f'Invalid model: {model_name}')
@@ -273,7 +345,7 @@ def set_engine(model_name, dataset_name, frequency, model_params = None):
 
     module_logger.info('Setting the engine...')
     model_type = get_model_type(model_name)
-    model = set_model(model_name)
+    model = set_model(model_name, model_params)
     freq = get_frequency(frequency)
     target_transforms = get_target_transforms(model_name)
     lags = get_lags(dataset_name, frequency)
@@ -288,7 +360,7 @@ def set_engine(model_name, dataset_name, frequency, model_params = None):
 
         engine = MLForecast(
             models = model,
-            freq = freq, 
+            freq = freq[0], 
             num_threads = os.cpu_count(),
             target_transforms = target_transforms,
             lags = lags,

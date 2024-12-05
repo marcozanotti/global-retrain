@@ -28,6 +28,7 @@ from .set_engine import (
     get_lag_transforms,
     get_date_features,
     get_model_type,
+    get_default_model_params,
     set_model,
     set_engine
 )

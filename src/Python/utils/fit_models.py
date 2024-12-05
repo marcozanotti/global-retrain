@@ -276,17 +276,17 @@ def retrain_ets_model(
     return in_sample_df, params_df, out_sample_df, time_df, tot_time
 
 def retrain_ml_model(
+    train_df, 
+    test_df,
     dataset_name,
     frequency,
     engine, 
     test_window,
     horizon, 
-    retrain_window = 1,
+    retrain_window,
     levels = [50, 60, 70, 80, 90, 95, 99],
     intervals = None, 
     static_features = [],
-    min_series_length = None,
-    samples = None,
     store_in_sample_results = False,
     combine_results = False,
     ext = '.parquet'
@@ -295,23 +295,23 @@ def retrain_ml_model(
     """Function to retrain the ML model and predict with retrained model.
 
     Args:
+        train_df (pd.DataFrame): training data in Nixtla's format.
+        test_df (pd.DataFrame): testing data in Nixtla's format.
         dataset_name (str): name of the dataset (e.g., 'm5', 'm4').
         frequency (str): frequency of the data (e.g., 'daily', 'weekly').
         engine (MLForecast class): ML model engine.
         test_window (int): length of the test window.
         horizon (int): forecasting horizon.
-        retrain_window (int, optional): window for retraining. Defaults to 1.
+        retrain_window (int, optional): window for retraining.
         levels (list): confidence levels for the predictions. Defaults to
         [60, 70, 80, 85, 90, 95, 99].
         intervals (PredictionIntervals, optional): conformal inference method. 
         Defaults to PredictionIntervals(h = horizon, n_windows = 2).
         static_features (list, optional): static features to include in the model.
         Defaults to [].
-        min_series_length (int, optional): minimum length of the series.
-        Defaults to None.
-        samples (int, optional): number of samples to generate. Defaults to None.
         store_in_sample_results (bool, optional): store in-sample results.
         Defaults to False.
+        combine_results (bool, optional): combine results. Defaults to False.
         ext (str, optional): file extension for storing results. Defaults to '.parquet'.
 
     Returns:
@@ -323,20 +323,7 @@ def retrain_ml_model(
 
     # define the model name
     model_name = get_model_name(engine)
-    module_logger.info(f'---- Model: {model_name} ---- Retrain Window: {retrain_window} ----')
-
-    # load the dataset
-    data = get_data(
-        path = 'data/m5/',
-        name_list = [dataset_name, frequency, 'prep'],
-        ext = '.parquet',
-        min_series_length = min_series_length,
-        samples = samples
-    )
-
-    # split the data into train and test dataframes
-    train_df, test_df = split_train_test(data, test_window)
-    del data
+    module_logger.info(f'[ Model: {model_name} | Retrain Window: {retrain_window} ]')
 
     # define the fitting times
     fitting_ids = get_retrain_ids(test_window, horizon, retrain_window)
@@ -512,12 +499,13 @@ def retrain_ml_model(
     return
 
 def retrain_model(
-    model_names,
-    retrain_scenarios,
     dataset_name,
     frequency,
     test_window,
-    horizon, 
+    horizon,
+    retrain_scenarios,
+    model_names,
+    model_params = None, 
     levels = [50, 60, 70, 80, 90, 95, 99],
     intervals = None, 
     static_features = [],
@@ -532,13 +520,13 @@ def retrain_model(
     for different retraining scenarios.
 
     Args:
-        model_names (list): names of the ML models to be used.
-        retrain_scenarios (list): scenarios for retraining.
         dataset_name (str): name of the dataset (e.g., 'm5', 'm4').
         frequency (str): frequency of the data (e.g., 'daily', 'weekly').
-        engine (MLForecast class): ML model engine.
         test_window (int): length of the test window.
         horizon (int): forecasting horizon.
+        retrain_scenarios (list): scenarios for retraining.
+        model_names (list): names of the ML models to be used.
+        model_params (dict, optional): parameters for the models. Defaults to None.
         levels (list): confidence levels for the predictions. Defaults to
         [60, 70, 80, 85, 90, 95, 99].
         intervals (PredictionIntervals, optional): conformal inference method. 
@@ -550,27 +538,45 @@ def retrain_model(
         samples (int, optional): number of samples to generate. Defaults to None.
         store_in_sample_results (bool, optional): store in-sample results.
         Defaults to False.
+        combine_results (bool, optional): combine results. Defaults to False.
         ext (str, optional): file extension for storing results. Defaults to '.parquet'.
 
     Returns:
         pd.DataFrame: predictions made by the retrained models.
     """
 
+    module_logger.info('===============================================================')
+    # load the dataset
+    data = get_data(
+        path = 'data/m5/',
+        name_list = [dataset_name, frequency, 'prep'],
+        ext = '.parquet',
+        min_series_length = min_series_length,
+        samples = samples
+    )
+    # split the data into train and test dataframes
+    train_df, test_df = split_train_test(data, test_window)
+    del data
+
     for m in model_names:
 
-        module_logger.info('===============================================================')
         module_logger.info('---------------------------- START ----------------------------')
         
         model_type = get_model_type(m)
-        module_logger.info(f'---- Model type: {model_type}, Model name: {m} ----')
+        module_logger.info(f'[ Model type: {model_type} | Model name: {m} ]')
         
-        engine_tmp = set_engine(m, dataset_name, frequency)
+        if model_params is None:
+            engine_tmp = set_engine(m, dataset_name, frequency, model_params)
+        else:
+            engine_tmp = set_engine(m, dataset_name, frequency, model_params[m])
 
         for scenario in retrain_scenarios:
 
             if model_type == 'ml':
 
                 retrain_ml_model(
+                    train_df = train_df, 
+                    test_df = test_df,
                     dataset_name = dataset_name,
                     frequency = frequency,
                     engine = engine_tmp,
@@ -580,8 +586,6 @@ def retrain_model(
                     levels = levels,
                     intervals = intervals,
                     static_features = static_features,
-                    min_series_length = min_series_length,
-                    samples = samples,
                     store_in_sample_results = store_in_sample_results,
                     combine_results = combine_results,
                     ext = ext
@@ -591,6 +595,7 @@ def retrain_model(
                 raise ValueError('Not yet implemented.')
         
         module_logger.info('----------------------------- END -----------------------------')
-        module_logger.info('===============================================================')
+    
+    module_logger.info('===============================================================')
 
     return
