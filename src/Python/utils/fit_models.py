@@ -3,8 +3,8 @@ import gc
 import time
 import numpy as np
 import pandas as pd
-import pyarrow.parquet as pq
 from statsforecast import StatsForecast
+from mlforecast.utils import PredictionIntervals
 from src.Python.utils.collect_data import *
 from src.Python.utils.set_engine import *
 
@@ -285,7 +285,6 @@ def retrain_ml_model(
     horizon, 
     retrain_window,
     levels = [50, 60, 70, 80, 90, 95, 99],
-    intervals = None, 
     static_features = [],
     store_in_sample_results = False,
     combine_results = False,
@@ -305,8 +304,6 @@ def retrain_ml_model(
         retrain_window (int, optional): window for retraining.
         levels (list): confidence levels for the predictions. Defaults to
         [60, 70, 80, 85, 90, 95, 99].
-        intervals (PredictionIntervals, optional): conformal inference method. 
-        Defaults to PredictionIntervals(h = horizon, n_windows = 2).
         static_features (list, optional): static features to include in the model.
         Defaults to [].
         store_in_sample_results (bool, optional): store in-sample results.
@@ -329,7 +326,14 @@ def retrain_ml_model(
     fitting_ids = get_retrain_ids(test_window, horizon, retrain_window)
     n_fitting = len(fitting_ids) # int(np.round(test_window / retrain_window, 0))
     n_loops = test_window - horizon + 1
-    
+    module_logger.info(
+        f'[ Retrain ids: {fitting_ids} ] | Num fitting: {n_fitting} | Num iterations: {n_loops} ]'
+    )
+
+    # define the prediction intervals
+    if levels is not None:
+        intervals = PredictionIntervals(h = horizon, n_windows = 4, method = 'conformal_error')
+
     # initialize the time dataframe (the only auto-incremental df with save at the end)
     time_df = pd.DataFrame()
 
@@ -354,7 +358,7 @@ def retrain_ml_model(
             module_logger.info(f'Fitting: t = {i}, {int(i / retrain_window + 1)} of {n_fitting}...')
             start_fit_time = time.time()
 
-            if intervals == None:
+            if levels == None:
                 fit_tmp = engine.fit(
                     df = train_df_tmp, 
                     static_features = static_features,
@@ -507,7 +511,6 @@ def retrain_model(
     model_names,
     model_params = None, 
     levels = [50, 60, 70, 80, 90, 95, 99],
-    intervals = None, 
     static_features = [],
     min_series_length = None,
     samples = None,
@@ -529,8 +532,6 @@ def retrain_model(
         model_params (dict, optional): parameters for the models. Defaults to None.
         levels (list): confidence levels for the predictions. Defaults to
         [60, 70, 80, 85, 90, 95, 99].
-        intervals (PredictionIntervals, optional): conformal inference method. 
-        Defaults to PredictionIntervals(h = horizon, n_windows = 2).
         static_features (list, optional): static features to include in the model.
         Defaults to [].
         min_series_length (int, optional): minimum length of the series.
@@ -584,7 +585,6 @@ def retrain_model(
                     horizon = horizon,
                     retrain_window = scenario,
                     levels = levels,
-                    intervals = intervals,
                     static_features = static_features,
                     store_in_sample_results = store_in_sample_results,
                     combine_results = combine_results,

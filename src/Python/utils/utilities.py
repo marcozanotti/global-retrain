@@ -1,49 +1,51 @@
 
+import yaml
 import logging
 import logging.config
+from time import gmtime, strftime
+from src.Python.utils.collect_data import create_file_name
 
+def get_config(config_file):
+    """Function to load configuration from a YAML file.
 
-def configure_logging(log_file):
+    Args:
+        config_file (str): Path to the YAML configuration file.
+
+    Returns:
+        dict: Configuration as a dictionary.
+    """
+
+    with open(config_file, 'rt') as f:
+        config = yaml.safe_load(f.read())
+
+    return config
+
+def configure_logging(config_file, name_list):
 
     """Function to configure logging.
 
     Args:
-        log_file (str): Name of the log file.
+        config (dict): Logging configuration in YAML format.
+        log_file_name (str): Name of the log file.
     """
 
-    grey = '\x1b[38;20m'
+    # grey = '\x1b[38;20m'
     yellow = '\x1b[33;20m'
-    red = '\x1b[31;20m'
-    bold_red = '\x1b[31;1m'
+    # red = '\x1b[31;20m'
+    # bold_red = '\x1b[31;1m'
     reset = '\x1b[0m'
 
-    logging.config.dictConfig({ # Centralized logging configuration using dictConfig
-        'version': 1, # Configuration schema version
-        'disable_existing_loggers': False, # Ensure existing loggers are not disabled
-        'handlers': { # Handlers define where and how logs are output
-            'file': {
-                'class': 'logging.FileHandler',  
-                'filename': 'logs/' + log_file,          
-                'formatter': 'simple'           
-            },
-            'console': {
-                'class': 'logging.StreamHandler',  
-                'formatter':'colored'  
-            }
-        },
-        'formatters': { # Formatters define the structure of the log messages
-            'simple': {
-                'format': '%(asctime)s : %(name)s : %(levelname)s : %(message)s'
-            },
-            'colored': {
-                'format': yellow + '%(asctime)s : %(name)s : %(levelname)s : %(message)s' + reset
-            }
-        },
-        'root': { # The root logger configuration
-            'level': 'INFO',
-            'handlers': ['file', 'console']
-        }
-    })
+    time_suffix = strftime("%Y%m%d_%H%M%S", gmtime())
+    log_file = create_file_name(
+        name_list = name_list + [time_suffix], 
+        ext = '.log'
+    )
+    cfg = get_config(config_file)
+    cfg['handlers']['file']['filename'] = 'logs/' + log_file   
+    f = cfg['formatters']['colored']['format']
+    cfg['formatters']['colored']['format'] = yellow + f + reset
+    
+    logging.config.dictConfig(cfg)
 
     return
 

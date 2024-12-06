@@ -1,6 +1,6 @@
 
 import pandas as pd
-from src.Python.utils import *
+from src.Python.utils.collect_data import *
 
 pd.set_option("display.max_rows", 4)
 

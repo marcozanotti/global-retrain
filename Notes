@@ -1,5 +1,7 @@
 TODO:
 
+- impostare evaluation
+
 - usare chatgpt per parametri modelli
 
 - testare DL (MLP, KAN, LSTM, TCN, NBEATS, NHITS, DeepAR)

@@ -47,6 +47,7 @@ from .evaluate_forecasts import (
 )
 
 from .utilities import (
+    get_config,
     configure_logging,
     create_logger,
     stop_logger
