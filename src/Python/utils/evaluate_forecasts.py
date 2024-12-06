@@ -1,4 +1,5 @@
 
+import gc
 import numpy as np
 import pandas as pd
 import pandas_flavor as pf
@@ -8,7 +9,6 @@ from src.Python.utils.collect_data import *
 
 import logging
 module_logger = logging.getLogger('evaluate_forecasts')
-
 
 @pf.register_dataframe_method
 def evaluate_point_forecasts(
@@ -20,19 +20,17 @@ def evaluate_point_forecasts(
     """Function to evaluate the point forecast.
     
     Args:
-        forecasts_df (pd.DataFrame): dataframe with columns 'unique_id', 'ds', 'y', 'fcst'.
+        out_sample_df (pd.DataFrame): dataframe with columns 'unique_id', 'ds', 'y', 'fcst'.
         metrics (list): list of evaluation metrics.
         train_df (pd.DataFrame, optional): training data in the Nixtla's format. 
         Defaults to None.
-        id_col (str, optional): column name for unique_id. Defaults to 'unique_id'.
 
     Returns:
         pd.DataFrame: dataframe with evaluation results for each metric.
     """
 
     module_logger.info('Evaluating point forecasts...')
-    fcst_df = out_sample_df.copy()
-    samples = list(fcst_df['sample'].unique())
+    samples = list(out_sample_df['sample'].unique())
     n_samples = len(samples)
 
     eval_df = pd.DataFrame()
@@ -40,15 +38,14 @@ def evaluate_point_forecasts(
     for s in samples:
 
         # module_logger.info(f'Samlple {s} of {n_samples}...')
-        fcst_df_tmp = fcst_df[fcst_df['sample'] == s]
         eval_df_tmp = evaluate(
-            fcst_df_tmp, 
+            out_sample_df[out_sample_df['sample'] == s], 
             metrics = metrics,
             models = ['fcst'],
             train_df = train_df,
             id_col = 'unique_id'        
         ) \
-            .pivot(index = 'unique_id', columns ='metric', values = 'fcst') \
+            .pivot(index = 'unique_id', columns = 'metric', values = 'fcst') \
             .reset_index()
         eval_df_tmp['sample'] = s
         eval_df = pd.concat([eval_df, eval_df_tmp], axis = 0)
@@ -61,6 +58,7 @@ def evaluate_point_forecasts(
     return eval_df
 
 def evaluate_model(
+    config,
     model_name, 
     analysis_type,
     dataset_name, 
@@ -76,59 +74,90 @@ def evaluate_model(
     """Function to evaluate a specific model.
 
     Args:
-        model_name (string): name of the model.
-        dataset_name (string): name of the dataset (e.g., 'm5', 'm4').
-        frequency (string): frequency of the data (e.g., 'daily', 'weekly').
-        metrics (list): list of evaluation metrics.
-        train_df (pd.DataFrame, optional): training data in the Nixtla's format. 
-        Defaults to None.
-        group_columns (list, optional): list of columns to group by. Defaults to None.
-        drop_columns (list, optional): list of columns to drop. Defaults to None.
-        aggregate_function (callable, optional): function to use for aggregation.
-        ext (str, optional): extension of the data files. Defaults to '.parquet'.
-    
+        config (dict): configuration dictionary.
+
     Returns:
         pd.DataFrame: dataframe with evaluation results for each metric.
     """
 
-    module_logger.info(f'Evaluating {model_name} model on {dataset_name} dataset...')
+    module_logger.info('===============================================================')
 
-    file_names = get_file_name(
-        path = f'results/{dataset_name}/', 
-        name_list = [model_name, frequency, analysis_type, ext],
-        ext = ext
+    seed = config['seed']
+    dataset_name = config['dataset_name']
+    frequency = config['frequency']
+    retrain_scenarios = config['retrain_scenarios']
+    model_names = config['model_names']
+    metrics = config['metrics']
+    min_series_length = config['min_series_length']
+    samples = config['samples']
+    ext = config['ext']
+
+    # load the dataset
+    if samples is not None:
+        np.random.seed(seed)
+    data = get_data(
+        path_list = ['data', dataset_name],
+        name_list = [dataset_name, frequency, 'prep'],
+        ext = '.parquet',
+        min_series_length = min_series_length,
+        samples = samples
     )
 
-    if analysis_type == 'outsample':
-        module_logger.info(f'Evaluating outsample results...')
-    elif analysis_type == 'time':
-        module_logger.info(f'Evaluating time results...')
-    else:
-        raise ValueError(f'Invalid analysis type {analysis_type}.')
+    # FIXME: set_metrics
+
+    for m in model_names:
+
+        module_logger.info('---------------------------- START ----------------------------')
         
-    res_df = pd.DataFrame()
-    for f in file_names:
-        df_tmp = load_data(
-            path = f'results/{dataset_name}/',
-            name_list = [f],
-            ext = ext
-        )
-        if analysis_type == 'outsample':
-            df_tmp = evaluate_point_forecasts(
-                df_tmp,
-                metrics = metrics,
-                train_df = train_df
-            )
+        model_type = get_model_type(m)
+        module_logger.info(f'[ Model type: {model_type} | Model name: {m} ]')
 
-        if group_columns is not None:
-            df_tmp = aggregate_data(
-                df_tmp, 
-                group_columns, 
-                drop_columns,
-                aggregate_function
-            )
-
-        res_df = pd.concat([res_df, df_tmp], axis = 0)
+        for rs in retrain_scenarios:
             
-    return res_df
+            rs = 7
+
+            module_logger.info('Evaluating outsample results...')
+            eval_df = pd.DataFrame() # nrow(eval_df) = 30.000 * 365 = 11.000.000
+            i = 0
+            file_names_tmp = get_file_name(
+                path_list = ['results', dataset_name, m, rs, 'outsample', 'tmp'], 
+                name_list = None,
+                ext = ext
+            )
+            for f in file_names_tmp:
+                eval_df_tmp = load_data(
+                    path_list = ['results', dataset_name, m, rs, 'outsample', 'tmp'],
+                    name_list = [f],
+                    ext = ext
+                ) \
+                    .evaluate_point_forecasts(metrics = metrics, train_df = data)
+                eval_df = pd.concat([eval_df, eval_df_tmp], axis = 0)
+                del eval_df_tmp
+                i += 1
+                if (i % 10) == 0:
+                    gc.collect()
+
+            # nrow(eval_df_agg_by_id) = 30.000
+            eval_df_agg_by_id = eval_df \
+                    .aggregate_data(
+                        group_columns = ['method', 'test_window', 'horizon', 'retrain_window', 'unique_id'],
+                        drop_columns = ['sample'],
+                        aggregate_function = np.mean
+                    )
+
+            # nrow(eval_df_agg_rs) = 1
+            eval_df_agg_rs = eval_df_agg_by_id \
+                .aggregate_data(
+                    group_columns = ['method', 'test_window', 'horizon', 'retrain_window'],
+                    drop_columns = ['unique_id'],
+                    aggregate_function = np.mean
+                )
+
+        
+        module_logger.info('----------------------------- END -----------------------------')
+
+    module_logger.info('===============================================================')
+
+    return
+
 
