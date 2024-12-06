@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pandas_flavor as pf
 import pyarrow.parquet as pq
+# from src.Python.utils.fit_models import get_retrain_ids
 
 import logging
 module_logger = logging.getLogger('collect_data')
@@ -12,6 +13,23 @@ module_logger = logging.getLogger('collect_data')
 # from datasetsforecast.m4 import M4
 # M3.download('data')
 # M4.download('data') 
+
+def create_file_path(path_list):
+    """Function to create a file path from a list of directories.
+
+    Args:
+        path_list (list): List of directories to be joined.
+    
+    Returns:
+        string: The file path.
+    """
+
+    if len(path_list) == 1:
+        path = path_list[0]
+    else:
+        path = '/'.join(str(x) for x in path_list) + '/'
+
+    return path
 
 def create_file_name(name_list, ext = None):
 
@@ -34,43 +52,47 @@ def create_file_name(name_list, ext = None):
 
     return file_name
 
-def get_file_name(path, name_list, ext = '.parquet', remove_ext = True):
+def get_file_name(path_list, name_list = None, ext = '.parquet', remove_ext = True):
 
     """Function to get file names from a given path.
 
     Args:
-        path (string): Path to the directory containing the data files.
-        name_list (list): List of names to be used to filter the files.
+        path_list (list): List of directories to be joined.
+        name_list (list): List of names to be used to filter the files. Defaults to None.
         ext (str, optional): Extension of the files. Defaults to '.parquet'.
-        remove_ext (bool, optional): Whether to remove the extension from the file names. Defaults to True.
+        remove_ext (bool, optional): Whether to remove the extension from the file names. 
+        Defaults to True.
     
     Returns:
         list: List of file names.
     """
 
+    path = create_file_path(path_list)
     file_names = os.listdir(path)
-    for n in name_list:
-        file_names = list(filter(lambda x: n in x, file_names))
+    if name_list is not None:
+        for n in name_list:
+            file_names = list(filter(lambda x: str(n) in x, file_names))
     if remove_ext:
         file_names = [s.replace(ext, "") for s in file_names]
 
     return file_names
 
-def combine_and_save_files(path_to_read, path_to_write, name_list, ext = '.parquet'):
+def combine_and_save_files(path_list_to_read, path_list_to_write, name_list, ext = '.parquet'):
 
     """Function to combine and save multiple files into a single file.
 
     Args:
-        path_to_read (string): Path to the directory containing the data files.
-        path_to_write (string): Path to the directory where to save the combined file.
+        path_list_to_read (list): List of directories to be joined for reading.
+        path_list_to_write (list): List of directories to be joined for writing.
         name_list (list): List of names to be used to filter the files.
         ext (str, optional): Extension of the files. Defaults to '.parquet'.
     """
 
     module_logger.info('Combining and saving files...')
-
+    path_to_read = create_file_path(path_list_to_read)
+    path_to_write = create_file_path(path_list_to_write)
     files = get_file_name(
-        path = path_to_read, name_list = name_list,
+        path_list = [path_to_read], name_list = name_list,
         ext = ext, remove_ext = False
     )
     write_file_name = create_file_name(name_list = name_list, ext = ext) 
@@ -86,37 +108,40 @@ def combine_and_save_files(path_to_read, path_to_write, name_list, ext = '.parqu
 
     return
 
-def remove_file(path, name_list, ext = '.parquet'):
+def remove_file(path_list, name_list, ext = '.parquet'):
 
     """Function to remove files from a given path.
 
     Args:
-        path (string): Path to the directory containing the data files.
+        path_list (list): List of directories to be joined.
+        name_list (list): List of names to be used to filter the files.
         ext (str, optional): Extension of the files. Defaults to '.parquet'.
     """
 
     module_logger.info('Removing files...')
+    path_to_remove = create_file_path(path_list)
     files = get_file_name(
-        path = path, name_list = name_list,
+        path_list = [path_to_remove], name_list = name_list,
         ext = ext, remove_ext = False
     )
     for f in files:
-        os.remove(f'{path}{f}')
+        os.remove(f'{path_to_remove}{f}')
 
     return
 
 @pf.register_dataframe_method
-def save_data(data, path, name_list, ext = '.parquet'):
+def save_data(data, path_list, name_list, ext = '.parquet'):
 
     """Function to save dataframes.
 
     Args:
         data (pd.DataFrame): Data to be saved.
-        path (string): Path to the directory where to save the data.
+        path_list (list): List of directories to be joined.
         name_list (list): List of names to be used to create the file name.
         ext (string, optional): File extension (default is '.parquet').
     """
-
+    
+    path = create_file_path(path_list)
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -130,12 +155,12 @@ def save_data(data, path, name_list, ext = '.parquet'):
     else:
         raise(f'Unsupported file extension {ext}. Only .parquet and .csv are allowed')
 
-def load_data(path, name_list, ext = '.parquet'):
+def load_data(path_list, name_list, ext = '.parquet'):
 
     """Function to load the data.
 
     Args:
-        path (string): Path to the directory where to save the data.
+        path_list (list): List of directories to be joined.
         name_list (list): List of names to be used to create the file name.
         ext (string, optional): File extension (default is '.parquet').
 
@@ -143,6 +168,7 @@ def load_data(path, name_list, ext = '.parquet'):
         pd.Dataframe: The data.
     """
 
+    path = create_file_path(path_list)
     file_name = create_file_name(name_list)
     module_logger.info(f'Loading {file_name} dataset...')
 
@@ -310,12 +336,12 @@ def sampling_data(data, samples = 1000):
 
     return res_df
 
-def get_xregs_data(path, name_list, dataset_name, ext = '.parquet'):
+def get_xregs_data(path_list, name_list, dataset_name, ext = '.parquet'):
 
     """Function to get external regressors (xregs) for the specified dataset.
 
     Args:
-        path (string): Path to the external regressors directory.
+        path_list (list): List of directories to be joined.
         name_list (list): List of file names for external regressors.
         dataset_name (string): Name of the dataset (e.g., 'm5', 'm4').
         ext (string, optional): Extension of the external regressors files. Defaults to '.parquet'.
@@ -330,7 +356,7 @@ def get_xregs_data(path, name_list, dataset_name, ext = '.parquet'):
 
         ext = '.csv'
         xreg_df = load_data(
-            path = path, 
+            path_list = path_list, 
             name_list = name_list, 
             ext = ext
         )
@@ -400,12 +426,12 @@ def prepare_data(dataset_name, frequency, static_features = True, xregs = True, 
 
     return res_df
 
-def get_data(path, name_list, ext = '.parquet', min_series_length = None, samples = None):
+def get_data(path_list, name_list, ext = '.parquet', min_series_length = None, samples = None):
 
     """Function to get the data.
 
     Args:
-        path (string): Path to the directory where to save the data.
+        path_list (list): List of directories to be joined.
         name_list (list): List of names to be used to create the file name.
         ext (string, optional): File extension (default is '.parquet').
         min_series_length (int, optional): Minimum length of series to be included. 
@@ -416,7 +442,7 @@ def get_data(path, name_list, ext = '.parquet', min_series_length = None, sample
         pd.Dataframe: The data.
     """
 
-    res_df = load_data(path, name_list, ext)
+    res_df = load_data(path_list, name_list, ext)
 
     if min_series_length is not None:
         res_df = remove_series(res_df, min_series_length)
@@ -441,11 +467,11 @@ def aggregate_data(data, group_columns, drop_columns = None, aggregate_function 
         pd.DataFrame: dataframe with aggregated data.
     """
 
-    data_agg = data.copy()
+    # data_agg = data.copy()
 
     module_logger.info('Aggregating data...')
     if drop_columns is not None:
-        data_agg = data_agg.drop(columns = drop_columns)
+        data_agg.drop(columns = drop_columns, inplace = True)
 
     data_agg = data_agg \
         .groupby(group_columns) \

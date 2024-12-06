@@ -287,7 +287,6 @@ def retrain_ml_model(
     levels = [50, 60, 70, 80, 90, 95, 99],
     static_features = [],
     store_in_sample_results = False,
-    combine_results = False,
     ext = '.parquet'
 ):
 
@@ -308,7 +307,6 @@ def retrain_ml_model(
         Defaults to [].
         store_in_sample_results (bool, optional): store in-sample results.
         Defaults to False.
-        combine_results (bool, optional): combine results. Defaults to False.
         ext (str, optional): file extension for storing results. Defaults to '.parquet'.
 
     Returns:
@@ -398,11 +396,9 @@ def retrain_ml_model(
                 in_sample_df_tmp.reset_index(drop = True, inplace = True)
                 # save to file
                 save_data(
-                    out_sample_df_tmp, 
-                    path = f'results/{dataset_name}/{model_name}/{retrain_window}/fit/tmp/',
-                    name_list = [
-                        dataset_name, frequency, 'insample', model_name, str(retrain_window), i
-                    ],
+                    in_sample_df_tmp, 
+                    path_list = ['results', dataset_name, model_name, retrain_window, 'insample', 'tmp'],
+                    name_list = [dataset_name, frequency, model_name, retrain_window, 'insample', i],
                     ext = ext
                 )
                 del in_sample_df_tmp
@@ -436,10 +432,8 @@ def retrain_ml_model(
         # save to file
         save_data(
             out_sample_df_tmp, 
-            path = f'results/{dataset_name}/{model_name}/{retrain_window}/preds/tmp/',
-            name_list = [
-                dataset_name, frequency, 'outsample', model_name, str(retrain_window), i
-            ],
+            path_list = ['results', dataset_name, model_name, retrain_window, 'outsample', 'tmp'],
+            name_list = [dataset_name, frequency, model_name, retrain_window, 'outsample', i],
             ext = ext
         ) 
         
@@ -456,30 +450,6 @@ def retrain_ml_model(
         if (i % 10) == 0:
             gc.collect() # call gc once every 10 iterations to avoid overhead
 
-    
-    if combine_results:
-
-        if store_in_sample_results:
-            # combine and save the insample tmp files
-            combine_and_save_files(
-                path_to_read = f'results/{dataset_name}/{model_name}/{retrain_window}/fit/tmp/',
-                path_to_write = f'results/{dataset_name}/{model_name}/{retrain_window}/fit/',
-                name_list = [
-                    dataset_name, frequency, 'insample', model_name, str(retrain_window)
-                ],
-                ext = ext
-            )
-    
-        # combine and save the outsample tmp files
-        combine_and_save_files(
-            path_to_read = f'results/{dataset_name}/{model_name}/{retrain_window}/preds/tmp/',
-            path_to_write = f'results/{dataset_name}/{model_name}/{retrain_window}/preds/',
-            name_list = [
-                dataset_name, frequency, 'outsample', model_name, str(retrain_window)
-            ],
-            ext = ext
-        )
-
     # add additional columns to the dataframes for tracking parameters
     time_df['method'] = model_name
     time_df['test_window'] = test_window
@@ -489,10 +459,8 @@ def retrain_ml_model(
     # save to file
     save_data(
         time_df, 
-        path = f'results/{dataset_name}/{model_name}/{retrain_window}/time/',
-        name_list = [
-            dataset_name, frequency, 'time', model_name, str(retrain_window)
-        ],
+        path_list = ['results', dataset_name, model_name, retrain_window, 'time'],
+        name_list = [dataset_name, frequency, 'time', model_name, retrain_window],
         ext = ext
     )
 
@@ -502,54 +470,40 @@ def retrain_ml_model(
 
     return
 
-def retrain_model(
-    dataset_name,
-    frequency,
-    test_window,
-    horizon,
-    retrain_scenarios,
-    model_names,
-    model_params = None, 
-    levels = [50, 60, 70, 80, 90, 95, 99],
-    static_features = [],
-    min_series_length = None,
-    samples = None,
-    store_in_sample_results = False,
-    combine_results = False,
-    ext = '.parquet'
-):
+def retrain_model(config):
 
     """Function to retrain the models and predict with retrained models
     for different retraining scenarios.
 
     Args:
-        dataset_name (str): name of the dataset (e.g., 'm5', 'm4').
-        frequency (str): frequency of the data (e.g., 'daily', 'weekly').
-        test_window (int): length of the test window.
-        horizon (int): forecasting horizon.
-        retrain_scenarios (list): scenarios for retraining.
-        model_names (list): names of the ML models to be used.
-        model_params (dict, optional): parameters for the models. Defaults to None.
-        levels (list): confidence levels for the predictions. Defaults to
-        [60, 70, 80, 85, 90, 95, 99].
-        static_features (list, optional): static features to include in the model.
-        Defaults to [].
-        min_series_length (int, optional): minimum length of the series.
-        Defaults to None.
-        samples (int, optional): number of samples to generate. Defaults to None.
-        store_in_sample_results (bool, optional): store in-sample results.
-        Defaults to False.
-        combine_results (bool, optional): combine results. Defaults to False.
-        ext (str, optional): file extension for storing results. Defaults to '.parquet'.
+        config (dict): Configuration parameters.
 
     Returns:
         pd.DataFrame: predictions made by the retrained models.
     """
 
     module_logger.info('===============================================================')
+
+    seed = config['seed']
+    dataset_name = config['dataset_name']
+    frequency = config['frequency']
+    test_window = config['test_window']
+    horizon = config['horizon']
+    retrain_scenarios = config['retrain_scenarios']
+    model_names = config['model_names']
+    model_params = config['model_params']
+    levels = config['levels']
+    static_features = config['static_features']
+    min_series_length = config['min_series_length']
+    samples = config['samples']
+    store_in_sample_results = config['store_in_sample_results']
+    ext = config['ext']
+
     # load the dataset
+    if samples is not None:
+        np.random.seed(seed)
     data = get_data(
-        path = 'data/m5/',
+        path_list = ['data', dataset_name],
         name_list = [dataset_name, frequency, 'prep'],
         ext = '.parquet',
         min_series_length = min_series_length,
@@ -571,7 +525,7 @@ def retrain_model(
         else:
             engine_tmp = set_engine(m, dataset_name, frequency, model_params[m])
 
-        for scenario in retrain_scenarios:
+        for rs in retrain_scenarios:
 
             if model_type == 'ml':
 
@@ -583,11 +537,10 @@ def retrain_model(
                     engine = engine_tmp,
                     test_window = test_window,
                     horizon = horizon,
-                    retrain_window = scenario,
+                    retrain_window = rs,
                     levels = levels,
                     static_features = static_features,
                     store_in_sample_results = store_in_sample_results,
-                    combine_results = combine_results,
                     ext = ext
                 )
             
