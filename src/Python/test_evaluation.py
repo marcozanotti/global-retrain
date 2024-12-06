@@ -1,25 +1,11 @@
 
 import os
-import numpy as np
-import pandas as pd
+from src.Python.utils.evaluate_forecasts import evaluate_model
+from src.Python.utils.utilities import *
+
 
 from functools import partial
 from utilsforecast.losses import bias, mae, mse, rmse, mase, msse, rmsse
-
-from src.Python.utils import *
-
-pd.set_option("display.max_rows", 4)
-os.environ['NIXTLA_ID_AS_COL'] = '1'
-
-
-# Parameters --------------------------------------------------------------
-
-# parameters for file management
-dataset_name = 'm5'
-frequency = 'daily'
-model_name = 'LinearRegression'
-retrain_window = 7
-min_series_length = 365 * 1
 metrics = [
     bias, 
     mae, mse, rmse, 
@@ -29,12 +15,33 @@ metrics = [
 ]
 
 
+os.environ['NIXTLA_ID_AS_COL'] = '1'
+cfg = get_config('config/eval_config.yaml')
+configure_logging(
+    config_file = 'config/log_config.yaml', 
+    name_list = [cfg['dataset_name'], cfg['frequency'], 'eval']
+)
+logger = create_logger()
+
+evaluate_model(config = cfg)
+
+stop_logger(logger)
+
+
+
+
+
+
+
+
+
+
 # Load data ---------------------------------------------------------------
 
 # a sample of 100 time series
 np.random.seed(1992)
 data = get_data(
-    path = 'data/m5/',
+    path_list = ['data', dataset_name],
     name_list = [dataset_name, frequency, 'prep'],
     ext = '.parquet',
     min_series_length = min_series_length,
@@ -42,13 +49,22 @@ data = get_data(
 )
 
 out_sample_df = load_data(
-    'results/m5/', 
-    name_list = [dataset_name, frequency, 'outsample', model_name, retrain_window]
+    path_list = ['results', dataset_name, model_name, retrain_window, 'preds', 'tmp'],
+    name_list = [dataset_name, frequency, 'outsample', model_name, retrain_window, 0]
 )
 
 time_df = load_data(
-    'results/m5/', 
+    path_list = ['results', dataset_name, model_name, retrain_window, 'time'], 
     name_list = [dataset_name, frequency, 'time', model_name, retrain_window]
+)
+
+# Combine results ---------------------------------------------------------
+
+combine_and_save_files(
+    path_list_to_read = ['results', dataset_name, model_name, retrain_window, 'preds', 'tmp'],
+    path_list_to_write = ['results', dataset_name, model_name, retrain_window, 'preds'],
+    name_list = [dataset_name, frequency, 'outsample', model_name, retrain_window],
+    ext = '.parquet'
 )
 
 
@@ -111,9 +127,6 @@ time_df_agg = evaluate_model(
     drop_columns = ['sample'],
     aggregate_function = np.sum
 )
-
-
-
 
 
 # Plotting ----------------------------------------------------------------

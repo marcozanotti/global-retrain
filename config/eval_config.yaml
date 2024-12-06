@@ -1,0 +1,15 @@
+
+seed: 1992
+dataset_name: 'm5'
+frequency: 'daily'
+retrain_scenarios: [7, 14, 30, 60] # retrain_scenarios = [7, 14, 21, 30, 60, 90, 120, 150, 180, 364]
+model_names: ['LinearRegression', 'Lasso', 'LGBMRegressor']
+# model_names = [
+#     'LinearRegression', 'Lasso', 'Ridge', 
+#     'RandomForestRegressor', 
+#     'XGBRegressor', 'LGBMRegressor', 'CatBoostRegressor'
+# ]
+metrics: ['bias', 'mae', 'mse', 'rmse', 'mase', 'msse', 'rmsse']
+min_series_length: 730
+samples: 100
+ext: '.parquet'

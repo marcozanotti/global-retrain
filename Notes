@@ -1,6 +1,12 @@
 TODO:
 
 - impostare evaluation
+- testare aggregate_data per rimozione .copy()
+- FIXME: set_metrics
+- FIXME: add non overlapping evaluation
+- FIXME: combine_and_save
+
+- TODO: create ensemble
 
 - usare chatgpt per parametri modelli
 
