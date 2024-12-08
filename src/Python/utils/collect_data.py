@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import pandas_flavor as pf
 import pyarrow.parquet as pq
-# from src.Python.utils.fit_models import get_retrain_ids
 
 import logging
 module_logger = logging.getLogger('collect_data')
@@ -451,40 +450,3 @@ def get_data(path_list, name_list, ext = '.parquet', min_series_length = None, s
         res_df = sampling_data(res_df, samples)        
 
     return res_df
-
-@pf.register_dataframe_method
-def aggregate_data(data, group_columns, drop_columns = None, aggregate_function = np.mean):
-
-    """Function to aggregate evaluation metrics.
-
-    Args:
-        data (pd.DataFrame): dataframe to aggregate.
-        group_columns (list): list of columns to group by.
-        aggregate_function (str, optional): function to use to aggregate. 
-        Defaults to 'mean'.
-    
-    Returns:
-        pd.DataFrame: dataframe with aggregated data.
-    """
-
-    # data_agg = data.copy()
-
-    module_logger.info('Aggregating data...')
-    if drop_columns is not None:
-        data_agg.drop(columns = drop_columns, inplace = True)
-
-    data_agg = data_agg \
-        .groupby(group_columns) \
-        .agg(aggregate_function) \
-        .reset_index()
-    
-    if 'rmse' in data_agg.columns:
-        data_agg['rm_mse'] = np.sqrt(data_agg['mse'])
-    if 'msse' in data_agg.columns:
-        data_agg['rm_msse'] = np.sqrt(data_agg['msse'])
-    if 'total_fit_time' in data_agg.columns:
-        tw, h, rw = data_agg['test_window'][0], data_agg['horizon'][0], data_agg['retrain_window'][0]
-        ids = list(range(0, (tw - h + 1), rw)) # same as get_retrain_ids()
-        data_agg['total_fit_time'] = aggregate_function(data['total_fit_time'][ids])
-
-    return data_agg

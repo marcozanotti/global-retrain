@@ -3,12 +3,86 @@ import gc
 import numpy as np
 import pandas as pd
 import pandas_flavor as pf
-from utilsforecast.losses import bias, mae, mse, rmse
+from functools import partial
+from utilsforecast.losses import bias, mae, mse, rmse, mase, msse, rmsse
 from utilsforecast.evaluation import evaluate
-from src.Python.utils.collect_data import *
+from src.Python.utils.collect_data import (
+    get_file_name, get_data, load_data, save_data, combine_and_save_files
+)
+from src.Python.utils.set_engine import get_frequency
+from src.Python.utils.fit_models import get_model_type
 
 import logging
 module_logger = logging.getLogger('evaluate_forecasts')
+
+@pf.register_dataframe_method
+def aggregate_data(data, group_columns, drop_columns = None, aggregate_function = np.mean):
+
+    """Function to aggregate evaluation metrics.
+
+    Args:
+        data (pd.DataFrame): dataframe to aggregate.
+        group_columns (list): list of columns to group by.
+        aggregate_function (str, optional): function to use to aggregate. 
+        Defaults to 'mean'.
+    
+    Returns:
+        pd.DataFrame: dataframe with aggregated data.
+    """
+
+    data_agg = data.copy()
+
+    module_logger.info('Aggregating data...')
+    if drop_columns is not None:
+        data_agg.drop(columns = drop_columns, inplace = True)
+
+    data_agg = data_agg \
+        .groupby(group_columns) \
+        .agg(aggregate_function) \
+        .reset_index()
+    
+    if 'rmse' in data_agg.columns:
+        data_agg['rm_mse'] = np.sqrt(data_agg['mse'])
+    if 'msse' in data_agg.columns:
+        data_agg['rm_msse'] = np.sqrt(data_agg['msse'])
+    if 'total_fit_time' in data_agg.columns:
+        tw, h, rw = data_agg['test_window'][0], data_agg['horizon'][0], data_agg['retrain_window'][0]
+        ids = list(range(0, (tw - h + 1), rw)) # same as get_retrain_ids()
+        data_agg['total_fit_time'] = aggregate_function(data['total_fit_time'][ids])
+
+    return data_agg
+
+def get_metrics(metric_names, frequency = None):
+
+    """Function to get the evaluation metrics.
+
+    Args:
+        metric_names (list): list of evaluation metric names.
+    
+    Returns:
+        list: list of evaluation metrics.
+    """
+
+    module_logger.info('Defining evaluation metrics...')
+    freq = get_frequency(frequency)[1]
+
+    metrics = []
+    if 'bias' in metric_names:
+        metrics.append(bias)
+    if 'mae' in metric_names:
+        metrics.append(mae)
+    if 'mse' in metric_names:
+        metrics.append(mse)
+    if 'rmse' in metric_names:
+        metrics.append(rmse)
+    if 'mase' in metric_names:
+        metrics.append(partial(mase, seasonality = freq))
+    if 'msse' in metric_names:
+        metrics.append(partial(msse, seasonality = freq))
+    if 'rmsse' in metric_names:
+        metrics.append(partial(rmsse, seasonality = freq))
+
+    return metrics
 
 @pf.register_dataframe_method
 def evaluate_point_forecasts(
@@ -31,7 +105,7 @@ def evaluate_point_forecasts(
 
     module_logger.info('Evaluating point forecasts...')
     samples = list(out_sample_df['sample'].unique())
-    n_samples = len(samples)
+    # n_samples = len(samples)
 
     eval_df = pd.DataFrame()
 
@@ -57,27 +131,12 @@ def evaluate_point_forecasts(
 
     return eval_df
 
-def evaluate_model(
-    config,
-    model_name, 
-    analysis_type,
-    dataset_name, 
-    frequency, 
-    metrics = [bias, mae, mse, rmse], 
-    train_df = None, 
-    group_columns = None,
-    drop_columns = None,
-    aggregate_function = np.mean,
-    ext = '.parquet'
-):
+def evaluate_model(config):
 
     """Function to evaluate a specific model.
 
     Args:
         config (dict): configuration dictionary.
-
-    Returns:
-        pd.DataFrame: dataframe with evaluation results for each metric.
     """
 
     module_logger.info('===============================================================')
@@ -87,7 +146,7 @@ def evaluate_model(
     frequency = config['frequency']
     retrain_scenarios = config['retrain_scenarios']
     model_names = config['model_names']
-    metrics = config['metrics']
+    metrics = get_metrics(config['metrics'], frequency)
     min_series_length = config['min_series_length']
     samples = config['samples']
     ext = config['ext']
@@ -103,8 +162,6 @@ def evaluate_model(
         samples = samples
     )
 
-    # FIXME: set_metrics
-
     for m in model_names:
 
         module_logger.info('---------------------------- START ----------------------------')
@@ -113,51 +170,68 @@ def evaluate_model(
         module_logger.info(f'[ Model type: {model_type} | Model name: {m} ]')
 
         for rs in retrain_scenarios:
-            
-            rs = 7
 
-            module_logger.info('Evaluating outsample results...')
-            eval_df = pd.DataFrame() # nrow(eval_df) = 30.000 * 365 = 11.000.000
+            module_logger.info(f'Evaluate predictions for retrain scenario: {rs}')
+
             i = 0
+            eval_df_retrain = pd.DataFrame() # eval_df_retrain.shape[0] = 30.000 * 365 = 11.000.000
             file_names_tmp = get_file_name(
                 path_list = ['results', dataset_name, m, rs, 'outsample', 'tmp'], 
                 name_list = None,
                 ext = ext
             )
+            
             for f in file_names_tmp:
                 eval_df_tmp = load_data(
                     path_list = ['results', dataset_name, m, rs, 'outsample', 'tmp'],
                     name_list = [f],
                     ext = ext
-                ) \
-                    .evaluate_point_forecasts(metrics = metrics, train_df = data)
-                eval_df = pd.concat([eval_df, eval_df_tmp], axis = 0)
+                )
+                eval_df_tmp = evaluate_point_forecasts(
+                    out_sample_df = eval_df_tmp, 
+                    metrics = metrics, 
+                    train_df = data
+                )
+                eval_df_retrain = pd.concat([eval_df_retrain, eval_df_tmp], axis = 0)
                 del eval_df_tmp
                 i += 1
                 if (i % 10) == 0:
                     gc.collect()
 
-            # nrow(eval_df_agg_by_id) = 30.000
-            eval_df_agg_by_id = eval_df \
-                    .aggregate_data(
-                        group_columns = ['method', 'test_window', 'horizon', 'retrain_window', 'unique_id'],
-                        drop_columns = ['sample'],
-                        aggregate_function = np.mean
-                    )
+            # eval_df_agg_by_id.shape[0] = 30.000
+            eval_df_agg_by_id_tmp = aggregate_data(
+                data = eval_df_retrain,
+                group_columns = ['method', 'test_window', 'horizon', 'retrain_window', 'unique_id'],
+                drop_columns = ['sample'],
+                aggregate_function = np.mean
+            )
+            del eval_df_retrain
+            save_data(
+                eval_df_agg_by_id_tmp,
+                path_list = ['results', dataset_name, m, 'evaluation', 'byretrain'],
+                name_list = [dataset_name, frequency, m, rs, 'eval'],
+                ext = ext
+            )
+            del eval_df_agg_by_id_tmp
 
-            # nrow(eval_df_agg_rs) = 1
-            eval_df_agg_rs = eval_df_agg_by_id \
-                .aggregate_data(
-                    group_columns = ['method', 'test_window', 'horizon', 'retrain_window'],
-                    drop_columns = ['unique_id'],
-                    aggregate_function = np.mean
-                )
+        # combine and save evaluation results
+        combine_and_save_files(
+            path_list_to_read = ['results', dataset_name, m, 'evaluation', 'byretrain'],
+            path_list_to_write = ['results', dataset_name, m, 'evaluation'],
+            name_list = [dataset_name, frequency, m, 'eval'],
+            ext = ext
+        )
+        # combine and save time results
+        combine_and_save_files(
+            path_list_to_read = ['results', dataset_name, m, 'time', 'byretrain'],
+            path_list_to_write = ['results', dataset_name, m, 'time'],
+            name_list = [dataset_name, frequency, m, 'time'],
+            ext = ext
+        )
 
-        
         module_logger.info('----------------------------- END -----------------------------')
 
     module_logger.info('===============================================================')
 
     return
-
 

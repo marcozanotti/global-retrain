@@ -10,7 +10,7 @@ from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
-from src.Python.utils.custom_feats import *
+from src.Python.utils.custom_feats import is_weekend
 
 import logging
 module_logger = logging.getLogger('set_engine')
