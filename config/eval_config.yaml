@@ -10,6 +10,8 @@ model_names: ['LinearRegression', 'Lasso', 'LGBMRegressor']
 #     'XGBRegressor', 'LGBMRegressor', 'CatBoostRegressor'
 # ]
 metrics: ['bias', 'mae', 'mse', 'rmse', 'mase', 'msse', 'rmsse']
+evaluation_type: 'point' # 'interval'
+evaluation_samples: 'overlap' # nooverlap
 min_series_length: 730
 samples: 100
 ext: '.parquet'

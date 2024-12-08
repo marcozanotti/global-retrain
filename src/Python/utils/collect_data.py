@@ -91,9 +91,12 @@ def combine_and_save_files(path_list_to_read, path_list_to_write, name_list, ext
     path_to_read = create_file_path(path_list_to_read)
     path_to_write = create_file_path(path_list_to_write)
     files = get_file_name(
-        path_list = [path_to_read], name_list = name_list,
-        ext = ext, remove_ext = False
+        path_list = [path_to_read], 
+        name_list = name_list,
+        ext = ext, 
+        remove_ext = False
     )
+    files.sort(key = lambda x: int("".join([i for i in x if i.isdigit()])))
     write_file_name = create_file_name(name_list = name_list, ext = ext) 
 
     if ext == '.parquet':
@@ -207,12 +210,14 @@ def download_data(dataset_name, frequency, save = True, ext = '.parquet'):
 
     if save:
         save_data(
-            train_df, path = f'data/{dataset_name}/', 
+            data = train_df, 
+            path_list = ['data', dataset_name], 
             name_list = [dataset_name, frequency, 'train'],
             ext = ext
         )
         save_data(
-            test_df, path = f'data/{dataset_name}/', 
+            data = test_df, 
+            path_list = ['data', dataset_name], 
             name_list = [dataset_name, frequency, 'test'],
             ext = ext
         )
