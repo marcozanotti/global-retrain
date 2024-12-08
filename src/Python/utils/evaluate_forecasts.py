@@ -176,14 +176,14 @@ def evaluate_model(config):
             i = 0
             eval_df_retrain = pd.DataFrame() # eval_df_retrain.shape[0] = 30.000 * 365 = 11.000.000
             file_names_tmp = get_file_name(
-                path_list = ['results', dataset_name, m, rs, 'outsample', 'tmp'], 
+                path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'], 
                 name_list = None,
                 ext = ext
             )
             
             for f in file_names_tmp:
                 eval_df_tmp = load_data(
-                    path_list = ['results', dataset_name, m, rs, 'outsample', 'tmp'],
+                    path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'],
                     name_list = [f],
                     ext = ext
                 )
@@ -208,7 +208,7 @@ def evaluate_model(config):
             del eval_df_retrain
             save_data(
                 eval_df_agg_by_id_tmp,
-                path_list = ['results', dataset_name, m, 'evaluation', 'byretrain'],
+                path_list = ['results', dataset_name, frequency, m, 'evaluation', 'byretrain'],
                 name_list = [dataset_name, frequency, m, rs, 'eval'],
                 ext = ext
             )
@@ -216,15 +216,15 @@ def evaluate_model(config):
 
         # combine and save evaluation results
         combine_and_save_files(
-            path_list_to_read = ['results', dataset_name, m, 'evaluation', 'byretrain'],
-            path_list_to_write = ['results', dataset_name, m, 'evaluation'],
+            path_list_to_read = ['results', dataset_name, frequency, m, 'evaluation', 'byretrain'],
+            path_list_to_write = ['results', dataset_name, frequency, m, 'evaluation'],
             name_list = [dataset_name, frequency, m, 'eval'],
             ext = ext
         )
         # combine and save time results
         combine_and_save_files(
-            path_list_to_read = ['results', dataset_name, m, 'time', 'byretrain'],
-            path_list_to_write = ['results', dataset_name, m, 'time'],
+            path_list_to_read = ['results', dataset_name, frequency, m, 'time', 'byretrain'],
+            path_list_to_write = ['results', dataset_name, frequency, m, 'time'],
             name_list = [dataset_name, frequency, m, 'time'],
             ext = ext
         )

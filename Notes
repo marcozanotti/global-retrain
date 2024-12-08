@@ -1,6 +1,7 @@
 TODO:
 
 - FIXME: add non overlapping evaluation
+- testare get_retrain_ids in evealute
 
 - TODO: create ensemble
 

@@ -387,7 +387,7 @@ def prepare_data(dataset_name, frequency, static_features = True, xregs = True, 
     """
 
     train_df = load_data(
-        path = f'data/{dataset_name}/', 
+        path_list = ['data', dataset_name], 
         name_list = [dataset_name, frequency, 'train'], 
         ext = ext
     )
@@ -395,7 +395,7 @@ def prepare_data(dataset_name, frequency, static_features = True, xregs = True, 
     train_df['unique_id'] = train_df['unique_id'].astype(str)
 
     test_df = load_data(
-        path = f'data/{dataset_name}/', 
+        path_list = ['data', dataset_name], 
         name_list = [dataset_name, frequency, 'test'],
         ext = ext
     )
@@ -409,7 +409,7 @@ def prepare_data(dataset_name, frequency, static_features = True, xregs = True, 
 
     if xregs:
         xreg_df = get_xregs_data(
-            path = f'data/{dataset_name}/', 
+            path_list = ['data', dataset_name],  
             name_list = [dataset_name, 'xregs'], 
             dataset_name = dataset_name,
             ext = ext
@@ -418,7 +418,8 @@ def prepare_data(dataset_name, frequency, static_features = True, xregs = True, 
 
     if save:
         save_data(
-            res_df, path = f'data/{dataset_name}/', 
+            data = res_df, 
+            path_list = ['data', dataset_name], 
             name_list = [dataset_name, frequency, 'prep'],
             ext = ext
         )

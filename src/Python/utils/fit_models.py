@@ -192,8 +192,8 @@ def retrain_ml_model(
                 in_sample_df_tmp.reset_index(drop = True, inplace = True)
                 # save to file
                 save_data(
-                    in_sample_df_tmp, 
-                    path_list = ['results', dataset_name, model_name, retrain_window, 'insample', 'tmp'],
+                    data = in_sample_df_tmp, 
+                    path_list = ['results', dataset_name, frequency, model_name, retrain_window, 'insample', 'tmp'],
                     name_list = [dataset_name, frequency, model_name, retrain_window, 'insample', i],
                     ext = ext
                 )
@@ -227,8 +227,8 @@ def retrain_ml_model(
         out_sample_df_tmp.reset_index(drop = True, inplace = True)
         # save to file
         save_data(
-            out_sample_df_tmp, 
-            path_list = ['results', dataset_name, model_name, retrain_window, 'outsample', 'tmp'],
+            data = out_sample_df_tmp, 
+            path_list = ['results', dataset_name, frequency, model_name, retrain_window, 'outsample', 'tmp'],
             name_list = [dataset_name, frequency, model_name, retrain_window, 'outsample', i],
             ext = ext
         ) 
@@ -254,8 +254,8 @@ def retrain_ml_model(
     time_df.reset_index(drop = True, inplace = True)
     # save to file
     save_data(
-        time_df, 
-        path_list = ['results', dataset_name, model_name, 'time', 'byretrain'],
+        data = time_df, 
+        path_list = ['results', dataset_name, frequency, model_name, 'time', 'byretrain'],
         name_list = [dataset_name, frequency, model_name, retrain_window, 'time'],
         ext = ext
     )

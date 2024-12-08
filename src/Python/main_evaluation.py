@@ -25,7 +25,7 @@ from src.Python.utils.evaluate_forecasts import aggregate_data
 
 # eval_df.shape[0] = n_series * n_retrain_scenarios = 30.000 * 10
 eval_df = load_data(
-    path_list = ['results', cfg['dataset_name'], cfg['model_names'][0], 'evaluation'],
+    path_list = ['results', cfg['dataset_name'], cfg['frequency'], cfg['model_names'][0], 'evaluation'],
     name_list = [cfg['dataset_name'], cfg['frequency'], cfg['model_names'][0], 'eval'],
     ext = cfg['ext']
 )
@@ -38,7 +38,7 @@ eval_df_agg = aggregate_data(
 
 # time_df.shape[0] = n_samples * n_retrain_scenarios = 365 * 10
 time_df = load_data(
-    path_list = ['results', cfg['dataset_name'], cfg['model_names'][0], 'time'],
+    path_list = ['results', cfg['dataset_name'], cfg['frequency'], cfg['model_names'][0], 'time'],
     name_list = [cfg['dataset_name'], cfg['frequency'], cfg['model_names'][0], 'time'],
     ext = cfg['ext']
 )
