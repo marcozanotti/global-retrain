@@ -3,7 +3,6 @@ import gc
 import time
 import numpy as np
 import pandas as pd
-from statsforecast import StatsForecast
 from mlforecast.utils import PredictionIntervals
 from src.Python.utils.collect_data import save_data, get_data, combine_train_test
 from src.Python.utils.set_engine import get_model_type, set_engine
@@ -119,21 +118,21 @@ def retrain_ml_model(
     # define the fitting times
     fitting_ids = get_retrain_ids(test_window, horizon, retrain_window)
     n_fitting = len(fitting_ids) # int(np.round(test_window / retrain_window, 0))
-    n_loops = test_window - horizon + 1
+    n_samples = test_window - horizon + 1
     module_logger.info(
-        f'[ Retrain ids: {fitting_ids} ] | Num fitting: {n_fitting} | Num iterations: {n_loops} ]'
+        f'[ Retrain ids: {fitting_ids} ] | Num fitting: {n_fitting} | Num iterations: {n_samples} ]'
     )
 
     # define the prediction intervals
     if levels is not None:
-        intervals = PredictionIntervals(h = horizon, n_windows = 4, method = 'conformal_error')
+        intervals = PredictionIntervals(h = horizon, n_windows = 4, method = 'conformal_distribution')
 
     # initialize the time dataframe (the only auto-incremental df with save at the end)
     time_df = pd.DataFrame()
 
-    for i in range(n_loops):
+    for i in range(n_samples):
         
-        module_logger.info(f'Step {i + 1} of {n_loops}')
+        module_logger.info(f'Step {i + 1} of {n_samples}')
 
         # define the training data
         train_df_tmp = combine_train_test(train_df, test_df.groupby('unique_id').head(i))
@@ -220,7 +219,10 @@ def retrain_ml_model(
         out_sample_df_tmp['retrain_window'] = retrain_window
         # add actual out-of-sample to results
         out_sample_df_tmp = out_sample_df_tmp.merge(
-            test_df_tmp, how = 'left', on = ['unique_id', 'ds'], copy = False
+            test_df_tmp[['unique_id', 'ds', 'y']], 
+            how = 'left', 
+            on = ['unique_id', 'ds'], 
+            copy = False
         )
         # format column names and reset index values
         out_sample_df_tmp.columns = out_sample_df_tmp.columns.str.replace(model_name, 'fcst')

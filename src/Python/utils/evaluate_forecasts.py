@@ -10,13 +10,13 @@ from src.Python.utils.collect_data import (
     get_file_name, get_data, load_data, save_data, combine_and_save_files
 )
 from src.Python.utils.set_engine import get_frequency
-from src.Python.utils.fit_models import get_retrain_ids, get_model_type
+from src.Python.utils.fit_models import get_retrain_ids
 
 import logging
 module_logger = logging.getLogger('evaluate_forecasts')
 
 @pf.register_dataframe_method
-def aggregate_data(data, group_columns, drop_columns = None, aggregate_function = np.mean):
+def aggregate_data(data, group_columns, drop_columns = None, aggregate_function = np.mean, adjust_metrics = True):
 
     """Function to aggregate evaluation metrics.
 
@@ -41,15 +41,16 @@ def aggregate_data(data, group_columns, drop_columns = None, aggregate_function 
         .agg(aggregate_function) \
         .reset_index()
     
-    if 'rmse' in data_agg.columns:
-        data_agg['rm_mse'] = np.sqrt(data_agg['mse'])
-    if 'msse' in data_agg.columns:
-        data_agg['rm_msse'] = np.sqrt(data_agg['msse'])
-    if 'total_fit_time' in data_agg.columns:
-        # tw, h, rw = data_agg['test_window'][0], data_agg['horizon'][0], data_agg['retrain_window'][0]
-        # ids = list(range(0, (tw - h + 1), rw)) # same as get_retrain_ids()
-        ids = get_retrain_ids(data_agg['test_window'][0], data_agg['horizon'][0], data_agg['retrain_window'][0])
-        data_agg['total_fit_time'] = aggregate_function(data['total_fit_time'][ids])
+    if adjust_metrics:
+        if 'rmse' in data_agg.columns:
+            data_agg['rm_mse'] = np.sqrt(data_agg['mse'])
+        if 'msse' in data_agg.columns:
+            data_agg['rm_msse'] = np.sqrt(data_agg['msse'])
+        if 'total_fit_time' in data_agg.columns:
+            # tw, h, rw = data_agg['test_window'][0], data_agg['horizon'][0], data_agg['retrain_window'][0]
+            # ids = list(range(0, (tw - h + 1), rw)) # same as get_retrain_ids()
+            ids = get_retrain_ids(data_agg['test_window'][0], data_agg['horizon'][0], data_agg['retrain_window'][0])
+            data_agg['total_fit_time'] = aggregate_function(data['total_fit_time'][ids])
 
     return data_agg
 
@@ -194,12 +195,13 @@ def evaluate_model(config):
     frequency = config['frequency']
     retrain_scenarios = config['retrain_scenarios']
     model_names = config['model_names']
-    metrics = get_metrics(config['metrics'], frequency)
     eval_type = config['evaluation_type']
     eval_samples = config['evaluation_samples']
     min_series_length = config['min_series_length']
     samples = config['samples']
     ext = config['ext']
+
+    metrics = get_metrics(config['metrics'], frequency)
 
     # load the dataset
     if samples is not None:
@@ -215,9 +217,7 @@ def evaluate_model(config):
     for m in model_names:
 
         module_logger.info('---------------------------- START ----------------------------')
-        
-        model_type = get_model_type(m)
-        module_logger.info(f'[ Model type: {model_type} | Model name: {m} ]')
+        module_logger.info(f'[ Model name: {m} ]')
 
         for rs in retrain_scenarios:
 

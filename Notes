@@ -1,13 +1,12 @@
 TODO:
 
-- create ensemble
+- add interval evaluation # how to evaluate prediction intervals?
 
 - usare chatgpt per parametri modelli
 
 - testare DL (MLP, KAN, LSTM, TCN, NBEATS, NHITS, DeepAR)
-- how to evaluate prediction intervals?
 - wilcoxon signed rank test 0.05 (daily retail  demand forecasting)
-
+- test overlap and nooverlap evaluation
 - aggiungere encoding per categorical variables
 https://nixtlaverse.nixtla.io/mlforecast/docs/how-to-guides/sklearn_pipelines.html
 
