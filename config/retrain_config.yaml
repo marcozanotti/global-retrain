@@ -23,7 +23,7 @@ model_params: null
 #         'object': tweedie
 #     },
 # }
-ensemble_methods: ['average', 'median']
+ensemble_methods: ['mean', 'median']
 levels: [50, 60, 70, 80, 90, 95, 99]
 static_features: ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id']
 min_series_length: 730 # 365 * 2 = 730

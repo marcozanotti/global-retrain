@@ -1,7 +1,5 @@
 TODO:
 
-- add interval evaluation # how to evaluate prediction intervals?
-
 - usare chatgpt per parametri modelli
 
 - testare DL (MLP, KAN, LSTM, TCN, NBEATS, NHITS, DeepAR)

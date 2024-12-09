@@ -5,26 +5,8 @@ from src.Python.utils.collect_data import save_data, load_data
 from src.Python.utils.evaluate_forecasts import aggregate_data
 
 import logging
-module_logger = logging.getLogger('fit_models')
+module_logger = logging.getLogger('fit_ensembles')
 
-def get_ensemble_function(ensemble_method):
-    """Function to get the ensemble function.
-
-    Args:
-        ensemble_method (str): Ensemble method to use.
-    
-    Returns:
-        function: Ensemble function.
-    """
-    
-    module_logger.info('Defining ensemble function...')
-
-    if ensemble_method == 'average':
-        return np.mean
-    elif ensemble_method =='median':
-        return np.median
-    else:
-        raise ValueError(f'Invalid ensemble method: {ensemble_method}')
 
 def fit_ensembles(config):
 
@@ -71,14 +53,13 @@ def fit_ensembles(config):
 
                 module_logger.info(f'Computing ensemble {ens} predictions...')
 
-                ensemble_function = get_ensemble_function(ens)
                 ensemble_name = 'Ensemble' + ens.capitalize()
 
                 ensemble_df_tmp = aggregate_data(
                     data = outsample_df_sample_tmp,
                     group_columns = ['sample', 'test_window', 'horizon', 'retrain_window', 'ds', 'unique_id'],
                     drop_columns = ['method', 'y'], 
-                    aggregate_function = ensemble_function,
+                    function_name = ens,
                     adjust_metrics = False
                 )
                 ensemble_df_tmp['method'] = ensemble_name
@@ -101,36 +82,38 @@ def fit_ensembles(config):
 
     # compute and save the ensemble time results
     module_logger.info('---------------------------------------------------------------')
-    for ens in ensemble_methods:
+    for rs in retrain_scenarios:
 
-        module_logger.info(f'Computing ensemble {ens} time results...')
-        time_df_tmp = pd.DataFrame()
+        for ens in ensemble_methods:
 
-        for m in model_names:
-            time_df_model_tmp = load_data(
-                path_list = ['results', dataset_name, frequency, m, 'time'],
-                name_list = [dataset_name, frequency, m, 'time'],
+            module_logger.info(f'Computing ensemble {ens} time results...')
+            time_df_tmp = pd.DataFrame()
+
+            for m in model_names:
+                time_df_model_tmp = load_data(
+                    path_list = ['results', dataset_name, frequency, m, 'time', 'byretrain'],
+                    name_list = [dataset_name, frequency, m, rs, 'time'],
+                    ext = ext
+                )
+                time_df_tmp = pd.concat([time_df_tmp, time_df_model_tmp], axis = 0)
+                del time_df_model_tmp
+            
+            ensemble_name = 'Ensemble' + ens.capitalize()
+            ensemble_time_df_tmp = aggregate_data(
+                data = time_df_tmp,
+                group_columns = ['sample', 'test_window', 'horizon', 'retrain_window'],
+                drop_columns = ['method'], 
+                function_name = 'sum',
+                adjust_metrics = False
+            )
+            ensemble_time_df_tmp['method'] = ensemble_name
+            save_data(
+                data = ensemble_time_df_tmp, 
+                path_list = ['results', dataset_name, frequency, ensemble_name, 'time', 'byretrain'],
+                name_list = [dataset_name, frequency, ensemble_name, rs, 'time'],
                 ext = ext
             )
-            time_df_tmp = pd.concat([time_df_tmp, time_df_model_tmp], axis = 0)
-            del time_df_model_tmp
-        
-        ensemble_name = 'Ensemble' + ens.capitalize()
-        ensemble_time_df_tmp = aggregate_data(
-            data = time_df_tmp,
-            group_columns = ['sample', 'test_window', 'horizon', 'retrain_window'],
-            drop_columns = ['method'], 
-            aggregate_function = np.sum,
-            adjust_metrics = False
-        )
-        ensemble_time_df_tmp['method'] = ensemble_name
-        save_data(
-            data = ensemble_time_df_tmp, 
-            path_list = ['results', dataset_name, frequency, ensemble_name, 'time'],
-            name_list = [dataset_name, frequency, ensemble_name, 'time'],
-            ext = ext
-        )
-        del time_df_tmp, ensemble_time_df_tmp
+            del time_df_tmp, ensemble_time_df_tmp
 
     module_logger.info('----------------------------- END -----------------------------')
     module_logger.info('===============================================================')
