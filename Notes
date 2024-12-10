@@ -44,6 +44,7 @@ Consider multiple seasonalities for frequencies less than daily
 #    "yearly": 1
 # }
 
+
 Aggregate M5 to weekly and monthly to test on those frequencies
 
 

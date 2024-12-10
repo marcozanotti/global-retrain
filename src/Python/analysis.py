@@ -1,4 +1,25 @@
 
+# Retrain
+
+# if cfg['combine_results']:
+
+#     if cfg['store_in_sample_results']:
+#         # combine and save the insample tmp files
+#         combine_and_save_files(
+#             path_list_to_read = ['results', dataset_name, model_name, retrain_window, 'insample', 'tmp'],
+#             path_list_to_write = ['results', dataset_name, model_name, retrain_window, 'insample'],
+#             name_list = [dataset_name, frequency, model_name, retrain_window, 'insample'],
+#             ext = ext
+#         )
+    
+#     # combine and save the outsample tmp files
+#     combine_and_save_files(
+#         path_list_to_read = ['results', dataset_name, model_name, retrain_window, 'outsample', 'tmp'],
+#         path_list_to_write = ['results', dataset_name, model_name, retrain_window, 'outsample'],
+#         name_list = [dataset_name, frequency, model_name, retrain_window, 'outsample'],
+#         ext = ext
+#     )
+
 
 # Evaluation --------------------------------------------------------------
 
@@ -61,15 +82,4 @@ time_df_agg = aggregate_data(
 #     max_insample_length = horizon * 5, 
 #     engine = 'plotly'
 # ).show()
-
-
-from src.Python.utils.utilities import get_config
-
-
-
-out_sample_df = load_data(
-    path_list = ['results', cfg['dataset_name'], cfg['frequency'], cfg['model_names'][0], 7, 'outsample', 'tmp'],
-    name_list = [cfg['dataset_name'], cfg['frequency'], cfg['model_names'][0], 7, 'outsample', 0],
-    ext = cfg['ext']
-)
 

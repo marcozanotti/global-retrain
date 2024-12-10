@@ -1,0 +1,28 @@
+
+dataset_name: 'm5'
+frequency: 'daily'
+horizon: 28
+test_window: 56 # test_window = 28 * 13 = 364
+retrain_scenarios: [
+    7, 
+    14, 
+    # 21,
+    30, 
+    60,
+    # 90,
+    # 120,
+    # 150,
+    # 180,
+    # 364
+]
+model_names: [
+  'LinearRegression', 
+  'Lasso', 
+  'Ridge', 
+  'RandomForestRegressor', 
+  'XGBRegressor', 
+  'LGBMRegressor', 
+  'CatBoostRegressor'
+]
+ensemble_methods: ['mean', 'median']
+ext: '.parquet'
