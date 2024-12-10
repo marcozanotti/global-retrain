@@ -1,0 +1,49 @@
+
+seed: 1992
+dataset_name: 'm5'
+frequency: 'daily'
+horizon: 28
+test_window: 56 # test_window = 28 * 13 = 364
+retrain_scenarios: [
+    7, 
+    # 14, 
+    # 21,
+    # 30, 
+    # 60,
+    # 90,
+    # 120,
+    # 150,
+    # 180,
+    # 364
+]
+model_names: [
+    # 'LinearRegression', 
+    # 'Lasso', 
+    # 'Ridge', 
+    # 'RandomForestRegressor', 
+    # 'XGBRegressor', 
+    # 'LGBMRegressor', 
+    # 'CatBoostRegressor',
+    'MLP'
+]
+# model_params: null
+model_params: {
+    'MLP': {
+        'h': 28,
+        'input_size': 14,
+        'num_layers': 2,
+        'hidden_size': 128,
+        'max_steps': 20,
+        'stat_exog_list': ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id'],
+        'futr_exog_list': ['event'],
+        'hist_exog_list': ['event'],
+        'random_seed': 0 
+    }
+}
+levels: [50, 60, 70, 80, 90, 95, 99]
+static_features: ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id']
+min_series_length: 730 # 365 * 2 = 730
+samples: 10
+store_in_sample_results: False
+combine_results: False
+ext: '.parquet'

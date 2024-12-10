@@ -1,6 +1,7 @@
 
 import os
 from mlforecast import MLForecast
+from neuralforecast import NeuralForecast
 from mlforecast.lag_transforms import RollingMean, ExpandingMean
 # from sklearn.preprocessing import FunctionTransformer
 # from mlforecast.target_transforms import GlobalSklearnTransformer
@@ -10,6 +11,7 @@ from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
+from neuralforecast.models import MLP, KAN, RNN, GRU, LSTM, TCN, NBEATS, NHITS, DeepAR
 from src.Python.utils.custom_feats import is_weekend
 
 import logging
@@ -85,6 +87,10 @@ def get_target_transforms(model_name):
         target_transforms = None
     
     elif model_name == 'CatBoostRegressor':
+
+        target_transforms = None
+
+    elif model_name == 'MLP':
 
         target_transforms = None
     
@@ -195,7 +201,7 @@ def get_model_type(model_name):
         'RandomForestRegressor', 
         'XGBRegressor', 'LGBMRegressor', 'CatBoostRegressor' 
     ]
-    dl = ['MLP', 'KAN', 'LSTM', 'TCN', 'NBEATS', 'NHITS', 'DeepAR']
+    dl = ['MLP', 'KAN', 'RNN', 'LSTM', 'GRU', 'TCN', 'NBEATS', 'NHITS', 'DeepAR']
 
     if model_name in sf:
         model_type = 'sf'
@@ -274,6 +280,16 @@ def get_default_model_params(model_name):
             }
         }
     
+    elif model_name == 'MLP':
+
+        model_params = {
+            model_name: {
+                'h': 7,
+                'input_size': 2,
+                'max_steps': 20
+            }
+        }
+    
     else:
         raise ValueError(f'Invalid model: {model_name}')
 
@@ -296,33 +312,37 @@ def set_model(model_name, model_params = None):
     module_logger.info(f'Model parameters: {model_params}')
 
     if model_name == 'LinearRegression':
-
         model = [LinearRegression(**model_params)]
-    
     elif model_name == 'Lasso':
-
         model = [Lasso(**model_params)]
-    
     elif model_name == 'Ridge':
-
         model = [Ridge(**model_params)]
-
     elif model_name == 'RandomForestRegressor':
-
         model = [RandomForestRegressor(**model_params)]
-    
     elif model_name == 'XGBRegressor':
-
         model = [XGBRegressor(**model_params)]
-    
     elif model_name == 'LGBMRegressor':
-
         model = [LGBMRegressor(**model_params)]
-    
     elif model_name == 'CatBoostRegressor':
-
         model = [CatBoostRegressor(**model_params)]
-
+    elif model_name == 'MLP':
+        model = [MLP(**model_params)]
+    elif model_name == 'KAN':
+        model = [KAN(**model_params)]
+    elif model_name == 'RNN':
+        model = [RNN(**model_params)]
+    elif model_name == 'LSTM':
+        model = [LSTM(**model_params)]
+    elif model_name == 'GRU':
+        model = [GRU(**model_params)]
+    elif model_name == 'TCN':
+        model = [TCN(**model_params)]
+    elif model_name == 'NBEATS':
+        model = [NBEATS(**model_params)]
+    elif model_name == 'NHITS':
+        model = [NHITS(**model_params)]
+    elif model_name == 'DeepAR':
+        model = [DeepAR(**model_params)]
     else:
         raise ValueError(f'Invalid model: {model_name}')
 
@@ -370,8 +390,12 @@ def set_engine(model_name, dataset_name, frequency, model_params = None):
     
     elif model_type == 'dl':
 
-        raise ValueError(f'Not yet implemented for model {model_name}')
-    
+        engine = NeuralForecast(
+            models = model, 
+            freq = freq[0],
+            local_scaler_type = target_transforms
+        )
+        
     else:
         raise ValueError(f'Invalid model: {model_name}')
 

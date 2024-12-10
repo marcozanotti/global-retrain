@@ -62,7 +62,16 @@ def get_model_name(engine):
         str: model name.
     """
 
-    model_names = list(engine.models.keys())
+    engine_class = str(engine.__class__)
+    if engine_class == "<class 'statsforecast.core.StatsForecast'>":
+        model_names = list(engine.models.keys())
+    elif engine_class == "<class 'mlforecast.forecast.MLForecast'>":
+        model_names = list(engine.models.keys())
+    elif engine_class == "<class 'neuralforecast.core.NeuralForecast'>":
+        model_names = engine.models
+    else:
+        raise ValueError(f'Invalid engine class {engine_class}.')
+
     if len(model_names) > 1:
         raise(f'Please specify only one model at a time')
     else:
