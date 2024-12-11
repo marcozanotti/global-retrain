@@ -5,7 +5,6 @@ TODO:
 
 2. add neuralforecast for DL models
 - testare DL (MLP, KAN, LSTM, TCN, NBEATS, NHITS, DeepAR)
-- FIXME: valutare di non usare get_model_name e di passarlo come parametro
 - FIXME: set_engine: local_scaler_type = target_transforms
 - FIXME: get_default_model_params: aggiungere i default per tutti
 
@@ -14,8 +13,7 @@ TODO:
 - wilcoxon signed rank test 0.05 (daily retail  demand forecasting)
 
 
-
-
+- valutare il save e load dei modelli ad ogni fitting
 - test overlap and nooverlap evaluation
 - aggiungere encoding per categorical variables
 https://nixtlaverse.nixtla.io/mlforecast/docs/how-to-guides/sklearn_pipelines.html
