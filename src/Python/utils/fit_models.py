@@ -339,8 +339,8 @@ def retrain_dl_model(
 
     # get the static dataframe and remove it from train and test
     static_df = test_df[['unique_id'] + static_features].drop_duplicates().reset_index(drop = True)
-    train_df.drop(columns = static_features, axis = 1, inplace = True)
-    test_df.drop(columns = static_features, axis = 1, inplace = True)
+    train_df = train_df.drop(columns = static_features, axis = 1) # WARN: not inplace = True since it modifies the original
+    test_df = test_df.drop(columns = static_features, axis = 1) # WARN: not inplace = True since it modifies the original
 
     # initialize the time dataframe (the only auto-incremental df with save at the end)
     time_df = pd.DataFrame()
@@ -369,7 +369,7 @@ def retrain_dl_model(
             if levels == None:
                 engine.fit(
                     df = train_df_tmp,
-                    static_df = static_df,
+                    static_df = static_df
                 )
             else:
                 engine.fit(
@@ -383,7 +383,10 @@ def retrain_dl_model(
             # predict out-of-sample with the models
             module_logger.info('Predicting...')
             start_predict_time = time.time()
-            out_sample_df_tmp = engine.predict(futr_df = test_df_tmp, level = levels)
+            out_sample_df_tmp = engine.predict(
+                futr_df = test_df_tmp.drop(columns = 'y', axis = 1), 
+                level = levels
+            )
             end_predict_time = time.time()
 
             tot_sample_time = end_predict_time - start_fit_time
@@ -392,7 +395,7 @@ def retrain_dl_model(
 
                 # extract in-sample results from the model only when fitting
                 module_logger.info('Extracting fitted values...')
-                in_sample_df_tmp = engine.predict_insample(step_size = horizon)
+                in_sample_df_tmp = engine.predict_insample() # not working since time series with different lengths
                 in_sample_df_tmp.drop(columns = 'cutoff', inplace = True)
                 # add additional columns to the dataframes for tracking parameters
                 in_sample_df_tmp['sample'] = i
@@ -414,13 +417,14 @@ def retrain_dl_model(
                 
         else:
 
-            # update the neuralforecast object with the new data 
-            # NOTE: fundamental to roll predictions without fitting !!!!!
-            engine.update(train_df_tmp.groupby('unique_id').tail(1))
-
             module_logger.info('Predicting with pre-trained model...')
             start_predict_time = time.time()
-            out_sample_df_tmp = engine.predict(futr_df = test_df_tmp, level = levels)
+            out_sample_df_tmp = engine.predict(
+                df = train_df_tmp,
+                static_df = static_df,
+                futr_df = test_df_tmp.drop(columns = 'y', axis = 1), 
+                level = levels
+            )
             end_predict_time = time.time()
 
             tot_sample_time = end_predict_time - start_predict_time
@@ -458,7 +462,7 @@ def retrain_dl_model(
         })
         time_df = pd.concat([time_df, time_df_tmp], axis = 0)
 
-        del train_df_tmp, ds_to_remove, test_df_tmp, xreg_df_tmp, out_sample_df_tmp, time_df_tmp
+        del train_df_tmp, ds_to_remove, test_df_tmp, out_sample_df_tmp, time_df_tmp
         if (i % 10) == 0:
             gc.collect() # call gc once every 10 iterations to avoid overhead
 
