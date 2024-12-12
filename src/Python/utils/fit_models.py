@@ -3,9 +3,9 @@ import gc
 import time
 import numpy as np
 import pandas as pd
-from mlforecast.utils import PredictionIntervals
 from src.Python.utils.collect_data import save_data, get_data, combine_train_test
 from src.Python.utils.set_engine import get_model_type, set_engine, add_data_features
+from mlforecast.utils import PredictionIntervals
 
 import logging
 module_logger = logging.getLogger('fit_models')
@@ -79,6 +79,27 @@ def get_model_name(engine):
         
     return model_name
 
+def get_prediction_intervals(intervals):
+    """Function to get prediction intervals.
+
+    Args:
+        intervals (fun): prediction intervals function.
+    
+    Returns:
+        list: list of prediction intervals.
+    """
+
+    module_logger.info('Defining prediction intervals...')
+
+    if intervals is not None:
+        intervals_new = PredictionIntervals(
+            h = intervals['h'],
+            n_windows = intervals['n_windows'],
+            method = intervals['method']
+        )
+
+    return intervals_new
+
 def retrain_ml_model(
     train_df, 
     test_df,
@@ -90,6 +111,7 @@ def retrain_ml_model(
     horizon, 
     retrain_window,
     features,
+    intervals = None,
     levels = [50, 60, 70, 80, 90, 95, 99],
     store_in_sample_results = False,
     ext = '.parquet'
@@ -108,6 +130,7 @@ def retrain_ml_model(
         horizon (int): forecasting horizon.
         retrain_window (int, optional): window for retraining.
         features (dict): features to be used for training.
+        intervals (fun): intervals to be used for predictions. Defaults to None.
         levels (list): confidence levels for the predictions. Defaults to
         [60, 70, 80, 85, 90, 95, 99].
         store_in_sample_results (bool, optional): store in-sample results.
@@ -136,9 +159,8 @@ def retrain_ml_model(
     # define static features
     static_features = features['static']
 
-    # define the prediction intervals
-    if levels is not None:
-        intervals = PredictionIntervals(h = horizon, n_windows = 4, method = 'conformal_distribution')
+    module_logger.info(f'Train dataset contains: {list(train_df.columns)}...')
+    module_logger.info(f'Test dataset contains: {list(test_df.columns)}...')
 
     # initialize the time dataframe (the only auto-incremental df with save at the end)
     time_df = pd.DataFrame()
@@ -164,7 +186,7 @@ def retrain_ml_model(
             module_logger.info(f'Fitting: t = {i}, {int(i / retrain_window + 1)} of {n_fitting}...')
             start_fit_time = time.time()
 
-            if levels == None:
+            if intervals is None:
                 fit_tmp = engine.fit(
                     df = train_df_tmp, 
                     static_features = static_features,
@@ -292,6 +314,7 @@ def retrain_dl_model(
     horizon, 
     retrain_window,
     features,
+    intervals = None,
     levels = [50, 60, 70, 80, 90, 95, 99],
     store_in_sample_results = False,
     ext = '.parquet'
@@ -310,6 +333,7 @@ def retrain_dl_model(
         horizon (int): forecasting horizon.
         retrain_window (int, optional): window for retraining.
         features (dict): features to be used for training.
+        intervals (fun): intervals to be used for predictions. Defaults to None.
         levels (list): confidence levels for the predictions. Defaults to
         [60, 70, 80, 85, 90, 95, 99].
         store_in_sample_results (bool, optional): store in-sample results.
@@ -338,14 +362,13 @@ def retrain_dl_model(
     # define the static features
     static_features = features['static']
 
-    # define the prediction intervals
-    if levels is not None:
-        intervals = PredictionIntervals(h = horizon, n_windows = 4, method = 'conformal_distribution')
-
     # get the static dataframe and remove it from train and test
     static_df = test_df[['unique_id'] + static_features].drop_duplicates().reset_index(drop = True)
     train_df = add_data_features(data = train_df, frequency = frequency, features = features, remove_static = True)
     test_df = add_data_features(data = test_df, frequency = frequency, features = features, remove_static = True)
+    
+    module_logger.info(f'Train dataset contains: {list(train_df.columns)}...')
+    module_logger.info(f'Test dataset contains: {list(test_df.columns)}...')
 
     # initialize the time dataframe (the only auto-incremental df with save at the end)
     time_df = pd.DataFrame()
@@ -369,17 +392,10 @@ def retrain_dl_model(
             module_logger.info(f'Fitting: t = {i}, {int(i / retrain_window + 1)} of {n_fitting}...')
             start_fit_time = time.time()
 
-            if levels == None:
-                engine.fit(
-                    df = train_df_tmp,
-                    static_df = static_df
-                )
+            if intervals is None:
+                engine.fit(df = train_df_tmp, static_df = static_df)
             else:
-                engine.fit(
-                    df = train_df_tmp,
-                    static_df = static_df,
-                    prediction_intervals = intervals
-                )
+                engine.fit(df = train_df_tmp, static_df = static_df, prediction_intervals = intervals)
 
             end_fit_time = time.time()
 
@@ -503,21 +519,25 @@ def retrain_model(config):
 
     module_logger.info('===============================================================')
 
-    seed = config['seed']
-    dataset_name = config['dataset_name']
-    frequency = config['frequency']
-    test_window = config['test_window']
-    horizon = config['horizon']
-    retrain_scenarios = config['retrain_scenarios']
+    # dataset parameters
+    dataset_name = config['dataset']['dataset_name']
+    frequency = config['dataset']['frequency']
+    min_series_length = config['dataset']['min_series_length']
+    samples = config['dataset']['samples']
+    ext = config['dataset']['ext']
+    seed = config['dataset']['seed']
+    # fitting parameters
+    test_window = config['fitting']['test_window']
+    horizon = config['fitting']['horizon']
+    retrain_scenarios = config['fitting']['retrain_scenarios']
+    intervals = config['fitting']['intervals']
+    levels = config['fitting']['levels']
+    store_in_sample_results = config['fitting']['store_in_sample_results']
+    # model parameters
     model_names = config['model_names']
     model_params = config['model_params']
-    levels = config['levels']
     target_transforms = config['target_transforms']
     features = config['features']
-    min_series_length = config['min_series_length']
-    samples = config['samples']
-    store_in_sample_results = config['store_in_sample_results']
-    ext = config['ext']
 
     # load the dataset
     if samples is not None:
@@ -532,6 +552,9 @@ def retrain_model(config):
     # split the data into train and test dataframes
     train_df, test_df = split_train_test(data, test_window)
     del data
+
+    # define prediction intervals
+    intervals = get_prediction_intervals(intervals)
 
     for m in model_names:
 
@@ -577,6 +600,7 @@ def retrain_model(config):
                     horizon = horizon,
                     retrain_window = rs,
                     features = features,
+                    intervals = intervals,
                     levels = levels,
                     store_in_sample_results = store_in_sample_results,
                     ext = ext
@@ -595,6 +619,7 @@ def retrain_model(config):
                     horizon = horizon,
                     retrain_window = rs,
                     features = features,
+                    intervals = intervals,
                     levels = levels,
                     store_in_sample_results = store_in_sample_results,
                     ext = ext

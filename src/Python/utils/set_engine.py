@@ -367,6 +367,7 @@ def add_data_features(data, frequency, features, remove_static = False):
     """
 
     module_logger.info(f'Adding features to the dataset...')
+
     freq = get_frequency(frequency)
     lags = get_lags(feature_list = features['lags'])
     lag_transforms = get_lag_transforms(feature_list = features['lag_transforms'])

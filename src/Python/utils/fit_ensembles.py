@@ -19,14 +19,17 @@ def fit_ensembles(config):
     module_logger.info('===============================================================')
     module_logger.info('---------------------------- START ----------------------------')
 
-    dataset_name = config['dataset_name']
-    frequency = config['frequency']
-    test_window = config['test_window']
-    horizon = config['horizon']
-    retrain_scenarios = config['retrain_scenarios']
+    # dataset parameters
+    dataset_name = config['dataset']['dataset_name']
+    frequency = config['dataset']['frequency']
+    ext = config['dataset']['ext']
+    # fitting parameters
+    test_window = config['fitting']['test_window']
+    horizon = config['fitting']['horizon']
+    retrain_scenarios = config['fitting']['retrain_scenarios']
+    # model parameters
     model_names = config['model_names']
     ensemble_methods = config['ensemble_methods']
-    ext = config['ext']
 
     n_samples = test_window - horizon + 1
 

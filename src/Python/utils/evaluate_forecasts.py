@@ -202,18 +202,21 @@ def evaluate_model(config):
 
     module_logger.info('===============================================================')
 
-    seed = config['seed']
-    dataset_name = config['dataset_name']
-    frequency = config['frequency']
-    retrain_scenarios = config['retrain_scenarios']
+    # dataset parameters
+    dataset_name = config['dataset']['dataset_name']
+    frequency = config['dataset']['frequency']
+    min_series_length = config['dataset']['min_series_length']
+    samples = config['dataset']['samples']
+    ext = config['dataset']['ext']
+    seed = config['dataset']['seed']
+    # fitting parameters    
+    retrain_scenarios = config['fitting']['retrain_scenarios']
+    levels = config['fitting']['levels']
+    # model parameters
     model_names = config['model_names']
-    levels = config['levels']
-    eval_sample_type = config['evaluation_sample_type']
-    min_series_length = config['min_series_length']
-    samples = config['samples']
-    ext = config['ext']
-
-    metrics = get_metrics(config['metrics'], frequency)
+    # evaluation parameters
+    metrics = get_metrics(config['evaluation']['metrics'], frequency)
+    eval_sample_type = config['evaluation']['evaluation_sample_type']
 
     # load the dataset
     if samples is not None:

@@ -1,19 +1,29 @@
 
-seed: 1992
-dataset_name: 'm5'
-frequency: 'daily'
-retrain_scenarios: [
-    7, 
-    14, 
-    # 21,
-    30, 
-    60,
-    # 90,
-    # 120,
-    # 150,
-    # 180,
-    # 364
-]
+dataset: {
+    'dataset_name': 'm5',
+    'frequency': 'daily',
+    'min_series_length': 730, # 365 * 2 = 730
+    'samples': 10,
+    'ext': '.parquet',
+    'seed': 1992
+}
+
+fitting: {
+    'retrain_scenarios': [
+        7, 
+        # 14, 
+        # 21,
+        # 30, 
+        # 60,
+        # 90,
+        # 120,
+        # 150,
+        # 180,
+        # 364
+    ],
+    levels: [50, 60, 70, 80, 90, 95, 99]
+}
+
 model_names: [
     'LinearRegression', 
     'Lasso', 
@@ -25,9 +35,10 @@ model_names: [
     'EnsembleMean',
     'EnsembleMedian'
 ]
-metrics: ['bias', 'mae', 'mse', 'rmse', 'mase', 'msse', 'rmsse', 'mql', 'cov', 'scrps'] # 'ql', 'cal'
-levels: [50, 60, 70, 80, 90, 95, 99]
-evaluation_sample_type: 'overlap' # nooverlap
-min_series_length: 730
-samples: 100
-ext: '.parquet'
+
+evaluation: {
+    metrics: ['bias', 'mae', 'mse', 'rmse', 'mase', 'msse', 'rmsse', 'mql', 'cov', 'scrps'], # 'ql', 'cal'
+    evaluation_sample_type: 'overlap' # nooverlap
+}
+
+
