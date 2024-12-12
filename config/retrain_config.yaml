@@ -80,10 +80,21 @@ model_params: {
         'task_type': 'CPU'
     }
 }
+target_transforms: null
+features: {
+    'static': ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id'],
+    'lags': [1, 7, 14, 21, 28, 35, 42, 49, 56],
+    'lag_transforms': {
+                1: [RollingMean(7), RollingMean(14), RollingMean(30), ExpandingMean()],
+                7: [RollingMean(7), RollingMean(14), RollingMean(30)],
+                14: [RollingMean(7), RollingMean(14), RollingMean(30)],
+                30: [RollingMean(7), RollingMean(14), RollingMean(30)]
+            },
+    'date': ['year', 'quarter', 'month', 'week', 'dayofweek', 'day', is_weekend],
+    'xregs': ['event']
+}
 levels: [50, 60, 70, 80, 90, 95, 99]
-static_features: ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id']
 min_series_length: 730 # 365 * 2 = 730
 samples: 100
 store_in_sample_results: False
-combine_results: False
 ext: '.parquet'

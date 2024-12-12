@@ -1,17 +1,20 @@
 
 import os
+import pandas_flavor as pf
 from mlforecast import MLForecast
 from neuralforecast import NeuralForecast
-from mlforecast.lag_transforms import RollingMean, ExpandingMean
-# from sklearn.preprocessing import FunctionTransformer
-# from mlforecast.target_transforms import GlobalSklearnTransformer
-# from mlforecast.target_transforms import LocalStandardScaler, LocalMinMaxScaler, Differences
 from sklearn.linear_model import LinearRegression, Lasso, Ridge
 from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
 from neuralforecast.models import MLP, KAN, RNN, GRU, LSTM, TCN, NBEATS, NHITS, DeepAR
+
+# NOTE: feature and transform functions must be imported to be used with eval('fun_name')
+# from sklearn.preprocessing import FunctionTransformer
+# from mlforecast.target_transforms import GlobalSklearnTransformer
+# from mlforecast.target_transforms import LocalStandardScaler, LocalMinMaxScaler, Differences
+from mlforecast.lag_transforms import RollingMean, ExpandingMean
 from src.Python.utils.custom_feats import is_weekend
 
 import logging
@@ -47,123 +50,72 @@ def get_frequency(frequency):
 
     return freq
 
-def get_target_transforms(model_name):
+def get_target_transforms(target_transforms):
     """Function to get the target transforms for the dataset.
 
     Args:
-        model_name (str): name of the model.
+        target_transforms (list): list of target transformations.
     
     Returns:
         list: target transforms.
     """
 
     module_logger.info('Defining target trasformations...')
-
     # Log1p = FunctionTransformer(func = np.log1p, inverse_func = np.expm1)
     # target_transforms = [GlobalSklearnTransformer(Log1p)],
-
-    if model_name == 'LinearRegression':
-
-        target_transforms = None
     
-    elif model_name == 'Lasso':
-
-        target_transforms = None
-    
-    elif model_name == 'Ridge':
-
-        target_transforms = None
-    
-    elif model_name == 'RandomForestRegressor':
-
-        target_transforms = None
-    
-    elif model_name == 'XGBRegressor':
-
-        target_transforms = None
-    
-    elif model_name == 'LGBMRegressor':
-
-        target_transforms = None
-    
-    elif model_name == 'CatBoostRegressor':
-
-        target_transforms = None
-
-    elif model_name == 'MLP':
-
-        target_transforms = None
-    
-    else:
-        raise ValueError(f'Invalid model: {model_name}')
+    if target_transforms is not None:
+        for i in range(len(target_transforms)):
+            try:
+                fun_tmp = eval(target_transforms[i])
+            except:
+                fun_tmp = 'error'
+            if fun_tmp != 'error':
+                target_transforms[i] = fun_tmp
 
     return target_transforms
 
-def get_lags(dataset_name, frequency):
+def get_lags(feature_list):
     """Function to get the lags for the dataset.
 
     Args:
-        dataset_name (str): name of the dataset.
-        frequency (str): frequency of the dataset.
+        feature_list (list): list of features.
     
     Returns:
         list: lags.
     """
 
     module_logger.info('Defining lags...')
+    return feature_list
 
-    if dataset_name == 'm5':
-
-        if frequency == 'daily':
-
-            lags = [1] + [7 * (i+1) for i in range(8)]
-        
-        else:
-            raise ValueError(f'Invalid frequency: {frequency}')        
-
-    else:
-        raise ValueError(f'Invalid dataset: {dataset_name}')
-
-    return lags
-
-def get_lag_transforms(dataset_name, frequency):
+def get_lag_transforms(feature_list):
     """Function to get the lag transforms for the dataset.
 
     Args:
-        dataset_name (str): name of the dataset.
-        frequency (str): frequency of the dataset.
+        feature_list (list): list of features.
     
     Returns:
         dict: lag transforms.
     """
 
     module_logger.info('Defining lag trasformations...')
+    if feature_list is not None:
+        for k in feature_list.keys():
+            for i in range(len(feature_list[k])):
+                try:
+                    fun_tmp = eval(feature_list[k][i])
+                except:
+                    fun_tmp = 'error'
+                if fun_tmp != 'error':
+                    feature_list[k][i] = fun_tmp
 
-    if dataset_name == 'm5':
+    return feature_list
 
-        if frequency == 'daily':
-
-            lag_transforms = {
-                1: [RollingMean(7), RollingMean(14), RollingMean(30), ExpandingMean()],
-                7: [RollingMean(7), RollingMean(14), RollingMean(30)],
-                14: [RollingMean(7), RollingMean(14), RollingMean(30)],
-                30: [RollingMean(7), RollingMean(14), RollingMean(30)]
-            }
-
-        else:
-            raise ValueError(f'Invalid frequency: {frequency}')
-
-    else:
-        raise ValueError(f'Invalid dataset: {dataset_name}')
-
-    return lag_transforms
-
-def get_date_features(dataset_name, frequency):
+def get_date_features(feature_list):
     """Function to get the date features for the dataset.
 
     Args:
-        dataset_name (str): name of the dataset.
-        frequency (str): frequency of the dataset.
+        feature_list (list): list of features.
     
     Returns:
         list: date features.
@@ -171,19 +123,16 @@ def get_date_features(dataset_name, frequency):
 
     module_logger.info('Defining date features...')
 
-    if dataset_name == 'm5':
+    if feature_list is not None:
+        for i in range(len(feature_list)):
+            try:
+                fun_tmp = eval(feature_list[i])
+            except:
+                fun_tmp = 'error'
+            if fun_tmp != 'error':
+                feature_list[i] = fun_tmp
 
-        if frequency == 'daily':
-
-            date_features = ['year', 'quarter', 'month', 'week', 'dayofweek', 'day', is_weekend]
-
-        else:
-            raise ValueError(f'Invalid frequency: {frequency}')
-
-    else:
-        raise ValueError(f'Invalid dataset: {dataset_name}')
-
-    return date_features
+    return feature_list
 
 def get_model_type(model_name):
     """Function to get the model type for the dataset.
@@ -348,7 +297,7 @@ def set_model(model_name, model_params = None):
 
     return model
 
-def set_engine(model_name, dataset_name, frequency, model_params = None):
+def set_engine(model_name, frequency, features, target_transforms = None, model_params = None):
 
     """Function to set the engine based on the model name.
 
@@ -356,6 +305,8 @@ def set_engine(model_name, dataset_name, frequency, model_params = None):
         model_name (str): name of the model.
         dataset_name (str): name of the dataset.
         frequency (str): frequency of the dataset.
+        features (dict): features of the dataset.
+        target_transforms (list, optional): target transformations. Defaults to None.
         model_params (dict, optional): parameters for the model. Defaults to None.
     
     Returns:
@@ -367,10 +318,10 @@ def set_engine(model_name, dataset_name, frequency, model_params = None):
     model_type = get_model_type(model_name)
     model = set_model(model_name, model_params)
     freq = get_frequency(frequency)
-    target_transforms = get_target_transforms(model_name)
-    lags = get_lags(dataset_name, frequency)
-    lag_transforms = get_lag_transforms(dataset_name, frequency)
-    date_features = get_date_features(dataset_name, frequency)
+    target_transforms = get_target_transforms(target_transforms = target_transforms)
+    lags = get_lags(feature_list = features['lags'])
+    lag_transforms = get_lag_transforms(feature_list = features['lag_transforms'])
+    date_features = get_date_features(feature_list = features['date'])
 
     if model_type =='sf':
 
@@ -401,3 +352,36 @@ def set_engine(model_name, dataset_name, frequency, model_params = None):
 
     return engine
 
+@pf.register_dataframe_method
+def add_data_features(data, frequency, features, remove_static = False):
+
+    """Function to add date features to the data.
+
+    Args:
+        data (pd.DataFrame): Input dataframe in Nixtla's format.
+        frequency (string): The frequency of the data (e.g., 'daily', 'weekly').
+        features (dict): Dictionary containing feature details.
+    
+    Returns:
+        pd.DataFrame: dataframe with date features added.
+    """
+
+    module_logger.info(f'Adding features to the dataset...')
+    freq = get_frequency(frequency)
+    lags = get_lags(feature_list = features['lags'])
+    lag_transforms = get_lag_transforms(feature_list = features['lag_transforms'])
+    date_features = get_date_features(feature_list = features['date'])
+    static_features = features['static']
+
+    data_feat = MLForecast(
+        models = [],
+        freq = freq[0], 
+        lags = lags,
+        lag_transforms = lag_transforms,
+        date_features = date_features
+    ).preprocess(df = data, static_features = static_features)
+
+    if remove_static:
+        data_feat = data_feat.drop(static_features, axis = 1)
+
+    return data_feat

@@ -7,7 +7,7 @@ TODO:
 - testare DL (MLP, KAN, LSTM, TCN, NBEATS, NHITS, DeepAR)
 - FIXME: set_engine: local_scaler_type = target_transforms or as model params scaler_type = 'robust'
 - FIXME: get_default_model_params: aggiungere i default per tutti
-- FIXME: add exogenous calendar variable to data (make_future_data o MLForecast.preprocess)
+- FIXME: tirare fuori i PredictionIntervals in config
 
 
 3. significance difference tests for point and interval forecasts
@@ -17,7 +17,7 @@ TODO:
 - valutare l'aggiunta di un parametro skip per saltare di k le iterazioni 
 (deve essere minore di horizon e della retrain_window)
 (se uguale alla retrain window produce previsioni non overlapping)
-- valutare il padding del dataset per averle tutte lunghe uguali (necessario per insample)
+- valutare il padding del dataset per averle tutte lunghe uguali (necessario per insample DL)
 - valutare il save e load dei modelli ad ogni fitting
 - test overlap and nooverlap evaluation
 - aggiungere encoding per categorical variables

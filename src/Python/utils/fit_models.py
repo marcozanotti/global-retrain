@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from mlforecast.utils import PredictionIntervals
 from src.Python.utils.collect_data import save_data, get_data, combine_train_test
-from src.Python.utils.set_engine import get_model_type, set_engine
+from src.Python.utils.set_engine import get_model_type, set_engine, add_data_features
 
 import logging
 module_logger = logging.getLogger('fit_models')
@@ -89,8 +89,8 @@ def retrain_ml_model(
     test_window,
     horizon, 
     retrain_window,
+    features,
     levels = [50, 60, 70, 80, 90, 95, 99],
-    static_features = [],
     store_in_sample_results = False,
     ext = '.parquet'
 ):
@@ -107,10 +107,9 @@ def retrain_ml_model(
         test_window (int): length of the test window.
         horizon (int): forecasting horizon.
         retrain_window (int, optional): window for retraining.
+        features (dict): features to be used for training.
         levels (list): confidence levels for the predictions. Defaults to
         [60, 70, 80, 85, 90, 95, 99].
-        static_features (list, optional): static features to include in the model.
-        Defaults to [].
         store_in_sample_results (bool, optional): store in-sample results.
         Defaults to False.
         ext (str, optional): file extension for storing results. Defaults to '.parquet'.
@@ -133,6 +132,9 @@ def retrain_ml_model(
     module_logger.info(
         f'[ Retrain ids: {fitting_ids} ] | Num fitting: {n_fitting} | Num iterations: {n_samples} ]'
     )
+
+    # define static features
+    static_features = features['static']
 
     # define the prediction intervals
     if levels is not None:
@@ -289,8 +291,8 @@ def retrain_dl_model(
     test_window,
     horizon, 
     retrain_window,
+    features,
     levels = [50, 60, 70, 80, 90, 95, 99],
-    static_features = [],
     store_in_sample_results = False,
     ext = '.parquet'
 ):
@@ -307,9 +309,9 @@ def retrain_dl_model(
         test_window (int): length of the test window.
         horizon (int): forecasting horizon.
         retrain_window (int, optional): window for retraining.
+        features (dict): features to be used for training.
         levels (list): confidence levels for the predictions. Defaults to
         [60, 70, 80, 85, 90, 95, 99].
-        static_features (list, optional): list of static features. Defaults to [].
         store_in_sample_results (bool, optional): store in-sample results.
         Defaults to False.
         ext (str, optional): file extension for storing results. Defaults to '.parquet'.
@@ -333,14 +335,17 @@ def retrain_dl_model(
         f'[ Retrain ids: {fitting_ids} ] | Num fitting: {n_fitting} | Num iterations: {n_samples} ]'
     )
 
+    # define the static features
+    static_features = features['static']
+
     # define the prediction intervals
     if levels is not None:
         intervals = PredictionIntervals(h = horizon, n_windows = 4, method = 'conformal_distribution')
 
     # get the static dataframe and remove it from train and test
     static_df = test_df[['unique_id'] + static_features].drop_duplicates().reset_index(drop = True)
-    train_df = train_df.drop(columns = static_features, axis = 1) # WARN: not inplace = True since it modifies the original
-    test_df = test_df.drop(columns = static_features, axis = 1) # WARN: not inplace = True since it modifies the original
+    train_df = add_data_features(data = train_df, frequency = frequency, features = features, remove_static = True)
+    test_df = add_data_features(data = test_df, frequency = frequency, features = features, remove_static = True)
 
     # initialize the time dataframe (the only auto-incremental df with save at the end)
     time_df = pd.DataFrame()
@@ -357,8 +362,6 @@ def retrain_dl_model(
         test_df_tmp.reset_index(drop = True, inplace = True)
         ds_to_remove = train_df_tmp["ds"].unique()
         test_df_tmp = test_df_tmp.loc[~test_df_tmp['ds'].isin(ds_to_remove)]
-        # xreg_df_tmp = test_df_tmp.drop(columns = 'y', axis = 1)
-        # test_df_tmp = test_df_tmp[['unique_id', 'ds', 'y']]
         
         if i in fitting_ids:
 
@@ -509,7 +512,8 @@ def retrain_model(config):
     model_names = config['model_names']
     model_params = config['model_params']
     levels = config['levels']
-    static_features = config['static_features']
+    target_transforms = config['target_transforms']
+    features = config['features']
     min_series_length = config['min_series_length']
     samples = config['samples']
     store_in_sample_results = config['store_in_sample_results']
@@ -537,9 +541,9 @@ def retrain_model(config):
         module_logger.info(f'[ Model type: {model_type} | Model name: {m} ]')
         
         if model_params is None:
-            engine_tmp = set_engine(m, dataset_name, frequency, model_params)
+            engine_tmp = set_engine(m, frequency, features, target_transforms, model_params)
         else:
-            engine_tmp = set_engine(m, dataset_name, frequency, model_params[m])
+            engine_tmp = set_engine(m, frequency, features, target_transforms, model_params[m])
 
         for rs in retrain_scenarios:
 
@@ -572,8 +576,8 @@ def retrain_model(config):
                     test_window = test_window,
                     horizon = horizon,
                     retrain_window = rs,
+                    features = features,
                     levels = levels,
-                    static_features = static_features,
                     store_in_sample_results = store_in_sample_results,
                     ext = ext
                 )
@@ -590,8 +594,8 @@ def retrain_model(config):
                     test_window = test_window,
                     horizon = horizon,
                     retrain_window = rs,
+                    features = features,
                     levels = levels,
-                    static_features = static_features,
                     store_in_sample_results = store_in_sample_results,
                     ext = ext
                 )    
