@@ -3,7 +3,7 @@ from src.Python.utils.utilities import *
 from src.Python.utils.fit_models import retrain_model
 
 os.environ['NIXTLA_ID_AS_COL'] = '1'
-config = get_config('config/retrain_config_ml.yaml')
+config = get_config('config/retrain_ml_config.yaml')
 configure_logging(
     config_file = 'config/log_config.yaml', 
     name_list = [

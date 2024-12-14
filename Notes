@@ -1,15 +1,12 @@
 TODO:
 
-1. add datasets (VN1, M3, M4, Favorita, Rossmann, Walmart Store Sales, Walmart Stormy Weather, Wikipedia)
-
-
-2. add neuralforecast for DL models
-- testare DL (MLP, KAN, LSTM, TCN, NBEATS, NHITS, DeepAR)
+1. add neuralforecast for DL models
 - FIXME: set_engine: local_scaler_type = target_transforms or as model params scaler_type = 'robust'
-- FIXME: get_default_model_params: aggiungere i default per tutti
+- FIXME: config_dl: impostare i parametri dei vari modelli
 
-3. corregere ensemble (se creo un ensemble con 2 modelli e uno con 3 non devono sovrascriversi)
+2. corregere ensemble (se creo un ensemble con 2 modelli e uno con 3 non devono sovrascriversi)
 
+3. add datasets (VN1, M3, M4, Favorita, Rossmann, Walmart Store Sales, Walmart Stormy Weather, Wikipedia)
 
 4. significance difference tests for point and interval forecasts
 - wilcoxon signed rank test 0.05 (daily retail  demand forecasting)

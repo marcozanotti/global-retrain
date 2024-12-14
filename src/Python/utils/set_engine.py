@@ -8,7 +8,7 @@ from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
-from neuralforecast.models import MLP, KAN, RNN, GRU, LSTM, TCN, NBEATS, NHITS, DeepAR
+from neuralforecast.models import MLP, LSTM, TCN, NBEATSx, NHITS
 
 # NOTE: feature and transform functions must be imported to be used with eval('fun_name')
 # from sklearn.preprocessing import FunctionTransformer
@@ -150,7 +150,7 @@ def get_model_type(model_name):
         'RandomForestRegressor', 
         'XGBRegressor', 'LGBMRegressor', 'CatBoostRegressor' 
     ]
-    dl = ['MLP', 'KAN', 'RNN', 'LSTM', 'GRU', 'TCN', 'NBEATS', 'NHITS', 'DeepAR']
+    dl = ['MLP', 'LSTM', 'TCN', 'NBEATSx', 'NHITS']
 
     if model_name in sf:
         model_type = 'sf'
@@ -233,9 +233,52 @@ def get_default_model_params(model_name):
 
         model_params = {
             model_name: {
-                'h': 7,
+                'h': 28,
                 'input_size': 2,
-                'max_steps': 20
+                'max_steps': 100,
+                'early_stop_patience_steps': 10
+            }
+        }
+
+    elif model_name == 'LSTM':
+
+        model_params = {
+            model_name: {
+                'h': 28,
+                'max_steps': 100,
+                'early_stop_patience_steps': 10
+            }
+        }
+    
+    elif model_name == 'TCN':
+
+        model_params = {
+            model_name: {
+                'h': 28,
+                'max_steps': 100,
+                'early_stop_patience_steps': 10
+            }
+        }
+    
+    elif model_name == 'NBEATSx':
+
+        model_params = {
+            model_name: {
+                'h': 28,
+                'input_size': 7,
+                'max_steps': 100,
+                'early_stop_patience_steps': 10
+            }
+        }
+
+    elif model_name == 'NHITS':
+
+        model_params = {
+            model_name: {
+                'h': 28,
+                'input_size': 7,
+                'max_steps': 100,
+                'early_stop_patience_steps': 10 
             }
         }
     
@@ -276,22 +319,14 @@ def set_model(model_name, model_params = None):
         model = [CatBoostRegressor(**model_params)]
     elif model_name == 'MLP':
         model = [MLP(**model_params)]
-    elif model_name == 'KAN':
-        model = [KAN(**model_params)]
-    elif model_name == 'RNN':
-        model = [RNN(**model_params)]
     elif model_name == 'LSTM':
         model = [LSTM(**model_params)]
-    elif model_name == 'GRU':
-        model = [GRU(**model_params)]
     elif model_name == 'TCN':
         model = [TCN(**model_params)]
-    elif model_name == 'NBEATS':
-        model = [NBEATS(**model_params)]
+    elif model_name == 'NBEATSx':
+        model = [NBEATSx(**model_params)]
     elif model_name == 'NHITS':
         model = [NHITS(**model_params)]
-    elif model_name == 'DeepAR':
-        model = [DeepAR(**model_params)]
     else:
         raise ValueError(f'Invalid model: {model_name}')
 
