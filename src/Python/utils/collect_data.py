@@ -1,195 +1,19 @@
 
-import os
 import numpy as np
 import pandas as pd
 import pandas_flavor as pf
-import pyarrow.parquet as pq
+from src.Python.utils.utilities import save_data, load_data, get_frequency, get_dataset_frequency
 
 import logging
 module_logger = logging.getLogger('collect_data')
 
-# from datasetsforecast.m3 import M3
-# from datasetsforecast.m4 import M4
-# M3.download('data')
-# M4.download('data') 
 
-def create_file_path(path_list):
-    """Function to create a file path from a list of directories.
-
-    Args:
-        path_list (list): List of directories to be joined.
-    
-    Returns:
-        string: The file path.
-    """
-
-    if len(path_list) == 1:
-        path = path_list[0]
-    else:
-        path = '/'.join(str(x) for x in path_list) + '/'
-
-    return path
-
-def create_file_name(name_list, ext = None):
-
-    """Function to create a file name from a list of names.
-
-    Args:
-        name_list (list): List of names to be used to create the file name.
-        ext (str, optional): Extension of the file. Defaults to '.parquet'.
-    
-    Returns:
-        string: The file name.
-    """
-    if len(name_list) == 1:
-        file_name = name_list[0]
-    else:
-        file_name = '_'.join(str(x) for x in name_list)
-    
-    if ext is not None:
-        file_name += ext
-
-    return file_name
-
-def get_file_name(path_list, name_list = None, ext = '.parquet', remove_ext = True):
-
-    """Function to get file names from a given path.
-
-    Args:
-        path_list (list): List of directories to be joined.
-        name_list (list): List of names to be used to filter the files. Defaults to None.
-        ext (str, optional): Extension of the files. Defaults to '.parquet'.
-        remove_ext (bool, optional): Whether to remove the extension from the file names. 
-        Defaults to True.
-    
-    Returns:
-        list: List of file names.
-    """
-
-    path = create_file_path(path_list)
-    file_names = os.listdir(path)
-    if name_list is not None:
-        for n in name_list:
-            file_names = list(filter(lambda x: str(n) in x, file_names))
-    if remove_ext:
-        file_names = [s.replace(ext, "") for s in file_names]
-
-    return file_names
-
-def combine_and_save_files(path_list_to_read, path_list_to_write, name_list, ext = '.parquet'):
-
-    """Function to combine and save multiple files into a single file.
-
-    Args:
-        path_list_to_read (list): List of directories to be joined for reading.
-        path_list_to_write (list): List of directories to be joined for writing.
-        name_list (list): List of names to be used to filter the files.
-        ext (str, optional): Extension of the files. Defaults to '.parquet'.
-    """
-
-    module_logger.info('Combining and saving files...')
-    path_to_read = create_file_path(path_list_to_read)
-    path_to_write = create_file_path(path_list_to_write)
-    files = get_file_name(
-        path_list = [path_to_read], 
-        name_list = name_list,
-        ext = ext, 
-        remove_ext = False
-    )
-    files.sort(key = lambda x: int("".join([i for i in x if i.isdigit()])))
-    write_file_name = create_file_name(name_list = name_list, ext = ext) 
-
-    if ext == '.parquet':
-        if files:
-            schema = pq.ParquetFile(path_to_read + files[0]).schema_arrow
-            with pq.ParquetWriter(path_to_write + write_file_name, schema = schema) as writer:
-                for f in files:
-                    writer.write_table(pq.read_table(path_to_read + f, schema = schema))
-    else:
-        raise ValueError(f'Unsupported extension {ext}')
-
-    return
-
-def remove_file(path_list, name_list, ext = '.parquet'):
-
-    """Function to remove files from a given path.
-
-    Args:
-        path_list (list): List of directories to be joined.
-        name_list (list): List of names to be used to filter the files.
-        ext (str, optional): Extension of the files. Defaults to '.parquet'.
-    """
-
-    module_logger.info('Removing files...')
-    path_to_remove = create_file_path(path_list)
-    files = get_file_name(
-        path_list = [path_to_remove], name_list = name_list,
-        ext = ext, remove_ext = False
-    )
-    for f in files:
-        os.remove(f'{path_to_remove}{f}')
-
-    return
-
-@pf.register_dataframe_method
-def save_data(data, path_list, name_list, ext = '.parquet'):
-
-    """Function to save dataframes.
-
-    Args:
-        data (pd.DataFrame): Data to be saved.
-        path_list (list): List of directories to be joined.
-        name_list (list): List of names to be used to create the file name.
-        ext (string, optional): File extension (default is '.parquet').
-    """
-    
-    path = create_file_path(path_list)
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-    file_name = create_file_name(name_list)
-    module_logger.info(f'Saving {file_name} dataset...')
-
-    if ext == '.parquet':
-        data.to_parquet(f'{path}{file_name}{ext}')
-    elif ext == '.csv':
-        data.to_csv(f'{path}{file_name}{ext}')
-    else:
-        raise(f'Unsupported file extension {ext}. Only .parquet and .csv are allowed')
-
-def load_data(path_list, name_list, ext = '.parquet'):
-
-    """Function to load the data.
-
-    Args:
-        path_list (list): List of directories to be joined.
-        name_list (list): List of names to be used to create the file name.
-        ext (string, optional): File extension (default is '.parquet').
-
-    Returns:
-        pd.Dataframe: The data.
-    """
-
-    path = create_file_path(path_list)
-    file_name = create_file_name(name_list)
-    module_logger.info(f'Loading {file_name} dataset...')
-
-    if ext == '.parquet':
-        res_df = pd.read_parquet(f'{path}{file_name}{ext}')
-    elif ext == '.csv':
-        res_df = pd.read_csv(f'{path}{file_name}{ext}')
-    else:
-        raise(f'Unsupported file extension {ext}. Only .parquet and .csv are allowed')
-
-    return res_df
-
-def download_data(dataset_name, frequency, save = True, ext = '.parquet'):
+def download_data(dataset_name, save = True, ext = '.parquet'):
 
     """Function to download and save different time series datasets.
 
     Args:
         dataset_name (string): Name of the dataset (e.g., 'm5', 'm4').
-        frequency (string, optional): The frequency of the data (e.g., 'daily', 'weekly'). 
         save (bool, optional): Whether to save data or not. Train and test detasets
         are saved in data/_dataset_name/ as .parquet files. Defaults to True.
         ext (string, optional): File extension (default is '.parquet').
@@ -199,26 +23,56 @@ def download_data(dataset_name, frequency, save = True, ext = '.parquet'):
     """
 
     if dataset_name == 'm5':
+        
         module_logger.info(f'Downloading {dataset_name} train dataset...')
         train_df = pd.read_parquet('https://m5-benchmarks.s3.amazonaws.com/data/train/target.parquet') \
             .rename(columns = {'item_id': 'unique_id', 'timestamp': 'ds', 'demand': 'y'})
         module_logger.info(f'Downloading {dataset_name} test dataset...')
         test_df = pd.read_parquet('https://m5-benchmarks.s3.amazonaws.com/data/test/target.parquet') \
             .rename(columns = {'item_id': 'unique_id', 'timestamp': 'ds', 'demand': 'y'})
+    
+    elif dataset_name == 'vn1':
+
+        module_logger.info(f'Downloading {dataset_name} train dataset...')
+        # Phase 0 datset
+        train_df0 = pd.read_csv('data/vn1/Phase 0 - Sales.csv')
+        train_df0['unique_id'] = train_df0['Client'].astype(str) + '_' \
+            + train_df0['Warehouse'].astype(str) + '_' \
+            + train_df0['Product'].astype(str)
+        train_df0.drop(columns = ['Client', 'Warehouse', 'Product'], axis = 1, inplace = True)
+        # Phase 1 dataset
+        train_df1 = pd.read_csv('data/vn1/Phase 1 - Sales.csv')
+        train_df1['unique_id'] = train_df1['Client'].astype(str) + '_' \
+            + train_df1['Warehouse'].astype(str) + '_' \
+            + train_df1['Product'].astype(str)
+        train_df1.drop(columns = ['Client', 'Warehouse', 'Product'], axis = 1, inplace = True)
+        train_df = train_df0 \
+            .merge(train_df1, how = 'left', on = 'unique_id') \
+            .melt(id_vars = 'unique_id', var_name = 'ds', value_name  = 'y')
+
+        module_logger.info(f'Downloading {dataset_name} test dataset...')
+        test_df = pd.read_csv('data/vn1/Phase 2 - Sales.csv')
+        test_df['unique_id'] = test_df['Client'].astype(str) + '_' \
+            + test_df['Warehouse'].astype(str) + '_' \
+            + test_df['Product'].astype(str)
+        test_df.drop(columns = ['Client', 'Warehouse', 'Product'], axis = 1, inplace = True)
+        test_df = test_df.melt(id_vars = 'unique_id', var_name = 'ds', value_name  = 'y')
+            
     else:
+
         raise(f'Unknown dataset {dataset_name}')
 
     if save:
         save_data(
             data = train_df, 
             path_list = ['data', dataset_name], 
-            name_list = [dataset_name, frequency, 'train'],
+            name_list = [dataset_name, 'train'],
             ext = ext
         )
         save_data(
             data = test_df, 
             path_list = ['data', dataset_name], 
-            name_list = [dataset_name, frequency, 'test'],
+            name_list = [dataset_name, 'test'],
             ext = ext
         )
 
@@ -243,6 +97,60 @@ def combine_train_test(train_df, test_df):
     combined_df.reset_index(drop = True, inplace = True)
 
     return combined_df
+
+@pf.register_dataframe_method
+def aggregate_data_by_frequency(data, dataset_name, frequency, drop_firstlast = False):
+
+    """Function to aggregate dataframes by frequency.
+
+    Args:
+        data (pd.DataFrame): Input dataframe in Nixtla's format.
+        dataset_name (string): Name of the dataset (e.g., 'm5', 'm4').
+        frequency (string): The frequency of the data (e.g., 'daily', 'weekly').
+    
+    Returns:
+        pd.DataFrame: dataframe aggregated by frequency.
+    """
+
+    def drop_first_last(df):
+        return df.iloc[1:-1]
+
+    freq_list = get_frequency(frequency)
+    freq = freq_list[0]
+    freq_df = get_frequency(get_dataset_frequency(dataset_name))[0]
+
+    if freq != freq_df:
+        module_logger.info(f'Aggregating {dataset_name} dataset into {frequency} frequency...')
+
+        if 'unique_id' in data.columns:
+            data_agg = data \
+                .set_index('ds') \
+                .groupby(['unique_id', pd.Grouper(freq = freq_list[2])]) \
+                .sum() \
+                .reset_index()
+
+            if drop_firstlast:
+                data_agg = data_agg \
+                    .groupby('unique_id') \
+                    .apply(drop_first_last, include_groups = False) \
+                    .reset_index() \
+                    .drop(columns = ['level_1'], axis = 1)
+
+        else:
+            data_agg = data \
+                .set_index('ds') \
+                .groupby([pd.Grouper(freq = freq_list[2])]) \
+                .sum() \
+                .reset_index()
+
+            if drop_firstlast:
+                data_agg = data_agg \
+                    .apply(drop_first_last)
+
+    else:
+        data_agg = data      
+
+    return data_agg
 
 @pf.register_dataframe_method
 def remove_series(data, min_series_length):
@@ -309,7 +217,14 @@ def get_static_features(data, dataset_name):
         static_df['store_id'] = static_df['store_id'].astype('category').cat.codes
         static_df['state_id'] = static_df[3]
         static_df['state_id'] = static_df['state_id'].astype('category').cat.codes
-        static_df = static_df.drop(columns = [0, 1, 2, 3, 4], axis = 1)
+        static_df.drop(columns = [0, 1, 2, 3, 4], axis = 1, inplace = True)
+
+    elif dataset_name == 'vn1':
+        static_df['unique_id'] = static_df[0] + "_" + static_df[1] + "_" + static_df[2]
+        static_df['client'] = static_df[0].astype('category').cat.codes
+        static_df['warehouse'] = static_df[1].astype('category').cat.codes
+        static_df['product'] = static_df[2].astype('category').cat.codes
+        static_df.drop(columns = [0, 1, 2], axis = 1, inplace = True)
 
     else:
         raise(f'Unknown dataset {dataset_name}')
@@ -340,7 +255,7 @@ def sampling_data(data, samples = 1000):
 
     return res_df
 
-def get_xregs_data(path_list, name_list, dataset_name, ext = '.parquet'):
+def get_xregs_data(path_list, name_list, dataset_name, frequency, ext = '.parquet'):
 
     """Function to get external regressors (xregs) for the specified dataset.
 
@@ -348,6 +263,7 @@ def get_xregs_data(path_list, name_list, dataset_name, ext = '.parquet'):
         path_list (list): List of directories to be joined.
         name_list (list): List of file names for external regressors.
         dataset_name (string): Name of the dataset (e.g., 'm5', 'm4').
+        frequency (string): The frequency of the data (e.g., 'daily', 'weekly').
         ext (string, optional): Extension of the external regressors files. Defaults to '.parquet'.
     
     Returns:
@@ -369,6 +285,12 @@ def get_xregs_data(path_list, name_list, dataset_name, ext = '.parquet'):
         xreg_df['date'] = pd.to_datetime(xreg_df['date'])
         xreg_df.rename(columns = {'date': 'ds'}, inplace = True)
         xreg_df = xreg_df[['ds', 'event']]
+        xreg_df = aggregate_data_by_frequency(xreg_df, dataset_name, frequency, drop_firstlast = False)
+        xreg_df['event'] = np.where(xreg_df['event'] == 0, 0, 1)
+
+    elif dataset_name == 'vn1':
+
+        raise ValueError(f'Xregs are not available for dataset {dataset_name}.')
 
     else:
         raise ValueError(f'Unknown dataset {dataset_name}.')
@@ -393,7 +315,7 @@ def prepare_data(dataset_name, frequency, static_features = True, xregs = True, 
 
     train_df = load_data(
         path_list = ['data', dataset_name], 
-        name_list = [dataset_name, frequency, 'train'], 
+        name_list = [dataset_name, 'train'], 
         ext = ext
     )
     train_df['ds'] = pd.to_datetime(train_df['ds'])
@@ -401,14 +323,17 @@ def prepare_data(dataset_name, frequency, static_features = True, xregs = True, 
 
     test_df = load_data(
         path_list = ['data', dataset_name], 
-        name_list = [dataset_name, frequency, 'test'],
+        name_list = [dataset_name, 'test'],
         ext = ext
     )
     test_df['ds'] = pd.to_datetime(test_df['ds'])
     test_df['unique_id'] = test_df['unique_id'].astype(str)
 
     res_df = combine_train_test(train_df, test_df)
+    del train_df, test_df
 
+    res_df = aggregate_data_by_frequency(res_df, dataset_name, frequency, drop_firstlast = True)
+        
     if static_features:
         res_df = get_static_features(res_df, dataset_name)
 
@@ -417,6 +342,7 @@ def prepare_data(dataset_name, frequency, static_features = True, xregs = True, 
             path_list = ['data', dataset_name],  
             name_list = [dataset_name, 'xregs'], 
             dataset_name = dataset_name,
+            frequency = frequency, 
             ext = ext
         )
         res_df = pd.merge(res_df, xreg_df, how = 'left', on = 'ds')
@@ -431,17 +357,17 @@ def prepare_data(dataset_name, frequency, static_features = True, xregs = True, 
 
     return res_df
 
-def get_data(path_list, name_list, ext = '.parquet', min_series_length = None, samples = None):
+def get_data(path_list, name_list, min_series_length = None, samples = None, ext = '.parquet'):
 
     """Function to get the data.
 
     Args:
         path_list (list): List of directories to be joined.
         name_list (list): List of names to be used to create the file name.
-        ext (string, optional): File extension (default is '.parquet').
         min_series_length (int, optional): Minimum length of series to be included. 
         Defaults to None.
         samples (int, optional): Number of samples to be included. Defaults to None.
+        ext (string, optional): File extension (default is '.parquet').
 
     Returns:
         pd.Dataframe: The data.
@@ -453,6 +379,8 @@ def get_data(path_list, name_list, ext = '.parquet', min_series_length = None, s
         res_df = remove_series(res_df, min_series_length)
 
     if samples is not None:
-        res_df = sampling_data(res_df, samples)        
+        res_df = sampling_data(res_df, samples)
+
+    res_df.sort_values(by = ['unique_id', 'ds'], inplace = True)  
 
     return res_df

@@ -1,6 +1,8 @@
 
 import os
-from src.Python.utils.utilities import *
+from src.Python.utils.utilities import (
+    get_config, configure_logging, create_logger, stop_logger
+)
 from src.Python.utils.evaluate_forecasts import evaluate_model
 
 os.environ['NIXTLA_ID_AS_COL'] = '1'

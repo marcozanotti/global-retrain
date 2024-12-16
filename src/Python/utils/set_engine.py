@@ -16,39 +16,11 @@ from neuralforecast.models import MLP, LSTM, TCN, NBEATSx, NHITS
 # from mlforecast.target_transforms import LocalStandardScaler, LocalMinMaxScaler, Differences
 from mlforecast.lag_transforms import RollingMean, ExpandingMean
 from src.Python.utils.custom_feats import is_weekend
+from src.Python.utils.utilities import get_frequency
 
 import logging
 module_logger = logging.getLogger('set_engine')
 
-
-def get_frequency(frequency):
-    """Function to get the frequency of the dataset.
-
-    Args:
-        frequency (str): frequency of the dataset.
-    
-    Returns:
-        str: frequency.
-    """
-
-    module_logger.info('Defining frequency...')
-
-    if frequency == 'hourly':
-        freq = ['H', 24]
-    elif frequency == 'daily':
-        freq = ['D', 7]
-    elif frequency == 'weekly':
-        freq = ['W', 52]
-    elif frequency == 'monthly':
-        freq = ['M',12]
-    elif frequency == 'quarterly':
-        freq = ['Q', 4]
-    elif frequency == 'yearly':
-        freq = ['Y', 1]
-    else:
-        raise ValueError(f'Invalid frequency: {frequency}')
-
-    return freq
 
 def get_target_transforms(target_transforms):
     """Function to get the target transforms for the dataset.

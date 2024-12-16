@@ -9,10 +9,10 @@ from utilsforecast.losses import (
     quantile_loss, mqloss, coverage, calibration, scaled_crps
 )
 from utilsforecast.evaluation import evaluate
-from src.Python.utils.collect_data import (
-    get_file_name, get_data, load_data, save_data, combine_and_save_files
+from src.Python.utils.utilities import (
+    get_file_name, save_data, load_data, combine_and_save_files, get_frequency
 )
-from src.Python.utils.set_engine import get_frequency
+from src.Python.utils.collect_data import get_data
 from src.Python.utils.fit_models import get_retrain_ids
 
 import logging

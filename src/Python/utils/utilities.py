@@ -1,9 +1,15 @@
 
+import os
 import yaml
+import pandas as pd
+import pandas_flavor as pf
+import pyarrow.parquet as pq
 import logging
 import logging.config
 from time import gmtime, strftime
-from src.Python.utils.collect_data import create_file_name
+
+module_logger = logging.getLogger('utilities')
+
 
 def get_config(config_file):
     """Function to load configuration from a YAML file.
@@ -72,3 +78,223 @@ def stop_logger(logger):
 
     return
 
+def create_file_path(path_list):
+    """Function to create a file path from a list of directories.
+
+    Args:
+        path_list (list): List of directories to be joined.
+    
+    Returns:
+        string: The file path.
+    """
+
+    if len(path_list) == 1:
+        path = path_list[0]
+    else:
+        path = '/'.join(str(x) for x in path_list) + '/'
+
+    return path
+
+def create_file_name(name_list, ext = None):
+
+    """Function to create a file name from a list of names.
+
+    Args:
+        name_list (list): List of names to be used to create the file name.
+        ext (str, optional): Extension of the file. Defaults to '.parquet'.
+    
+    Returns:
+        string: The file name.
+    """
+    if len(name_list) == 1:
+        file_name = name_list[0]
+    else:
+        file_name = '_'.join(str(x) for x in name_list)
+    
+    if ext is not None:
+        file_name += ext
+
+    return file_name
+
+def get_file_name(path_list, name_list = None, ext = '.parquet', remove_ext = True):
+
+    """Function to get file names from a given path.
+
+    Args:
+        path_list (list): List of directories to be joined.
+        name_list (list): List of names to be used to filter the files. Defaults to None.
+        ext (str, optional): Extension of the files. Defaults to '.parquet'.
+        remove_ext (bool, optional): Whether to remove the extension from the file names. 
+        Defaults to True.
+    
+    Returns:
+        list: List of file names.
+    """
+
+    path = create_file_path(path_list)
+    file_names = os.listdir(path)
+    if name_list is not None:
+        for n in name_list:
+            file_names = list(filter(lambda x: str(n) in x, file_names))
+    if remove_ext:
+        file_names = [s.replace(ext, "") for s in file_names]
+
+    return file_names
+
+def combine_and_save_files(path_list_to_read, path_list_to_write, name_list, ext = '.parquet'):
+
+    """Function to combine and save multiple files into a single file.
+
+    Args:
+        path_list_to_read (list): List of directories to be joined for reading.
+        path_list_to_write (list): List of directories to be joined for writing.
+        name_list (list): List of names to be used to filter the files.
+        ext (str, optional): Extension of the files. Defaults to '.parquet'.
+    """
+
+    module_logger.info('Combining and saving files...')
+    path_to_read = create_file_path(path_list_to_read)
+    path_to_write = create_file_path(path_list_to_write)
+    files = get_file_name(
+        path_list = [path_to_read], 
+        name_list = name_list,
+        ext = ext, 
+        remove_ext = False
+    )
+    files.sort(key = lambda x: int("".join([i for i in x if i.isdigit()])))
+    write_file_name = create_file_name(name_list = name_list, ext = ext) 
+
+    if ext == '.parquet':
+        if files:
+            schema = pq.ParquetFile(path_to_read + files[0]).schema_arrow
+            with pq.ParquetWriter(path_to_write + write_file_name, schema = schema) as writer:
+                for f in files:
+                    writer.write_table(pq.read_table(path_to_read + f, schema = schema))
+    else:
+        raise ValueError(f'Unsupported extension {ext}')
+
+    return
+
+def remove_file(path_list, name_list, ext = '.parquet'):
+
+    """Function to remove files from a given path.
+
+    Args:
+        path_list (list): List of directories to be joined.
+        name_list (list): List of names to be used to filter the files.
+        ext (str, optional): Extension of the files. Defaults to '.parquet'.
+    """
+
+    module_logger.info('Removing files...')
+    path_to_remove = create_file_path(path_list)
+    files = get_file_name(
+        path_list = [path_to_remove], name_list = name_list,
+        ext = ext, remove_ext = False
+    )
+    for f in files:
+        os.remove(f'{path_to_remove}{f}')
+
+    return
+
+@pf.register_dataframe_method
+def save_data(data, path_list, name_list, ext = '.parquet'):
+
+    """Function to save dataframes.
+
+    Args:
+        data (pd.DataFrame): Data to be saved.
+        path_list (list): List of directories to be joined.
+        name_list (list): List of names to be used to create the file name.
+        ext (string, optional): File extension (default is '.parquet').
+    """
+    
+    path = create_file_path(path_list)
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    file_name = create_file_name(name_list)
+    module_logger.info(f'Saving {file_name} dataset...')
+
+    if ext == '.parquet':
+        data.to_parquet(f'{path}{file_name}{ext}')
+    elif ext == '.csv':
+        data.to_csv(f'{path}{file_name}{ext}')
+    else:
+        raise(f'Unsupported file extension {ext}. Only .parquet and .csv are allowed')
+
+def load_data(path_list, name_list, ext = '.parquet'):
+
+    """Function to load the data.
+
+    Args:
+        path_list (list): List of directories to be joined.
+        name_list (list): List of names to be used to create the file name.
+        ext (string, optional): File extension (default is '.parquet').
+
+    Returns:
+        pd.Dataframe: The data.
+    """
+
+    path = create_file_path(path_list)
+    file_name = create_file_name(name_list)
+    module_logger.info(f'Loading {file_name} dataset...')
+
+    if ext == '.parquet':
+        res_df = pd.read_parquet(f'{path}{file_name}{ext}')
+    elif ext == '.csv':
+        res_df = pd.read_csv(f'{path}{file_name}{ext}')
+    else:
+        raise(f'Unsupported file extension {ext}. Only .parquet and .csv are allowed')
+
+    return res_df
+
+def get_frequency(frequency):
+    """Function to get the frequency of the dataset.
+
+    Args:
+        frequency (str): frequency of the dataset.
+    
+    Returns:
+        str: frequency.
+    """
+
+    module_logger.info('Defining frequency...')
+
+    if frequency == 'hourly':
+        freq = ['H', 24, 'h']
+    elif frequency == 'daily':
+        freq = ['D', 7, 'D']
+    elif frequency == 'weekly':
+        freq = ['W', 52, 'W-MON']
+    elif frequency == 'monthly':
+        freq = ['M', 12, 'ME']
+    elif frequency == 'quarterly':
+        freq = ['Q', 4, 'QE']
+    elif frequency == 'yearly':
+        freq = ['Y', 1, 'YE']
+    else:
+        raise ValueError(f'Invalid frequency: {frequency}')
+
+    return freq
+
+def get_dataset_frequency(dataset_name):
+
+    """Function to get the frequency of a specific dataset.
+
+    Args:
+        dataset_name (str): name of the dataset.
+    
+    Returns:
+        str: frequency.
+    """
+
+    module_logger.info(f'Getting {dataset_name} frequency...')
+
+    if dataset_name == 'm5':
+        freq = 'daily'
+    elif dataset_name == 'vn1':
+        freq = 'weekly'
+    else:
+        raise ValueError(f'Invalid dataset: {dataset_name}')
+
+    return freq

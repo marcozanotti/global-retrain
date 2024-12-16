@@ -1,33 +1,69 @@
 
 import pandas as pd
-from utils.collect_data import *
+from src.Python.utils.collect_data import download_data, prepare_data
 
 pd.set_option("display.max_rows", 4)
 
-dataset_name = 'm5'
-frequency = 'daily'
 
-download_data(dataset_name, frequency, save = True)
-prepare_data(dataset_name, frequency, static_features = True, save = True)
 
-# check
-# full dataset
-data = get_data(
-    path = 'data/m5/', 
-    name_list = [dataset_name, frequency, 'prep'],
-    ext = '.parquet'
-)
-# dataset with series of minimum 365 days length)
-data = get_data(
-    path = 'data/m5/', 
-    name_list = [dataset_name, frequency, 'prep'],
-    ext = '.parquet', 
-    min_series_length = 365 * 2
-)
-# sampled dataset
-data_sample = get_data(
-    path = 'data/m5/', 
-    name_list = [dataset_name, frequency, 'prep'],
-    ext = '.parquet', 
-    samples = 5
-)
+# M5
+# NOTE: m5 data is downloaded from Nixtla's benchmark
+download_data('m5', save = True)
+
+# daily
+prepare_data('m5', 'daily', static_features = True, xregs = True, save = True)
+# weekly
+prepare_data('m5', 'weekly', static_features = True, xregs = True, save = True)
+# monthly
+prepare_data('m5', 'monthly', static_features = True, xregs = True, save = True)
+
+
+
+# VN1
+# NOTE: vn1 data must be downloaded from Datasource.ai
+# https://www.datasource.ai/competitions/phase-2-vn1-forecasting-accuracy-challenge/
+# and saved into the data/vn1/ directory before proceeding
+download_data('vn1', save = True)
+
+# weekly
+prepare_data('vn1', 'weekly', static_features = True, xregs = False, save = True)
+# monthly
+prepare_data('vn1', 'monthly', static_features = True, xregs = False, save = True)
+
+
+
+
+# checks
+# from src.Python.utils.collect_data import get_data
+# from src.Python.utils.utilities import configure_logging, create_logger, stop_logger
+
+# dataset_name = 'vn1'
+# frequency = 'monthly'
+
+# configure_logging(
+#     config_file = 'config/log_config.yaml', 
+#     name_list = [dataset_name, frequency, 'download']
+# )
+# logger = create_logger()
+
+
+# data = get_data(
+#     path_list = ['data', dataset_name], 
+#     name_list = [dataset_name, frequency, 'prep'],
+#     ext = '.parquet'
+# )
+# len(data['unique_id'].unique())
+# data['ds'].min()
+# data['ds'].max()
+# data.groupby('unique_id')['ds'].min()
+# data.groupby('unique_id')['ds'].max()
+
+# get_data(
+#     path_list = ['data', dataset_name],  
+#     name_list = [dataset_name, frequency, 'prep'],
+#     ext = '.parquet', 
+#     min_series_length = 12 * 3
+# )
+
+# stop_logger(logger)
+

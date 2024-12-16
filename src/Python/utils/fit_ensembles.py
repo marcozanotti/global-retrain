@@ -1,7 +1,7 @@
 
 import numpy as np
 import pandas as pd
-from src.Python.utils.collect_data import save_data, load_data
+from src.Python.utils.utilities import save_data, load_data
 from src.Python.utils.evaluate_forecasts import aggregate_data
 
 import logging
