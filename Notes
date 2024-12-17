@@ -1,7 +1,13 @@
 TODO:
 
 1. add neuralforecast for DL models
-- FIXME: config_dl: impostare i parametri dei vari modelli
+- FIXME: aggiungere il set della loss
+
+2. impostare l'analisi finale
+- tabelle performance per modello e retrain scenarios
+- tabelle complexity per modello e retrain scenarios
+- grafici delle tabelle
+- risultati relativi rispetto allo scenario con frequenza di update piu' basso
 
 2. add datasets (Rossmann, Favorita, M4, Wikipedia)
 
@@ -64,3 +70,7 @@ Aggregate M5 to weekly and monthly to test on those frequencies
 # con tutti i valori dei modelli sulle colonne
 # es. unique_id, LinearRegression, Lasso, etc
 # evals['best_model'] = evals.idxmin(axis=1)
+
+# model parameters
+# 'Lasso': null,
+# 'Ridge': null,

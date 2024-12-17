@@ -12,7 +12,7 @@ configure_logging(
     name_list = [
         config['dataset']['dataset_name'], 
         config['dataset']['frequency'], 
-        'eval'
+        'evaluation'
     ]
 )
 logger = create_logger()

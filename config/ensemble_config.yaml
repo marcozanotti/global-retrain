@@ -10,10 +10,10 @@ fitting: {
     'test_window': 56, # test_window = 28 * 13 = 364
     'retrain_scenarios': [
         7, 
-        # 14, 
+        14, 
         # 21,
-        # 30, 
-        # 60,
+        30, 
+        60,
         # 90,
         # 120,
         # 150,
@@ -25,11 +25,13 @@ fitting: {
 ensembling: {
     model_names: [
         'LinearRegression', 
-        'RandomForestRegressor', 
-        'XGBRegressor', 
+        # 'RandomForestRegressor', 
+        # 'XGBRegressor', 
         'LGBMRegressor', 
-        'CatBoostRegressor'
+        # 'CatBoostRegressor',
+        'MLP',
+        'NBEATSx'
     ],
-    methods: ['mean', 'median'],
-    name: 'LRXLC'
+    methods: ['mean'], # ['mean', 'median']
+    name: 'LLMN'
 }

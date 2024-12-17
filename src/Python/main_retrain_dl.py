@@ -1,4 +1,5 @@
 import os
+import logging
 from src.Python.utils.utilities import (
     get_config, configure_logging, create_logger, stop_logger
 )
@@ -12,7 +13,7 @@ configure_logging(
     name_list = [
         config['dataset']['dataset_name'], 
         config['dataset']['frequency'], 
-        'retrain'
+        'retrain', 'dl'
     ]
 )
 logger = create_logger()

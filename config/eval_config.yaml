@@ -11,10 +11,10 @@ dataset: {
 fitting: {
     'retrain_scenarios': [
         7, 
-        # 14, 
+        14, 
         # 21,
-        # 30, 
-        # 60,
+        30, 
+        60,
         # 90,
         # 120,
         # 150,
@@ -26,14 +26,16 @@ fitting: {
 
 model_names: [
     'LinearRegression', 
-    'Lasso', 
-    'Ridge', 
     'RandomForestRegressor', 
     'XGBRegressor', 
     'LGBMRegressor', 
     'CatBoostRegressor',
-    'EnsembleMean',
-    'EnsembleMedian'
+    'MLP',
+    'LSTM',
+    'TCN',
+    'NBEATSx',
+    'NHITS',
+    'EnsembleMeanLLMN',
 ]
 
 evaluation: {

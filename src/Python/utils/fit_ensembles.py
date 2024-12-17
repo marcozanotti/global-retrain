@@ -29,7 +29,7 @@ def fit_ensembles(config):
     retrain_scenarios = config['fitting']['retrain_scenarios']
     # model parameters
     model_names = config['ensembling']['model_names']
-    ensemble_methods = config['ensembling']['ensemble_methods']
+    ensemble_methods = config['ensembling']['methods']
     ensemble_name = config['ensembling']['name']
 
     n_samples = test_window - horizon + 1

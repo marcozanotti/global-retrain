@@ -11,7 +11,7 @@ configure_logging(
     name_list = [
         config['dataset']['dataset_name'], 
         config['dataset']['frequency'], 
-        'retrain'
+        'retrain', 'ml'
     ]
 )
 logger = create_logger()
