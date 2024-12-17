@@ -18,6 +18,7 @@ configure_logging(
 )
 logger = create_logger()
 logging.getLogger('pytorch_lightning.utilities').setLevel(logging.ERROR)
+logging.getLogger('lightning_fabric.utilities').setLevel(logging.ERROR)
 
 retrain_model(config = config)
 

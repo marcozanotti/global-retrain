@@ -1,9 +1,6 @@
 TODO:
 
-1. add neuralforecast for DL models
-- FIXME: aggiungere il set della loss
-
-2. impostare l'analisi finale
+1. impostare l'analisi finale
 - tabelle performance per modello e retrain scenarios
 - tabelle complexity per modello e retrain scenarios
 - grafici delle tabelle

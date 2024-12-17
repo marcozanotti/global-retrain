@@ -15,12 +15,34 @@ from neuralforecast.models import MLP, LSTM, TCN, NBEATSx, NHITS
 # from mlforecast.target_transforms import GlobalSklearnTransformer
 # from mlforecast.target_transforms import LocalStandardScaler, LocalMinMaxScaler, Differences
 from mlforecast.lag_transforms import RollingMean, ExpandingMean
+from neuralforecast.losses.pytorch import MAE, MSE, RMSE
 from src.Python.utils.custom_feats import is_weekend
 from src.Python.utils.utilities import get_frequency
 
 import logging
 module_logger = logging.getLogger('set_engine')
 
+def get_loss_function(loss):
+    """Function to get the loss function.
+
+    Args:
+        loss (str): name of the loss function.
+    
+    Returns:
+        function: loss function.
+    """
+
+    module_logger.info('Defining loss function...')
+
+    if loss is not None:
+        try:
+            fun_tmp = eval(loss)
+        except:
+            fun_tmp = 'error'
+        if fun_tmp != 'error':
+            loss = fun_tmp
+
+    return loss
 
 def get_target_transforms(target_transforms):
     """Function to get the target transforms for the dataset.
@@ -271,36 +293,50 @@ def set_model(model_name, model_params = None):
     """
 
     module_logger.info('Defining the model...')
+    model_type = get_model_type(model_name)
     if model_params is None:
         model_params = get_default_model_params(model_name)[model_name]
     module_logger.info(f'Model parameters: {model_params}')
 
-    if model_name == 'LinearRegression':
-        model = [LinearRegression(**model_params)]
-    elif model_name == 'Lasso':
-        model = [Lasso(**model_params)]
-    elif model_name == 'Ridge':
-        model = [Ridge(**model_params)]
-    elif model_name == 'RandomForestRegressor':
-        model = [RandomForestRegressor(**model_params)]
-    elif model_name == 'XGBRegressor':
-        model = [XGBRegressor(**model_params)]
-    elif model_name == 'LGBMRegressor':
-        model = [LGBMRegressor(**model_params)]
-    elif model_name == 'CatBoostRegressor':
-        model = [CatBoostRegressor(**model_params)]
-    elif model_name == 'MLP':
-        model = [MLP(**model_params)]
-    elif model_name == 'LSTM':
-        model = [LSTM(**model_params)]
-    elif model_name == 'TCN':
-        model = [TCN(**model_params)]
-    elif model_name == 'NBEATSx':
-        model = [NBEATSx(**model_params)]
-    elif model_name == 'NHITS':
-        model = [NHITS(**model_params)]
+    if model_type == 'ml':
+
+        if model_name == 'LinearRegression':
+            model = [LinearRegression(**model_params)]
+        elif model_name == 'Lasso':
+            model = [Lasso(**model_params)]
+        elif model_name == 'Ridge':
+            model = [Ridge(**model_params)]
+        elif model_name == 'RandomForestRegressor':
+            model = [RandomForestRegressor(**model_params)]
+        elif model_name == 'XGBRegressor':
+            model = [XGBRegressor(**model_params)]
+        elif model_name == 'LGBMRegressor':
+            model = [LGBMRegressor(**model_params)]
+        elif model_name == 'CatBoostRegressor':
+            model = [CatBoostRegressor(**model_params)]
+        else:
+            raise ValueError(f'Invalid model: {model_name}')
+
+    elif model_type == 'dl':
+
+        if 'loss' in model_params.keys():
+            model_params['loss'] = get_loss_function(model_params['loss'])
+
+        if model_name == 'MLP':
+            model = [MLP(**model_params)]
+        elif model_name == 'LSTM':
+            model = [LSTM(**model_params)]
+        elif model_name == 'TCN':
+            model = [TCN(**model_params)]
+        elif model_name == 'NBEATSx':
+            model = [NBEATSx(**model_params)]
+        elif model_name == 'NHITS':
+            model = [NHITS(**model_params)]
+        else:
+            raise ValueError(f'Invalid model: {model_name}')
+    
     else:
-        raise ValueError(f'Invalid model: {model_name}')
+        raise ValueError(f'Invalid model type: {model_type}')
 
     return model
 
