@@ -28,8 +28,9 @@ def fit_ensembles(config):
     horizon = config['fitting']['horizon']
     retrain_scenarios = config['fitting']['retrain_scenarios']
     # model parameters
-    model_names = config['model_names']
-    ensemble_methods = config['ensemble_methods']
+    model_names = config['ensembling']['model_names']
+    ensemble_methods = config['ensembling']['ensemble_methods']
+    ensemble_name = config['ensembling']['name']
 
     n_samples = test_window - horizon + 1
 
@@ -56,7 +57,7 @@ def fit_ensembles(config):
 
                 module_logger.info(f'Computing ensemble {ens} predictions...')
 
-                ensemble_name = 'Ensemble' + ens.capitalize()
+                ensemble_name_tmp = 'Ensemble' + ens.capitalize() + ensemble_name 
 
                 ensemble_df_tmp = aggregate_data(
                     data = outsample_df_sample_tmp,
@@ -65,7 +66,7 @@ def fit_ensembles(config):
                     function_name = ens,
                     adjust_metrics = False
                 )
-                ensemble_df_tmp['method'] = ensemble_name
+                ensemble_df_tmp['method'] = ensemble_name_tmp
                 ensemble_df_tmp = ensemble_df_tmp.merge(
                     outsample_df_sample_tmp[['unique_id', 'ds', 'y']].drop_duplicates(), 
                     how = 'left', 
@@ -75,8 +76,8 @@ def fit_ensembles(config):
 
                 save_data(
                     data = ensemble_df_tmp, 
-                    path_list = ['results', dataset_name, frequency, ensemble_name, rs, 'outsample', 'tmp'],
-                    name_list = [dataset_name, frequency, ensemble_name, rs, 'outsample', s],
+                    path_list = ['results', dataset_name, frequency, ensemble_name_tmp, rs, 'outsample', 'tmp'],
+                    name_list = [dataset_name, frequency, ensemble_name_tmp, rs, 'outsample', s],
                     ext = ext
                 )
                 del ensemble_df_tmp
@@ -101,7 +102,7 @@ def fit_ensembles(config):
                 time_df_tmp = pd.concat([time_df_tmp, time_df_model_tmp], axis = 0)
                 del time_df_model_tmp
             
-            ensemble_name = 'Ensemble' + ens.capitalize()
+            ensemble_name_tmp = 'Ensemble' + ens.capitalize() + ensemble_name
             ensemble_time_df_tmp = aggregate_data(
                 data = time_df_tmp,
                 group_columns = ['sample', 'test_window', 'horizon', 'retrain_window'],
@@ -109,11 +110,11 @@ def fit_ensembles(config):
                 function_name = 'sum',
                 adjust_metrics = False
             )
-            ensemble_time_df_tmp['method'] = ensemble_name
+            ensemble_time_df_tmp['method'] = ensemble_name_tmp
             save_data(
                 data = ensemble_time_df_tmp, 
-                path_list = ['results', dataset_name, frequency, ensemble_name, 'time', 'byretrain'],
-                name_list = [dataset_name, frequency, ensemble_name, rs, 'time'],
+                path_list = ['results', dataset_name, frequency, ensemble_name_tmp, 'time', 'byretrain'],
+                name_list = [dataset_name, frequency, ensemble_name_tmp, rs, 'time'],
                 ext = ext
             )
             del time_df_tmp, ensemble_time_df_tmp

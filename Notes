@@ -1,16 +1,11 @@
 TODO:
 
 1. add neuralforecast for DL models
--  leggere Modern Time Series Forecasting
-- FIXME: set_engine: local_scaler_type = target_transforms or as model params scaler_type = 'robust'
 - FIXME: config_dl: impostare i parametri dei vari modelli
 
-2. corregere ensemble (se creo un ensemble con 2 modelli e uno con 3 non devono sovrascriversi)
+2. add datasets (Rossmann, Favorita, M4, Wikipedia)
 
-3. add datasets (Favorita, Rossmann, Walmart Store Sales, Walmart Stormy Weather, M4, Wikipedia)
-- FIXME: remove first and last ds after aggregation
-
-4. significance difference tests for point and interval forecasts
+3. significance difference tests for point and interval forecasts
 - wilcoxon signed rank test 0.05 (daily retail demand forecasting)
 
 

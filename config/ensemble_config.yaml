@@ -22,14 +22,14 @@ fitting: {
     ]
 }
 
-model_names: [
-  'LinearRegression', 
-  'Lasso', 
-  'Ridge', 
-  'RandomForestRegressor', 
-  'XGBRegressor', 
-  'LGBMRegressor', 
-  'CatBoostRegressor'
-]
-
-ensemble_methods: ['mean', 'median']
+ensembling: {
+    model_names: [
+        'LinearRegression', 
+        'RandomForestRegressor', 
+        'XGBRegressor', 
+        'LGBMRegressor', 
+        'CatBoostRegressor'
+    ],
+    methods: ['mean', 'median'],
+    name: 'LRXLC'
+}
