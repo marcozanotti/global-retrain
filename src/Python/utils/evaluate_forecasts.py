@@ -52,8 +52,7 @@ def aggregate_data(
     group_columns, 
     drop_columns = None, 
     function_name = 'mean', 
-    adjust_metrics = False,
-    retrain_scenarios = None
+    adjust_metrics = False
 ):
 
     """Function to aggregate evaluation metrics.
@@ -64,7 +63,6 @@ def aggregate_data(
         function_name (str, optional): function to use to aggregate. 
         Defaults to 'mean'.
         adjust_metrics (bool, optional): whether to adjust metrics. Defaults to False.
-        retrain_scenarios (list, optional): list of retrain scenarios. Defaults to None.
     
     Returns:
         pd.DataFrame: dataframe with aggregated data.
@@ -82,22 +80,30 @@ def aggregate_data(
         .reset_index()
     
     if adjust_metrics:
+
         if 'rmse' in data_agg.columns:
             data_agg['rm_mse'] = np.sqrt(data_agg['mse'])
+
         if 'msse' in data_agg.columns:
             data_agg['rm_msse'] = np.sqrt(data_agg['msse'])
+
         if 'total_fit_time' in data_agg.columns:
             agg_fun = get_aggregate_function(function_name)
+            model_names = list(data_agg['method'].unique())
+            retrain_scenarios = list(data_agg['retrain_window'].unique())
             total_fit_time = []
-            for rs in retrain_scenarios:
-                data_tmp = data.query(f'retrain_window == {rs}').reset_index(drop = True)
-                ids_tmp = get_retrain_ids(
-                    data_tmp['test_window'][0], 
-                    data_tmp['horizon'][0], 
-                    data_tmp['retrain_window'][0]
-                )
-                tot_fit_time_tmp = data_tmp['total_fit_time'][ids_tmp]
-                total_fit_time.append(agg_fun(tot_fit_time_tmp))
+            for m in model_names:
+                for rs in retrain_scenarios:
+                    data_tmp = data \
+                        .query(f'method == "{m}" and retrain_window == {rs}') \
+                        .reset_index(drop = True)
+                    ids_tmp = get_retrain_ids(
+                        data_tmp['test_window'][0], 
+                        data_tmp['horizon'][0], 
+                        data_tmp['retrain_window'][0]
+                    )
+                    tot_fit_time_tmp = data_tmp['total_fit_time'][ids_tmp]
+                    total_fit_time.append(agg_fun(tot_fit_time_tmp))
             data_agg['total_fit_time'] = total_fit_time
 
     return data_agg
