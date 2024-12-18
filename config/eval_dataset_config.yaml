@@ -1,0 +1,26 @@
+
+dataset: {
+    'dataset_names': ['m5'],
+    'frequencies': ['daily'],
+    'ext': '.parquet'
+}
+
+model_names: [
+    'LinearRegression', 
+    'RandomForestRegressor', 
+    'XGBRegressor', 
+    'LGBMRegressor', 
+    'CatBoostRegressor',
+    'MLP',
+    'LSTM',
+    'TCN',
+    'NBEATSx',
+    'NHITS',
+    'EnsembleMeanLLMN',
+]
+
+evaluation: {
+    evaluation_sample_type: 'overlap' # nooverlap
+}
+
+

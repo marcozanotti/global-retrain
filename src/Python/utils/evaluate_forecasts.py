@@ -10,7 +10,8 @@ from utilsforecast.losses import (
 )
 from utilsforecast.evaluation import evaluate
 from src.Python.utils.utilities import (
-    get_file_name, save_data, load_data, combine_and_save_files, get_frequency
+    create_file_path, create_file_name, get_file_name, 
+    save_data, load_data, combine_and_save_files, get_frequency
 )
 from src.Python.utils.collect_data import get_data
 from src.Python.utils.fit_models import get_retrain_ids
@@ -316,4 +317,75 @@ def evaluate_model(config):
     module_logger.info('===============================================================')
 
     return
+
+def evaluate_dataset(config):
+
+    """Function to evaluate all models for a specific dataset.
+
+    Args:
+        config (dict): configuration dictionary.
+    """
+    
+    module_logger.info('===============================================================')
+    module_logger.info('---------------------------- START ----------------------------')
+
+    dataset_names = config['dataset']['dataset_names']
+    frequencies = config['dataset']['frequencies']
+    ext = config['dataset']['ext']
+    model_names = config['model_names']
+    eval_sample_type = config['evaluation']['evaluation_sample_type']
+
+    for i in range(len(dataset_names)):
+
+        dataset_name_tmp = dataset_names[i]
+        freq_tmp = frequencies[i]
+        module_logger.info(f'[ Dataset: {dataset_name_tmp} | Frequency: {freq_tmp} ]')
+
+        # get file paths and names of evaluation and time samples
+        eval_f_list = []
+        time_f_lst = []
+        for m in model_names:
+            eval_f_list += [
+                create_file_path(
+                    path_list = ['results', dataset_name_tmp, freq_tmp, m, 'evaluation']
+                ) + 
+                create_file_name(
+                    name_list = [dataset_name_tmp, freq_tmp, m, 'eval', eval_sample_type],
+                    ext = ext
+                )
+            ]
+            time_f_lst += [
+                create_file_path(
+                    path_list = ['results', dataset_name_tmp, freq_tmp, m, 'time']
+                ) + 
+                create_file_name(
+                    name_list = [dataset_name_tmp, freq_tmp, m, 'time'],
+                    ext = ext
+                )
+            ]        
+
+        # combine and save evaluation results
+        combine_and_save_files(
+            path_list_to_read = None,
+            path_list_to_write = ['results', dataset_name_tmp, freq_tmp, 'evaluation'],
+            name_list = [dataset_name_tmp, freq_tmp, 'eval', eval_sample_type],
+            ext = ext,  
+            files_to_read = eval_f_list
+        )
+        # combine and save time results
+        combine_and_save_files(
+            path_list_to_read = None,
+            path_list_to_write = ['results', dataset_name_tmp, freq_tmp, 'evaluation'],
+            name_list = [dataset_name_tmp, freq_tmp, 'time'],
+            ext = ext,
+            files_to_read = time_f_lst
+        )
+
+    module_logger.info('----------------------------- END -----------------------------')
+    module_logger.info('===============================================================')
+
+    return
+
+
+
 

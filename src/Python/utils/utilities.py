@@ -141,7 +141,9 @@ def get_file_name(path_list, name_list = None, ext = '.parquet', remove_ext = Tr
 
     return file_names
 
-def combine_and_save_files(path_list_to_read, path_list_to_write, name_list, ext = '.parquet'):
+def combine_and_save_files(
+    path_list_to_read, path_list_to_write, name_list, ext = '.parquet', files_to_read = None
+):
 
     """Function to combine and save multiple files into a single file.
 
@@ -150,26 +152,35 @@ def combine_and_save_files(path_list_to_read, path_list_to_write, name_list, ext
         path_list_to_write (list): List of directories to be joined for writing.
         name_list (list): List of names to be used to filter the files.
         ext (str, optional): Extension of the files. Defaults to '.parquet'.
+        files_to_read (list, optional): List of specific files to read. Defaults to None.
     """
 
     module_logger.info('Combining and saving files...')
-    path_to_read = create_file_path(path_list_to_read)
-    path_to_write = create_file_path(path_list_to_write)
-    files = get_file_name(
-        path_list = [path_to_read], 
-        name_list = name_list,
-        ext = ext, 
-        remove_ext = False
-    )
+
+    if files_to_read is None:
+        path_to_read = create_file_path(path_list_to_read)
+        file_names = get_file_name(
+            path_list = [path_to_read], 
+            name_list = name_list,
+            ext = ext, 
+            remove_ext = False
+        )
+        files = [path_to_read + f for f in file_names]
+    else:
+        files = files_to_read
+
     files.sort(key = lambda x: int("".join([i for i in x if i.isdigit()])))
+    path_to_write = create_file_path(path_list_to_write)
+    if not os.path.exists(path_to_write):
+        os.makedirs(path_to_write)
     write_file_name = create_file_name(name_list = name_list, ext = ext) 
 
     if ext == '.parquet':
         if files:
-            schema = pq.ParquetFile(path_to_read + files[0]).schema_arrow
+            schema = pq.ParquetFile(files[0]).schema_arrow
             with pq.ParquetWriter(path_to_write + write_file_name, schema = schema) as writer:
                 for f in files:
-                    writer.write_table(pq.read_table(path_to_read + f, schema = schema))
+                    writer.write_table(pq.read_table(f, schema = schema))
     else:
         raise ValueError(f'Unsupported extension {ext}')
 
