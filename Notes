@@ -1,16 +1,19 @@
 TODO:
 
 1. impostare l'analisi finale
-- tabelle performance per modello e retrain scenarios
-- tabelle complexity per modello e retrain scenarios
-- grafici delle tabelle
 - risultati relativi rispetto allo scenario con frequenza di update piu' basso
+- estrarre totale osservazioni
 
-2. add datasets (Rossmann, Favorita, M4, Wikipedia)
+2. far girare l'analisi con LR, LGBM, NBEATSx su:
+- vn1 monthly
+- m5 monthly
+- vn1 weekly 
+- m5 weekly
 
-3. significance difference tests for point and interval forecasts
+2. significance difference tests for point and interval forecasts
 - wilcoxon signed rank test 0.05 (daily retail demand forecasting)
 
+3. add datasets (Rossmann, Favorita, M4, Wikipedia)
 
 - valutare l'aggiunta di un parametro skip per saltare di k le iterazioni 
 (deve essere minore di horizon e della retrain_window)

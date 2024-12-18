@@ -33,7 +33,7 @@ def get_aggregate_function(function_name):
 
     if function_name == 'mean':
         return np.mean
-    elif function_name =='median':
+    elif function_name == 'median':
         return np.median
     elif function_name == 'std':
         return np.std
@@ -81,7 +81,7 @@ def aggregate_data(
     
     if adjust_metrics:
 
-        if 'rmse' in data_agg.columns:
+        if 'mse' in data_agg.columns:
             data_agg['rm_mse'] = np.sqrt(data_agg['mse'])
 
         if 'msse' in data_agg.columns:
