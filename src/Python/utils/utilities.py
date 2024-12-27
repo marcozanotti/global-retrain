@@ -276,9 +276,9 @@ def get_frequency(frequency):
     elif frequency == 'daily':
         freq = ['D', 7, 'D']
     elif frequency == 'weekly':
-        freq = ['W', 52, 'W-MON']
+        freq = ['W-MON', 52, 'W-MON']
     elif frequency == 'monthly':
-        freq = ['M', 12, 'ME']
+        freq = ['ME', 12, 'ME']
     elif frequency == 'quarterly':
         freq = ['Q', 4, 'QE']
     elif frequency == 'yearly':

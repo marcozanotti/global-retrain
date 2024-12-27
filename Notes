@@ -1,13 +1,15 @@
 TODO:
 
+0. creare i file di config per le varie run
+
 1. impostare l'analisi finale
 - risultati relativi rispetto allo scenario con frequenza di update piu' basso
-- estrarre totale osservazioni
+- FVA con costi
 
 2. far girare l'analisi con LR, LGBM, NBEATSx su:
 - vn1 monthly
-- m5 monthly
 - vn1 weekly 
+- m5 monthly
 - m5 weekly
 
 2. significance difference tests for point and interval forecasts

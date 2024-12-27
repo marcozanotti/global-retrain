@@ -37,8 +37,8 @@ prepare_data('vn1', 'monthly', static_features = True, xregs = False, save = Tru
 # from src.Python.utils.collect_data import get_data
 # from src.Python.utils.utilities import configure_logging, create_logger, stop_logger
 
-# dataset_name = 'vn1'
-# frequency = 'monthly'
+# dataset_name = 'm5'
+# frequency = 'daily'
 
 # configure_logging(
 #     config_file = 'config/log_config.yaml', 
