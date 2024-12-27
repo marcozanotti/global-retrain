@@ -1,31 +1,31 @@
 
 dataset: {
     'dataset_name': 'm5',
-    'frequency': 'monthly',
-    'min_series_length': 42,
-    'samples': null,
+    'frequency': 'daily',
+    'min_series_length': 730, 
+    'samples': 10,
     'ext': '.parquet',
     'seed': 1992
 }
 
 fitting: {
-    'horizon': 6,
-    'test_window': 18,
+    'horizon': 28,
+    'test_window': 56, # test_window = 28 * 13 = 364
     'retrain_scenarios': [
-        1, 
-        2, 
-        3,
-        4, 
-        5,
-        6,
-        9,
-        12,
-        15,
-        18
+        # 7, 
+        # 14, 
+        # 21,
+        30, 
+        # 60,
+        # 90,
+        # 120,
+        # 150,
+        # 180,
+        # 364
     ],
     'intervals': {
-        'h': 6,
-        'n_windows': 2,
+        'h': 28,
+        'n_windows': 4,
         'method': 'conformal_distribution'
     },  
     'levels': [50, 60, 70, 80, 90, 95, 99],  
@@ -34,38 +34,39 @@ fitting: {
 
 model_names: [
     'LinearRegression', 
-    'RandomForestRegressor', 
-    'XGBRegressor', 
-    'LGBMRegressor', 
-    'CatBoostRegressor'
+    # 'RandomForestRegressor', 
+    # 'XGBRegressor', 
+    # 'LGBMRegressor', 
+    # 'CatBoostRegressor'
 ]
 # model_params: null
 model_params: {
     'LinearRegression': {'n_jobs': -1},
     'RandomForestRegressor': {
         'criterion': 'squared_error',
-        'n_estimators': 500,
+        'n_estimators': 50, # 500,
         'min_samples_leaf': 100,
         'max_features': 0.85,
         'max_depth': 6,
         'n_jobs': -1
     },
     'XGBRegressor': {
-        'objective': 'reg:squarederror',
+        'objective': 'reg:tweedie',
         'booster': 'gbtree',
-        'n_estimators': 1000,
+        'n_estimators': 100, # 1200,
         'learning_rate': 0.03,
         'max_leaves': 128,
         'subsample': 0.85,
         'colsample_bytree': 0.85,
         'eval_metric': 'rmse',
+        'tweedie_variance_power': 1.1,
         'n_jobs': -1,
         'device': 'cpu'
     },
     'LGBMRegressor': {
-        'objective': 'regression',
+        'objective': 'tweedie',
         'boosting_type': 'gbdt',
-        'n_estimators': 1000,
+        'n_estimators': 100, # 1200,
         'learning_rate': 0.03,
         'num_leaves': 128,
         'min_child_samples': 100,
@@ -73,16 +74,18 @@ model_params: {
         'subsample_freq': 1,
         'colsample_bytree': 0.85,
         'metric': 'rmse',
+        'tweedie_variance_power': 1.1,
         'boost_from_average': False,
         'n_jobs': -1,
         'device': 'cpu',
         'force_row_wise': True
     },
     'CatBoostRegressor': {
-        'loss_function': 'RMSE',
+        'loss_function': 'Tweedie:variance_power=1.1',
         'boosting_type': 'Plain',
-        'n_estimators': 1000,
+        'n_estimators': 100, # 1200,
         'learning_rate': 0.03,
+        # 'max_leaves': 128, # not working with Tweedie
         'min_child_samples': 100,
         'subsample': 0.85,
         'eval_metric': 'RMSE',
@@ -94,10 +97,13 @@ model_params: {
 target_transforms: null
 features: {
     'static': ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id'],
-    'lags': [1, 2, 3, 4, 12],
+    'lags': [1, 7, 14, 21, 28, 35, 42, 49, 56],
     'lag_transforms': {
-                1: [RollingMean(3)]
+                1: [RollingMean(7), RollingMean(14), RollingMean(30), ExpandingMean()],
+                7: [RollingMean(7), RollingMean(14), RollingMean(30)],
+                14: [RollingMean(7), RollingMean(14), RollingMean(30)],
+                30: [RollingMean(7), RollingMean(14), RollingMean(30)]
             },
-    'date': ['year', 'quarter', 'month'],
+    'date': ['year', 'quarter', 'month', 'week', 'dayofweek', 'day', is_weekend],
     'xregs': ['event']
 }
