@@ -1,6 +1,10 @@
 TODO:
 
 0. creare i file di config per le varie run
+- dl 5 file
+- eval model 5 file
+- eval dataset 1 file
+- ensemble 5 file
 
 1. impostare l'analisi finale
 - risultati relativi rispetto allo scenario con frequenza di update piu' basso
