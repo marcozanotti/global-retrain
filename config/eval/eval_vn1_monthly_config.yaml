@@ -1,25 +1,25 @@
 
 dataset: {
-    'dataset_name': 'm5',
-    'frequency': 'daily',
-    'min_series_length': 730, # 365 * 2 = 730
-    'samples': 10,
+    'dataset_name': 'vn1',
+    'frequency': 'monthly',
+    'min_series_length': 36,
+    'samples': null,
     'ext': '.parquet',
     'seed': 1992
 }
 
 fitting: {
     'retrain_scenarios': [
-        7, 
-        14, 
-        # 21,
-        30, 
-        60,
-        # 90,
-        # 120,
-        # 150,
-        # 180,
-        # 364
+        1, 
+        2, 
+        3,
+        4, 
+        5,
+        6,
+        9,
+        12,
+        15,
+        18
     ],
     levels: [50, 60, 70, 80, 90, 95, 99]
 }
@@ -29,18 +29,10 @@ model_names: [
     'RandomForestRegressor', 
     'XGBRegressor', 
     'LGBMRegressor', 
-    'CatBoostRegressor',
-    'MLP',
-    'LSTM',
-    'TCN',
-    'NBEATSx',
-    'NHITS',
-    'EnsembleMeanLLMN',
+    'CatBoostRegressor'
 ]
 
 evaluation: {
     metrics: ['bias', 'mae', 'mse', 'rmse', 'mase', 'msse', 'rmsse', 'mql', 'cov', 'scrps'], # 'ql', 'cal'
     evaluation_sample_type: 'overlap' # nooverlap
 }
-
-

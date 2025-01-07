@@ -1,7 +1,7 @@
 
 dataset: {
-    'dataset_names': ['m5'],
-    'frequencies': ['daily'],
+    'dataset_names': ['m5', 'm5', 'vn1', 'vn1'],
+    'frequencies': ['monthly', 'weekly', 'monthly', 'weekly'],
     'ext': '.parquet'
 }
 
@@ -10,13 +10,7 @@ model_names: [
     'RandomForestRegressor', 
     'XGBRegressor', 
     'LGBMRegressor', 
-    'CatBoostRegressor',
-    'MLP',
-    'LSTM',
-    'TCN',
-    'NBEATSx',
-    'NHITS',
-    'EnsembleMeanLLMN',
+    'CatBoostRegressor'
 ]
 
 evaluation: {
