@@ -16,5 +16,3 @@ model_names: [
 evaluation: {
     evaluation_sample_type: 'overlap' # nooverlap
 }
-
-

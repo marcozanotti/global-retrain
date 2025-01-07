@@ -13,16 +13,40 @@ reticulate::source_python('src/Python/utils/utilities.py')
 source('src/R/utils.R')
 
 
+
 # Parameters --------------------------------------------------------------
 
-dataset_name = 'm5'
-frequency = 'daily'
+dataset_name = 'vn1'
+frequency = 'monthly'
 evaluation_type = 'overlap'
 ext = '.parquet'
 
-retrain_scenarios = c(7, 14, 30, 60)
+retrain_scenarios = c(
+  1, 
+  2, 
+  3,
+  4, 
+  5,
+  6,
+  9,
+  12,
+  15,
+  18
+)
+retrain_scenarios = c(
+  1, 
+  2, 
+  3,
+  4, 
+  6,
+  8,
+  10,
+  13,
+  26,
+  52
+)
 
-metric = 'mae'
+metric = 'rm_mse' # 'bias', 'mae', 'mse', 'rmse', 'mase', 'msse', 'rmsse', 'mql', 'cov', 'scrps'
 time_metric = 'total_sample_time'
 
 model_type_levels = c('SF', 'ML', 'DL', 'ENS')
@@ -31,14 +55,9 @@ method_levels = list(
   'RF' = 'RandomForestRegressor',
   'XGB' = 'XGBRegressor',
   'LGBM' = 'LGBMRegressor',
-  'CatBoost' = 'CatBoostRegressor',
-  'MLP' = 'MLP',
-  'LSTM' = 'LSTM',
-  'TCN' = 'TCN',
-  'NBEATSx' = 'NBEATSx',
-  'NHITS' = 'NHITS',
-  'ENS' = 'EnsembleMeanLLMN'
+  'CatBoost' = 'CatBoostRegressor'
 )
+
 
 
 # Load data ---------------------------------------------------------------
@@ -130,7 +149,7 @@ g_eval <- eval_df_agg |>
   dplyr::mutate(method = factor(method, levels = method_levels, ordered = TRUE)) |> 
   dplyr::arrange(type, method) |> 
   ggplot(aes_string(x = 'retrain_window', y = metric, color = 'method')) +
-  geom_line(size = 2) + 
+  geom_line(linewidth = 2) + 
   scale_x_continuous(breaks = retrain_scenarios) +
   labs(
     title = toupper(dataset_name), 
@@ -148,7 +167,7 @@ g_time <- time_df_agg |>
   dplyr::mutate(method = factor(method, levels = method_levels, ordered = TRUE)) |> 
   dplyr::arrange(type, method) |> 
   ggplot(aes_string(x = 'retrain_window', y = time_metric, color = 'method')) +
-  geom_line(size = 2) + 
+  geom_line(linewidth = 2) + 
   scale_x_continuous(breaks = retrain_scenarios) +
   labs(
     title = toupper(dataset_name), 
@@ -160,4 +179,3 @@ g_time <- time_df_agg |>
 
 combined <- g_eval + g_time + plot_layout(guides = "collect") & theme(legend.position = "bottom")
 combined
-

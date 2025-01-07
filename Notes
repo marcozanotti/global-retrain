@@ -4,7 +4,10 @@ TODO:
 - ensemble 5 file (dopo aver trovato i top 3 modelli)
 
 1. impostare l'analisi finale
+- automatizzare analisi per ogni dataset
+- risultati per ciascuna metrica point
 - risultati relativi rispetto allo scenario con frequenza di update piu' basso
+- risultati per ciascuna metrica di interval
 - FVA con costi
 
 2. far girare l'analisi con LR, LGBM, NBEATSx su:
