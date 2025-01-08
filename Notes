@@ -4,27 +4,23 @@ TODO:
 - ensemble 5 file (dopo aver trovato i top 3 modelli)
 
 1. impostare l'analisi finale
-- automatizzare analisi per ogni dataset
-- risultati per ciascuna metrica point
-- risultati relativi rispetto allo scenario con frequenza di update piu' basso
-- risultati per ciascuna metrica di interval
+- significance difference tests for point and interval forecasts
+  wilcoxon signed rank test 0.05 (daily retail demand forecasting)
 - FVA con costi
 
-2. far girare l'analisi con LR, LGBM, NBEATSx su:
+2. far girare l'analisi con DL su:
 - vn1 monthly
 - vn1 weekly 
 - m5 monthly
 - m5 weekly
 
-2. significance difference tests for point and interval forecasts
-- wilcoxon signed rank test 0.05 (daily retail demand forecasting)
-
-3. add datasets (Rossmann, Favorita, M4, Wikipedia)
-
+3. far girare l'analisi con ML e DL su:
+- m5 daily
 
 
 NOTE:
 
+- valutare l'aggiunta di datasets (Rossmann, Favorita, M4, Wikipedia)
 - valutare l'aggiunta di un parametro skip per saltare di k le iterazioni 
 (deve essere minore di horizon e della retrain_window)
 (se uguale alla retrain window produce previsioni non overlapping)

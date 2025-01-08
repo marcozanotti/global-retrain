@@ -309,3 +309,27 @@ def get_dataset_frequency(dataset_name):
         raise ValueError(f'Invalid dataset: {dataset_name}')
 
     return freq
+
+def get_retrain_scenarios(frequency):
+    """Function to get the retrain scenarios for a specific frequency.
+
+    Args:
+        frequency (str): frequency of the dataset.
+    
+    Returns:
+        list: retrain scenarios.
+    """
+
+    module_logger.info('Getting retrain scenarios...')
+
+    if frequency == 'daily':
+        scn = [7, 14, 21, 30, 60, 90, 120, 150, 180, 364]
+    elif frequency == 'weekly':
+        scn = [1, 2, 3, 4, 6, 8, 10, 13, 26, 52]
+    elif frequency == 'monthly':
+        scn = [1, 2, 3, 4, 5, 6, 9, 12, 15, 18]
+    else:
+        raise ValueError(f'Invalid frequency: {frequency}')
+
+    return scn
+

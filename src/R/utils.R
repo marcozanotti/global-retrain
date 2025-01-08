@@ -97,7 +97,21 @@ get_model_type <- function(model_name) {
 
   return(model_type)
 
-}    
+}
+
+get_model_name_abbr <- function(model_name) {
+
+  model_name_abbr <- dplyr::case_when(
+    model_name == 'LinearRegression' ~ 'LR',
+    model_name == 'RandomForestRegressor' ~ 'RF',
+    model_name == 'XGBRegressor' ~ 'XGBoost',
+    model_name == 'LGBMRegressor' ~ 'LGBM',
+    model_name == 'CatBoostRegressor' ~ 'CatBoost',
+    TRUE ~ model_name
+  )
+  return(model_name_abbr)
+
+}
 
 dt_table <- function(data, title = "", caption = "", rownames = FALSE, digits = 3) {
 	
@@ -132,4 +146,240 @@ dt_table <- function(data, title = "", caption = "", rownames = FALSE, digits = 
 		)
 	return(res)
 	
+}
+
+compute_relative_metrics <- function(data) {
+
+  reference_data <- data |> 
+    dplyr::group_by(method) |> 
+    dplyr::slice_min(retrain_window) |> 
+    dplyr::ungroup() |> 
+    dplyr::select(-dplyr::any_of(c('type', 'retrain_window'))) |> 
+    dplyr::rename_with(~ stringr::str_c(.x, "_ref"))
+
+  if (any(stringr::str_detect(names(data), "_time"))) {
+
+    relative_data <- data |> 
+      dplyr::left_join(reference_data, by = c("method" = "method_ref")) |> 
+      dplyr::mutate(
+        total_fit_time = total_fit_time / total_fit_time_ref,
+        total_predict_time = total_predict_time / total_predict_time_ref,
+        total_sample_time = total_sample_time / total_sample_time_ref
+      ) |> 
+      dplyr::select(-dplyr::ends_with("_ref"))
+
+  } else {
+
+    relative_data <- data |> 
+      dplyr::left_join(reference_data, by = c("method" = "method_ref")) |>
+      dplyr::mutate(
+        bias = abs(bias) / abs(bias_ref),
+        coverage_level50 = coverage_level50 / coverage_level50_ref,
+        coverage_level60 = coverage_level60 / coverage_level60_ref,
+        coverage_level70 = coverage_level70 / coverage_level70_ref,
+        coverage_level80 = coverage_level80 / coverage_level80_ref,
+        coverage_level90 = coverage_level90 / coverage_level90_ref,
+        coverage_level95 = coverage_level95 / coverage_level95_ref,
+        coverage_level99 = coverage_level99 / coverage_level99_ref,
+        mae = mae / mae_ref,
+        mase = mase / mase_ref,
+        mqloss = mqloss / mqloss_ref,
+        mse = mse / mse_ref,
+        msse = msse / msse_ref,
+        rmse = rmse / rmse_ref,
+        rmsse = rmsse / rmsse_ref,
+        scaled_crps = scaled_crps / scaled_crps_ref,
+        rm_mse = rm_mse / rm_mse_ref,
+        rm_msse = rm_msse / rm_msse_ref
+      ) |> 
+      dplyr::select(-dplyr::ends_with("_ref"))
+
+  }
+  
+  return(relative_data)
+        
+}
+
+table_retrain_results <- function(data, metric, title = "") {
+
+  cat("Creating table...\n")  
+  tab <- data |> 
+    dplyr::select(c('method', 'retrain_window', dplyr::all_of(metric))) |> 
+    tidyr::pivot_wider(names_from = 'retrain_window', values_from = metric) |> 
+    dplyr::rename_with(stringr::str_to_title) |> 
+    dt_table(title = title, caption = '', digits = 3)
+  return(tab)
+
+}
+
+plot_retrain_results <- function(data, metric, metric_label = "", title = "") {
+
+  cat("Creating plot...\n")
+  retrain_scenario <- sort(unique(data[["retrain_window"]]))
+  g <- data |> 
+    ggplot2::ggplot(ggplot2::aes_string(x = 'retrain_window', y = metric, color = 'method')) +
+    ggplot2::geom_line(linewidth = 2) + 
+    ggplot2::scale_x_continuous(breaks = retrain_scenario) +
+    ggplot2::labs(
+      title = title, 
+      x = 'Retrain Scenario', y = metric_label,
+      color = 'Method'
+    ) + 
+    ggplot2::theme_minimal() +
+    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+  return(g)
+
+}
+
+analyse_results <- function(config) {
+
+  # dataset config
+  dataset_names <- config$dataset$dataset_names
+  frequencies <- config$dataset$frequencies
+  retrain_scenarios <- purrr::map(frequencies, get_retrain_scenarios)
+  ext <- config$dataset$ext
+  # model config
+  model_names <- config$models$model_names
+  model_names_abbr <- config$models$model_names_abbr
+  model_type_levels <- c('SF', 'ML', 'DL', 'ENS')
+  # evaluation config
+  eval_metrics <- config$evaluation$metrics
+  time_metric <- config$evaluation$time_metric
+  eval_type <- config$evaluation$evaluation_sample_type
+  analysis_type <- config$evaluation$analysis_type
+
+  analysis_results <- vector("list", length(dataset_names))
+  names(analysis_results) <- paste(dataset_names, frequencies, sep = "_")
+
+  for (i in seq_along(dataset_names)) {
+
+    dataset_name_tmp <- dataset_names[i]
+    freq_tmp <- frequencies[i]
+    retrain_scn_tmp <- retrain_scenarios[[i]]
+    cat(paste0("Analysing ", dataset_name_tmp, " ", freq_tmp, "...\n"))
+
+    # load, aggregate and prepare data
+    # eval_df.shape[0] = n_series * n_retrain_scenarios * n_models = 30.000 * 10 * 10
+    # time_df.shape[0] = n_samples * n_retrain_scenarios * n_models = 365 * 10 * 10
+    cat("Loading and preparing the evaluation data...\n")
+    eval_df_agg_tmp = load_data(
+      path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
+      name_list = c(dataset_name_tmp, freq_tmp, 'eval', eval_type),
+      ext = ext
+    ) |> 
+      aggregate_data(
+        group_columns = c('method', 'retrain_window'),
+        drop_columns = c('unique_id', 'test_window', 'horizon'),
+        function_name = 'mean',
+        adjust_metrics = TRUE
+      ) |> 
+      tibble::as_tibble() |> 
+      dplyr::mutate(
+        type = get_model_type(method),
+        type = factor(type, levels = model_type_levels, ordered = TRUE),
+        .before = 'method',
+      ) |> 
+      dplyr::mutate(
+        method = factor(get_model_name_abbr(method), levels = model_names_abbr, ordered = TRUE)
+      ) |> 
+      dplyr::arrange(type, method) |> 
+      dplyr::mutate(rmse = rm_mse, rmsse = rm_msse) |> 
+      dplyr::filter(retrain_window %in% retrain_scn_tmp)
+
+    cat("Loading and preparing the time data...\n")
+    time_df_agg_tmp = load_data(
+      path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
+      name_list = c(dataset_name_tmp, freq_tmp, 'time'),
+      ext = ext
+    ) |> 
+      aggregate_data(
+        group_columns = c('method', 'retrain_window'),
+        drop_columns = c('sample', 'test_window', 'horizon'),
+        function_name = 'sum',
+        adjust_metrics = TRUE
+      ) |> 
+      tibble::as_tibble() |> 
+      dplyr::mutate(
+        type = get_model_type(method),
+        type = factor(type, levels = model_type_levels, ordered = TRUE),
+        .before = 'method',
+      ) |> 
+      dplyr::mutate(
+        method = factor(get_model_name_abbr(method), levels = model_names_abbr, ordered = TRUE)
+      ) |> 
+      dplyr::arrange(type, method) |> 
+      dplyr::filter(retrain_window %in% retrain_scn_tmp)
+
+    if (analysis_type == 'relative') {
+      cat("Compute relative metrics...\n")
+      eval_df_agg_tmp <- compute_relative_metrics(eval_df_agg_tmp)
+      time_df_agg_tmp <- compute_relative_metrics(time_df_agg_tmp)
+    }
+
+    # time table and plot
+    tab_time <- table_retrain_results(
+      time_df_agg_tmp, 
+      metric = time_metric,
+      title = toupper(paste(dataset_name_tmp, freq_tmp, '-', gsub("_", " ", time_metric)))
+    )
+    g_time <- plot_retrain_results(
+      time_df_agg_tmp, 
+      metric = time_metric, metric_label = 'Computing Time',
+      title = toupper(paste(dataset_name_tmp, freq_tmp))
+    )
+
+    # evaluation tables and plots
+    tab_eval <- vector("list", length(eval_metrics))
+    names(tab_eval) <- eval_metrics
+    g_eval <- vector("list", length(eval_metrics))
+    names(g_eval) <- eval_metrics
+    g_eval_comb <- vector("list", length(eval_metrics))
+    names(g_eval_comb) <- eval_metrics
+
+    for (m in eval_metrics) {
+
+      cat(paste0("Creating evaluation table and plot for ", toupper(m), "...\n"))
+      tab_eval[[m]] <- table_retrain_results(
+        eval_df_agg_tmp, 
+        metric = m,
+        title = toupper(paste(dataset_name_tmp, freq_tmp, '-', gsub("_", " ", m)))
+      )
+      g_eval[[m]] <- plot_retrain_results(
+        eval_df_agg_tmp, 
+        metric = m, metric_label = toupper(gsub("_", " ", m)),
+        title = toupper(paste(dataset_name_tmp, freq_tmp))
+      )
+      cat("Combining evaluation and time plot...\n")
+      g_eval_comb[[m]] <- g_eval[[m]] + g_time + 
+        patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
+
+    }
+  
+    analysis_results[[i]] <- list(
+      "eval_df_agg" = eval_df_agg_tmp,
+      "time_df_agg" = time_df_agg_tmp,
+      "tab_time" = tab_time,
+      "g_time" = g_time,
+      "tab_eval" = tab_eval,
+      "g_eval" = g_eval,
+      "g_eval_comb" = g_eval_comb
+    )
+    
+  }
+
+  cat("Saving results...\n")
+  file_name <- paste0(
+    analysis_type, "_", eval_type, "_results_", 
+    Sys.time() |> 
+      as.character() |> 
+      stringr::str_remove_all("\\..*") |> 
+      stringr::str_replace_all("(-)|(:)", "") |> 
+      stringr::str_replace_all(" ", "_"),
+    ".RData"
+  )
+  save(analysis_results, file = paste0('results/analysis/', file_name))
+  cat("Done!\n")
+
+  return(invisible(analysis_results))
+
 }
