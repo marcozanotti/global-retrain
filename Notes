@@ -17,6 +17,9 @@ TODO:
 3. far girare l'analisi con ML e DL su:
 - m5 daily
 
+FIXME:
+- check MASE e RMSSE senza seasonal_naive (seasonality = 1)
+
 
 NOTE:
 
