@@ -212,21 +212,40 @@ table_retrain_results <- function(data, metric, title = "") {
 
 }
 
-plot_retrain_results <- function(data, metric, metric_label = "", title = "") {
+plot_retrain_results <- function(data, metric, metric_label = "", title = "", smooth = FALSE) {
 
   cat("Creating plot...\n")
   retrain_scenario <- sort(unique(data[["retrain_window"]]))
-  g <- data |> 
-    ggplot2::ggplot(ggplot2::aes_string(x = 'retrain_window', y = metric, color = 'method')) +
-    ggplot2::geom_line(linewidth = 2) + 
-    ggplot2::scale_x_continuous(breaks = retrain_scenario) +
-    ggplot2::labs(
-      title = title, 
-      x = 'Retrain Scenario', y = metric_label,
-      color = 'Method'
-    ) + 
-    ggplot2::theme_minimal() +
-    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+
+  if (smooth) {
+    g <- data |> 
+      ggplot2::ggplot(ggplot2::aes_string(x = 'retrain_window', y = metric, color = 'method')) +
+      ggplot2::geom_smooth(
+        method = 'lm', formula = 'y ~ log(x)', linewidth = 2, se = FALSE
+      ) +
+      ggplot2::scale_x_continuous(breaks = retrain_scenario) +
+      ggplot2::labs(
+        title = title, 
+        x = 'Retrain Scenario', y = metric_label,
+        color = 'Method'
+      ) + 
+      ggplot2::theme_minimal() +
+      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+  } else {
+    g <- data |> 
+      ggplot2::ggplot(ggplot2::aes_string(x = 'retrain_window', y = metric, color = 'method')) +
+      ggplot2::geom_point(size = 10, shape = 18) +
+      ggplot2::geom_line(linewidth = 2) + 
+      ggplot2::scale_x_continuous(breaks = retrain_scenario) +
+      ggplot2::labs(
+        title = title, 
+        x = 'Retrain Scenario', y = metric_label,
+        color = 'Method'
+      ) + 
+      ggplot2::theme_minimal() +
+      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+  }
+
   return(g)
 
 }
@@ -256,17 +275,23 @@ analyse_results <- function(config) {
     dataset_name_tmp <- dataset_names[i]
     freq_tmp <- frequencies[i]
     retrain_scn_tmp <- retrain_scenarios[[i]]
+    retrain_scn_grid_tmp <- combn(retrain_scn_tmp, 2) |> 
+      t() |> 
+      tibble::as_tibble() |> 
+      purrr::set_names(c("scn1", "scn2")) 
     cat(paste0("Analysing ", dataset_name_tmp, " ", freq_tmp, "...\n"))
 
     # load, aggregate and prepare data
     # eval_df.shape[0] = n_series * n_retrain_scenarios * n_models = 30.000 * 10 * 10
     # time_df.shape[0] = n_samples * n_retrain_scenarios * n_models = 365 * 10 * 10
     cat("Loading and preparing the evaluation data...\n")
-    eval_df_agg_tmp = load_data(
+    eval_df_tmp = load_data(
       path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
       name_list = c(dataset_name_tmp, freq_tmp, 'eval', eval_type),
       ext = ext
     ) |> 
+      tibble::as_tibble()
+    eval_df_agg_tmp <- eval_df_tmp |> 
       aggregate_data(
         group_columns = c('method', 'retrain_window'),
         drop_columns = c('unique_id', 'test_window', 'horizon'),
@@ -287,11 +312,13 @@ analyse_results <- function(config) {
       dplyr::filter(retrain_window %in% retrain_scn_tmp)
 
     cat("Loading and preparing the time data...\n")
-    time_df_agg_tmp = load_data(
+    time_df_tmp = load_data(
       path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
       name_list = c(dataset_name_tmp, freq_tmp, 'time'),
       ext = ext
     ) |> 
+      tibble::as_tibble()
+    time_df_agg_tmp <- time_df_tmp |> 
       aggregate_data(
         group_columns = c('method', 'retrain_window'),
         drop_columns = c('sample', 'test_window', 'horizon'),
@@ -338,7 +365,7 @@ analyse_results <- function(config) {
 
     for (m in eval_metrics) {
 
-      cat(paste0("Creating evaluation table and plot for ", toupper(m), "...\n"))
+      cat(paste0("Creating evaluation table, plot and tests for ", toupper(m), "...\n"))
       tab_eval[[m]] <- table_retrain_results(
         eval_df_agg_tmp, 
         metric = m,
