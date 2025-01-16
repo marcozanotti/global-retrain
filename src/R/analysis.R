@@ -22,7 +22,7 @@ res <- analyse_results(config)
 
 # Test
 source('src/R/utils.R')
-res <- load('results/analysis/relative_overlap_results_20250108_142040.RData')
+res <- load('results/analysis/relative_overlap_results_20250116_154150.RData')
 res <- analysis_results
 rm(analysis_results)
 
@@ -33,6 +33,7 @@ res$m5_monthly$time_df_agg
 res$m5_monthly$tab_time
 res$m5_monthly$g_eval$rmse
 res$m5_monthly$g_eval_comb$bias
+
 
 res$m5_monthly$eval_df_agg |> 
   plot_retrain_results(
@@ -64,3 +65,14 @@ res$m5_monthly$eval_df_agg |>
     title = 'M5 MONTHLY', smooth = FALSE
   )
 
+names(res$m5_monthly$test_list)
+metrics <- names(res$m5_monthly$test_list$LR)
+met <- "LR"
+for (m in metrics) {
+  g <- plot_test_results(
+    test_results = res$m5_monthly$test_list[[met]][[m]], 
+    metric_label = toupper(gsub("_", " ", m)),
+    title = toupper(paste("M5", "MONTHLY", "- Nemenyi Test -", met))
+  )
+  print(g)
+}

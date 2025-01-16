@@ -332,7 +332,7 @@ plot_test_results <- function(test_results, metric_label = "", title = "") {
     ggplot2::ggplot(ggplot2::aes(x = retrain_window, y = value)) +
     ggplot2::geom_errorbar(
       ggplot2::aes(ymin = lower, ymax = upper), 
-      col = 'lightblue', width = 0.2, size = 2
+      col = 'lightblue', width = 0.2, linewidth = 2
     ) +
     ggplot2::geom_point(size = 4, col = 'lightblue') +
     ggplot2::geom_point(data = data_min, size = 4, col = 'red') +
@@ -461,22 +461,22 @@ analyse_results <- function(config) {
     # testing differences
     test_list <- vector("list", length(model_names_abbr))
     names(test_list) <- model_names_abbr
-    g_test <- test_list
+    # g_test <- test_list
     for (met in model_names_abbr) {
       test_list_tmp <- vector("list", length(eval_metrics))
       names(test_list_tmp) <- eval_metrics
-      g_test_tmp <- test_list_tmp
+      # g_test_tmp <- test_list_tmp
       for (m in eval_metrics) {
         res_tmp <- test_differences(data = eval_df_tmp, .method = met, .metric = m)
         test_list_tmp[[m]] <- res_tmp
-        g_test_tmp[[m]] <- plot_test_results(
-          test_results = res_tmp, 
-          metric_label = toupper(gsub("_", " ", m)),
-          title = toupper(paste(dataset_name_tmp, freq_tmp, "- Nemenyi Test -", met))
-        )
+        # g_test_tmp[[m]] <- plot_test_results(
+        #   test_results = res_tmp, 
+        #   metric_label = toupper(gsub("_", " ", m)),
+        #   title = toupper(paste(dataset_name_tmp, freq_tmp, "- Nemenyi Test -", met))
+        # )
       }
       test_list[[met]] <- test_list_tmp
-      g_test[[met]] <- g_test_tmp
+      # g_test[[met]] <- g_test_tmp
     }
     tab_test <- test_list |> 
       purrr::map(~ purrr::map_chr(.x, extract_pvalue)) |> 
@@ -494,8 +494,7 @@ analyse_results <- function(config) {
       "g_eval" = g_eval,
       "g_eval_comb" = g_eval_comb,
       "test_list" = test_list,
-      "tab_test" = tab_test,
-      "g_test" = g_test
+      "tab_test" = tab_test #, "g_test" = g_test
     )
     
   }
