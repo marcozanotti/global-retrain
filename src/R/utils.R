@@ -113,6 +113,22 @@ get_model_name_abbr <- function(model_name) {
 
 }
 
+recode_data <- function(data, model_type_levels, model_names_abbr) {
+
+  data_recoded <- data |>  
+    dplyr::mutate(
+      type = get_model_type(method),
+      type = factor(type, levels = model_type_levels, ordered = TRUE),
+      .before = 'method',
+    ) |> 
+    dplyr::mutate(
+      method = factor(get_model_name_abbr(method), levels = model_names_abbr, ordered = TRUE)
+    ) |> 
+    dplyr::arrange(type, method)
+  return(data_recoded)
+
+}
+
 dt_table <- function(data, title = "", caption = "", rownames = FALSE, digits = 3) {
 	
 	p_len <- nrow(data)
@@ -188,9 +204,7 @@ compute_relative_metrics <- function(data) {
         msse = msse / msse_ref,
         rmse = rmse / rmse_ref,
         rmsse = rmsse / rmsse_ref,
-        scaled_crps = scaled_crps / scaled_crps_ref,
-        rm_mse = rm_mse / rm_mse_ref,
-        rm_msse = rm_msse / rm_msse_ref
+        scaled_crps = scaled_crps / scaled_crps_ref
       ) |> 
       dplyr::select(-dplyr::ends_with("_ref"))
 
@@ -219,7 +233,13 @@ plot_retrain_results <- function(data, metric, metric_label = "", title = "", sm
 
   if (smooth) {
     g <- data |> 
-      ggplot2::ggplot(ggplot2::aes_string(x = 'retrain_window', y = metric, color = 'method')) +
+      ggplot2::ggplot(
+        ggplot2::aes(
+          x = .data[['retrain_window']], 
+          y = .data[[metric]], 
+          color = .data[['method']]
+        )
+      ) +
       ggplot2::geom_smooth(
         method = 'lm', formula = 'y ~ log(x)', linewidth = 2, se = FALSE
       ) +
@@ -233,7 +253,13 @@ plot_retrain_results <- function(data, metric, metric_label = "", title = "", sm
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
   } else {
     g <- data |> 
-      ggplot2::ggplot(ggplot2::aes_string(x = 'retrain_window', y = metric, color = 'method')) +
+      ggplot2::ggplot(
+        ggplot2::aes(
+          x = .data[['retrain_window']], 
+          y = .data[[metric]], 
+          color = .data[['method']]
+        )
+      ) +
       ggplot2::geom_point(size = 10, shape = 18) +
       ggplot2::geom_line(linewidth = 2) + 
       ggplot2::scale_x_continuous(breaks = retrain_scenario) +
@@ -245,6 +271,77 @@ plot_retrain_results <- function(data, metric, metric_label = "", title = "", sm
       ggplot2::theme_minimal() +
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
   }
+
+  return(g)
+
+}
+
+test_differences <- function(data, .method, .metric) {
+
+  cat(paste0("Testing differences in ", .metric, " for ", .method, "...\n"))
+  n_series = length(unique(data$unique_id))
+  n_scn <- length(unique(data$retrain_window))
+  
+  data_test <- data |>
+    dplyr::filter(method == .method) |>
+    dplyr::select(dplyr::all_of(c('retrain_window', .metric))) |> 
+    dplyr::mutate(id = rep(1:n_series, n_scn), .before = 1) |> 
+    tidyr::pivot_wider(names_from = 'retrain_window', values_from = .metric) |> 
+    dplyr::select(-id)
+
+  test_res <- greybox::rmcb(data = data_test, level = 0.95, outplot = "none")
+  return(test_res)
+
+}
+
+extract_significance <- function(p_value) {
+	
+  cat("Extracting significance...\n")
+	res <- dplyr::case_when(
+		p_value < 0.001 ~ "***", 
+		p_value >= 0.001 & p_value < 0.01 ~ "**",
+		p_value >= 0.01 & p_value < 0.05 ~ "*",
+		p_value >= 0.05 & p_value < 0.1 ~ ".",
+		TRUE ~ ""
+	)
+	return(res)
+	
+}
+
+extract_pvalue <- function(test_results, digits = 4) {
+
+  pvalue <- round(test_results$p.value, digits = digits)
+  stars <- extract_significance(pvalue)
+  pvalue_res <- paste(pvalue, paste0("(", stars, ")"))
+  return(pvalue_res)
+
+}
+
+plot_test_results <- function(test_results, metric_label = "", title = "") {
+
+  cat("Creating plot...\n")
+  data_plot <- as.integer(names(test_results$mean)) |>
+    cbind(test_results$mean) |> 
+    cbind(test_results$interval) |> 
+    tibble::as_tibble(.name_repair = 'minimal') |> 
+    purrr::set_names(c('retrain_window', 'value', 'lower', 'upper'))
+  data_min <- data_plot |> dplyr::slice_min(value)
+  retrain_scenarios <- sort(unique(data_plot[["retrain_window"]]))
+
+  g <- data_plot |> 
+    ggplot2::ggplot(ggplot2::aes(x = retrain_window, y = value)) +
+    ggplot2::geom_errorbar(
+      ggplot2::aes(ymin = lower, ymax = upper), 
+      col = 'lightblue', width = 0.2, size = 2
+    ) +
+    ggplot2::geom_point(size = 4, col = 'lightblue') +
+    ggplot2::geom_point(data = data_min, size = 4, col = 'red') +
+    ggplot2::geom_hline(yintercept = data_min$lower, col = 'gray', linetype = 2) +
+    ggplot2::geom_hline(yintercept = data_min$upper, col = 'gray', linetype = 2) +
+    ggplot2::scale_x_continuous(breaks = retrain_scenarios) +
+    ggplot2::labs(title = title, x = 'Retrain Scenario', y = metric_label) + 
+    ggplot2::theme_minimal() +
+    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
 
   return(g)
 
@@ -275,10 +372,6 @@ analyse_results <- function(config) {
     dataset_name_tmp <- dataset_names[i]
     freq_tmp <- frequencies[i]
     retrain_scn_tmp <- retrain_scenarios[[i]]
-    retrain_scn_grid_tmp <- combn(retrain_scn_tmp, 2) |> 
-      t() |> 
-      tibble::as_tibble() |> 
-      purrr::set_names(c("scn1", "scn2")) 
     cat(paste0("Analysing ", dataset_name_tmp, " ", freq_tmp, "...\n"))
 
     # load, aggregate and prepare data
@@ -290,26 +383,20 @@ analyse_results <- function(config) {
       name_list = c(dataset_name_tmp, freq_tmp, 'eval', eval_type),
       ext = ext
     ) |> 
-      tibble::as_tibble()
+      tibble::as_tibble() |> 
+      dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
+      recode_data(model_type_levels, model_names_abbr) |> 
+      dplyr::mutate(rmse = rm_mse, rmsse = rm_msse) |> 
+      dplyr::select(-dplyr::any_of(c("rm_mse", "rm_msse")))
     eval_df_agg_tmp <- eval_df_tmp |> 
       aggregate_data(
-        group_columns = c('method', 'retrain_window'),
+        group_columns = c('type', 'method', 'retrain_window'),
         drop_columns = c('unique_id', 'test_window', 'horizon'),
         function_name = 'mean',
         adjust_metrics = TRUE
       ) |> 
-      tibble::as_tibble() |> 
-      dplyr::mutate(
-        type = get_model_type(method),
-        type = factor(type, levels = model_type_levels, ordered = TRUE),
-        .before = 'method',
-      ) |> 
-      dplyr::mutate(
-        method = factor(get_model_name_abbr(method), levels = model_names_abbr, ordered = TRUE)
-      ) |> 
-      dplyr::arrange(type, method) |> 
-      dplyr::mutate(rmse = rm_mse, rmsse = rm_msse) |> 
-      dplyr::filter(retrain_window %in% retrain_scn_tmp)
+        dplyr::mutate(rmse = rm_mse, rmsse = rm_msse) |> 
+        dplyr::select(-dplyr::any_of(c("rm_mse", "rm_msse")))
 
     cat("Loading and preparing the time data...\n")
     time_df_tmp = load_data(
@@ -317,25 +404,16 @@ analyse_results <- function(config) {
       name_list = c(dataset_name_tmp, freq_tmp, 'time'),
       ext = ext
     ) |> 
-      tibble::as_tibble()
+      tibble::as_tibble() |> 
+      dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
+      recode_data(model_type_levels, model_names_abbr)
     time_df_agg_tmp <- time_df_tmp |> 
       aggregate_data(
         group_columns = c('method', 'retrain_window'),
         drop_columns = c('sample', 'test_window', 'horizon'),
         function_name = 'sum',
         adjust_metrics = TRUE
-      ) |> 
-      tibble::as_tibble() |> 
-      dplyr::mutate(
-        type = get_model_type(method),
-        type = factor(type, levels = model_type_levels, ordered = TRUE),
-        .before = 'method',
-      ) |> 
-      dplyr::mutate(
-        method = factor(get_model_name_abbr(method), levels = model_names_abbr, ordered = TRUE)
-      ) |> 
-      dplyr::arrange(type, method) |> 
-      dplyr::filter(retrain_window %in% retrain_scn_tmp)
+      )
 
     if (analysis_type == 'relative') {
       cat("Compute relative metrics...\n")
@@ -364,7 +442,6 @@ analyse_results <- function(config) {
     names(g_eval_comb) <- eval_metrics
 
     for (m in eval_metrics) {
-
       cat(paste0("Creating evaluation table, plot and tests for ", toupper(m), "...\n"))
       tab_eval[[m]] <- table_retrain_results(
         eval_df_agg_tmp, 
@@ -379,8 +456,34 @@ analyse_results <- function(config) {
       cat("Combining evaluation and time plot...\n")
       g_eval_comb[[m]] <- g_eval[[m]] + g_time + 
         patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
-
     }
+
+    # testing differences
+    test_list <- vector("list", length(model_names_abbr))
+    names(test_list) <- model_names_abbr
+    g_test <- test_list
+    for (met in model_names_abbr) {
+      test_list_tmp <- vector("list", length(eval_metrics))
+      names(test_list_tmp) <- eval_metrics
+      g_test_tmp <- test_list_tmp
+      for (m in eval_metrics) {
+        res_tmp <- test_differences(data = eval_df_tmp, .method = met, .metric = m)
+        test_list_tmp[[m]] <- res_tmp
+        g_test_tmp[[m]] <- plot_test_results(
+          test_results = res_tmp, 
+          metric_label = toupper(gsub("_", " ", m)),
+          title = toupper(paste(dataset_name_tmp, freq_tmp, "- Nemenyi Test -", met))
+        )
+      }
+      test_list[[met]] <- test_list_tmp
+      g_test[[met]] <- g_test_tmp
+    }
+    tab_test <- test_list |> 
+      purrr::map(~ purrr::map_chr(.x, extract_pvalue)) |> 
+      dplyr::bind_rows() |> 
+      dplyr::mutate(method = model_names, .before = 1) |> 
+      recode_data(model_type_levels, model_names_abbr) |> 
+      dt_table(title = "Nemenyi Test")
   
     analysis_results[[i]] <- list(
       "eval_df_agg" = eval_df_agg_tmp,
@@ -389,7 +492,10 @@ analyse_results <- function(config) {
       "g_time" = g_time,
       "tab_eval" = tab_eval,
       "g_eval" = g_eval,
-      "g_eval_comb" = g_eval_comb
+      "g_eval_comb" = g_eval_comb,
+      "test_list" = test_list,
+      "tab_test" = tab_test,
+      "g_test" = g_test
     )
     
   }
