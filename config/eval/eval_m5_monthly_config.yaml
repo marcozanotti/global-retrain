@@ -34,5 +34,6 @@ model_names: [
 
 evaluation: {
     metrics: ['bias', 'mae', 'mse', 'rmse', 'mase', 'msse', 'rmsse', 'mql', 'cov', 'scrps'], # 'ql', 'cal'
+    evaluation_frequency: 'yearly', # frequency for mase, msse, rmsse
     evaluation_sample_type: 'overlap' # nooverlap
 }

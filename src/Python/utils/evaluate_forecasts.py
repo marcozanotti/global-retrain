@@ -82,10 +82,10 @@ def aggregate_data(
     if adjust_metrics:
 
         if 'mse' in data_agg.columns:
-            data_agg['rm_mse'] = np.sqrt(data_agg['mse'])
+            data_agg['rmse'] = np.sqrt(data_agg['mse'])
 
         if 'msse' in data_agg.columns:
-            data_agg['rm_msse'] = np.sqrt(data_agg['msse'])
+            data_agg['rmsse'] = np.sqrt(data_agg['msse'])
 
         if 'total_fit_time' in data_agg.columns:
             agg_fun = get_aggregate_function(function_name)
@@ -222,7 +222,8 @@ def evaluate_model(config):
     # model parameters
     model_names = config['model_names']
     # evaluation parameters
-    metrics = get_metrics(config['evaluation']['metrics'], frequency)
+    eval_freq = config['evaluation']['eval_freq']
+    metrics = get_metrics(config['evaluation']['metrics'], eval_freq)
     eval_sample_type = config['evaluation']['evaluation_sample_type']
 
     # load the dataset
@@ -391,7 +392,4 @@ def evaluate_dataset(config):
     module_logger.info('===============================================================')
 
     return
-
-
-
 

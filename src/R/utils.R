@@ -48,10 +48,10 @@ aggregate_data <- function(
   if (adjust_metrics) {
 
     if ('mse' %in% names(data_agg))
-      data_agg[['rm_mse']] = sqrt(data_agg[['mse']])
+      data_agg[['rmse']] = sqrt(data_agg[['mse']])
 
     if ('msse' %in% names(data_agg))
-      data_agg[['rm_msse']] = sqrt(data_agg[['msse']])
+      data_agg[['rmsse']] = sqrt(data_agg[['msse']])
     
     if ('total_fit_time' %in% names(data_agg)) {
       model_names <- unique(data_agg[['method']])
@@ -290,7 +290,16 @@ test_differences <- function(data, .method, .metric) {
     dplyr::select(-id)
 
   test_res <- greybox::rmcb(data = data_test, level = 0.95, outplot = "none")
-  return(test_res)
+  data_test <- tibble::tibble(
+    'method' = .method,
+    'metric' = .metric, 
+    'retrain_window' = as.integer(names(test_res$mean)),
+    'mean' = test_res$mean,
+    'lower' = test_res$interval[, 1],
+    'upper' = test_res$interval[, 2],
+    'pvalue' = test_res$p.value
+  )
+  return(data_test)
 
 }
 
@@ -308,34 +317,21 @@ extract_significance <- function(p_value) {
 	
 }
 
-extract_pvalue <- function(test_results, digits = 4) {
-
-  pvalue <- round(test_results$p.value, digits = digits)
-  stars <- extract_significance(pvalue)
-  pvalue_res <- paste(pvalue, paste0("(", stars, ")"))
-  return(pvalue_res)
-
-}
-
-plot_test_results <- function(test_results, metric_label = "", title = "") {
+plot_test_results <- function(data, .method, .metric, metric_label = "", title = "") {
 
   cat("Creating plot...\n")
-  data_plot <- as.integer(names(test_results$mean)) |>
-    cbind(test_results$mean) |> 
-    cbind(test_results$interval) |> 
-    tibble::as_tibble(.name_repair = 'minimal') |> 
-    purrr::set_names(c('retrain_window', 'value', 'lower', 'upper'))
-  data_min <- data_plot |> dplyr::slice_min(value)
-  retrain_scenarios <- sort(unique(data_plot[["retrain_window"]]))
+  data_plot <- data |> dplyr::filter(method == .method, metric == .metric)
+  data_min <- data_plot |> dplyr::slice_min(mean)
+  retrain_scenarios <- sort(unique(data[["retrain_window"]]))
 
   g <- data_plot |> 
-    ggplot2::ggplot(ggplot2::aes(x = retrain_window, y = value)) +
+    ggplot2::ggplot(ggplot2::aes(x = retrain_window, y = mean)) +
     ggplot2::geom_errorbar(
       ggplot2::aes(ymin = lower, ymax = upper), 
-      col = 'lightblue', width = 0.2, linewidth = 2
+      col = 'lightblue', width = 0.1, linewidth = 1
     ) +
-    ggplot2::geom_point(size = 4, col = 'lightblue') +
-    ggplot2::geom_point(data = data_min, size = 4, col = 'red') +
+    ggplot2::geom_point(size = 2, col = 'lightblue') +
+    ggplot2::geom_point(data = data_min, size = 2, col = 'red') +
     ggplot2::geom_hline(yintercept = data_min$lower, col = 'gray', linetype = 2) +
     ggplot2::geom_hline(yintercept = data_min$upper, col = 'gray', linetype = 2) +
     ggplot2::scale_x_continuous(breaks = retrain_scenarios) +
@@ -394,9 +390,7 @@ analyse_results <- function(config) {
         drop_columns = c('unique_id', 'test_window', 'horizon'),
         function_name = 'mean',
         adjust_metrics = TRUE
-      ) |> 
-        dplyr::mutate(rmse = rm_mse, rmsse = rm_msse) |> 
-        dplyr::select(-dplyr::any_of(c("rm_mse", "rm_msse")))
+      )
 
     cat("Loading and preparing the time data...\n")
     time_df_tmp = load_data(
@@ -459,32 +453,15 @@ analyse_results <- function(config) {
     }
 
     # testing differences
-    test_list <- vector("list", length(model_names_abbr))
-    names(test_list) <- model_names_abbr
-    # g_test <- test_list
-    for (met in model_names_abbr) {
-      test_list_tmp <- vector("list", length(eval_metrics))
-      names(test_list_tmp) <- eval_metrics
-      # g_test_tmp <- test_list_tmp
-      for (m in eval_metrics) {
-        res_tmp <- test_differences(data = eval_df_tmp, .method = met, .metric = m)
-        test_list_tmp[[m]] <- res_tmp
-        # g_test_tmp[[m]] <- plot_test_results(
-        #   test_results = res_tmp, 
-        #   metric_label = toupper(gsub("_", " ", m)),
-        #   title = toupper(paste(dataset_name_tmp, freq_tmp, "- Nemenyi Test -", met))
-        # )
-      }
-      test_list[[met]] <- test_list_tmp
-      # g_test[[met]] <- g_test_tmp
-    }
-    tab_test <- test_list |> 
-      purrr::map(~ purrr::map_chr(.x, extract_pvalue)) |> 
-      dplyr::bind_rows() |> 
-      dplyr::mutate(method = model_names, .before = 1) |> 
-      recode_data(model_type_levels, model_names_abbr) |> 
-      dt_table(title = "Nemenyi Test")
-  
+    test_res <- model_names_abbr |> 
+      purrr::map(
+        ~ purrr::map2(
+          .x, eval_metrics, 
+          ~ test_differences(eval_df_tmp, .method = .x, .metric = .y)
+        )
+      ) |> 
+      dplyr::bind_rows()
+
     analysis_results[[i]] <- list(
       "eval_df_agg" = eval_df_agg_tmp,
       "time_df_agg" = time_df_agg_tmp,
@@ -493,8 +470,7 @@ analyse_results <- function(config) {
       "tab_eval" = tab_eval,
       "g_eval" = g_eval,
       "g_eval_comb" = g_eval_comb,
-      "test_list" = test_list,
-      "tab_test" = tab_test #, "g_test" = g_test
+      "test_res" = test_res
     )
     
   }
