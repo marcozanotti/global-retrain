@@ -1,4 +1,6 @@
 
+import sys
+sys.path.insert(0, 'src/Python/utils')
 import gc
 import numpy as np
 import pandas as pd
@@ -9,12 +11,12 @@ from utilsforecast.losses import (
     quantile_loss, mqloss, coverage, calibration, scaled_crps
 )
 from utilsforecast.evaluation import evaluate
-from src.Python.utils.utilities import (
+from utilities import (
     create_file_path, create_file_name, get_file_name, 
     save_data, load_data, combine_and_save_files, get_frequency
 )
-from src.Python.utils.collect_data import get_data
-from src.Python.utils.fit_models import get_retrain_ids
+from collect_data import get_data
+from fit_models import get_retrain_ids
 
 import logging
 module_logger = logging.getLogger('evaluate_forecasts')

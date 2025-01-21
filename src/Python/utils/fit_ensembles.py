@@ -1,8 +1,10 @@
 
+import sys
+sys.path.insert(0, 'src/Python/utils')
 import numpy as np
 import pandas as pd
-from src.Python.utils.utilities import save_data, load_data
-from src.Python.utils.evaluate_forecasts import aggregate_data
+from utilities import save_data, load_data
+from evaluate_forecasts import aggregate_data
 
 import logging
 module_logger = logging.getLogger('fit_ensembles')

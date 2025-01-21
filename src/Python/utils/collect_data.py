@@ -1,8 +1,10 @@
 
+import sys
+sys.path.insert(0, 'src/Python/utils')
 import numpy as np
 import pandas as pd
 import pandas_flavor as pf
-from src.Python.utils.utilities import save_data, load_data, get_frequency, get_dataset_frequency
+from utilities import save_data, load_data, get_frequency, get_dataset_frequency
 
 import logging
 module_logger = logging.getLogger('collect_data')

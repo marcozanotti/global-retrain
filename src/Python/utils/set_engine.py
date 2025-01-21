@@ -1,4 +1,6 @@
 
+import sys
+sys.path.insert(0, 'src/Python/utils')
 import os
 import pandas_flavor as pf
 from mlforecast import MLForecast
@@ -16,8 +18,8 @@ from neuralforecast.models import MLP, LSTM, TCN, NBEATSx, NHITS
 # from mlforecast.target_transforms import LocalStandardScaler, LocalMinMaxScaler, Differences
 from mlforecast.lag_transforms import RollingMean, ExpandingMean
 from neuralforecast.losses.pytorch import MAE, MSE, RMSE
-from src.Python.utils.custom_feats import is_weekend
-from src.Python.utils.utilities import get_frequency
+from custom_feats import is_weekend
+from utilities import get_frequency
 
 import logging
 module_logger = logging.getLogger('set_engine')
