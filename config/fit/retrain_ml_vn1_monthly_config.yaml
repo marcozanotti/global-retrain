@@ -33,10 +33,10 @@ fitting: {
 }
 
 model_names: [
-    'LinearRegression', 
-    'RandomForestRegressor', 
-    'XGBRegressor', 
-    'LGBMRegressor', 
+    # 'LinearRegression', 
+    # 'RandomForestRegressor', 
+    # 'XGBRegressor', 
+    # 'LGBMRegressor', 
     'CatBoostRegressor'
 ]
 # model_params: null
@@ -60,7 +60,7 @@ model_params: {
         'colsample_bytree': 0.85,
         'eval_metric': 'rmse',
         'n_jobs': -1,
-        'device': 'cpu'
+        'device': 'cuda'
     },
     'LGBMRegressor': {
         'objective': 'regression',
@@ -75,8 +75,9 @@ model_params: {
         'metric': 'rmse',
         'boost_from_average': False,
         'n_jobs': -1,
-        'device': 'cpu',
-        'force_row_wise': True
+        'device': 'gpu',
+        'force_row_wise': True,
+        'verbosity': -1
     },
     'CatBoostRegressor': {
         'loss_function': 'RMSE',
@@ -84,11 +85,12 @@ model_params: {
         'n_estimators': 1000,
         'learning_rate': 0.03,
         'min_child_samples': 100,
-        'subsample': 0.85,
+        # 'subsample': 0.85,
         'eval_metric': 'RMSE',
         'thread_count': -1,
-        'task_type': 'CPU',
-        'logging_level': 'Silent'
+        'task_type': 'GPU',
+        'logging_level': 'Silent',
+        'allow_writing_files': False
     }
 }
 target_transforms: null

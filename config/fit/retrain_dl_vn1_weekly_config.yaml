@@ -34,7 +34,7 @@ fitting: {
 
 model_names: [
     'MLP',
-    # 'LSTM',
+    'LSTM',
     'TCN',
     'NBEATSx',
     'NHITS'
