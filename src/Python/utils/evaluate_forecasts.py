@@ -224,7 +224,7 @@ def evaluate_model(config):
     # model parameters
     model_names = config['model_names']
     # evaluation parameters
-    eval_freq = config['evaluation']['eval_freq']
+    eval_freq = config['evaluation']['evaluation_frequency']
     metrics = get_metrics(config['evaluation']['metrics'], eval_freq)
     eval_sample_type = config['evaluation']['evaluation_sample_type']
 

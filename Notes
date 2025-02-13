@@ -1,23 +1,12 @@
 TODO:
 
-0. creare i file di config per le varie run
-- ensemble 5 file (dopo aver trovato i top 3 modelli)
-
 1. impostare l'analisi finale
 - funzione obiettivo con costi per scelta di retrain_window (max cost 20k)
-
-2. far girare l'analisi con ML e DL su:
-- vn1 monthly
-- vn1 weekly 
-- m5 monthly
-- m5 weekly
-- m5 daily
 
 
 TEST:
 - fare il round delle previsioni (point e interval) a intero prima della valutazione? 
-  Con l'interval problema di coverage.  
-- MASE e RMSSE senza seasonal_naive (seasonality = 1)
+  Con l'interval problema di coverage.
 
 
 NOTE:
@@ -28,7 +17,6 @@ NOTE:
 (se uguale alla retrain window produce previsioni non overlapping)
 - valutare il padding del dataset per averle tutte lunghe uguali (necessario per insample DL)
 - valutare il save e load dei modelli ad ogni fitting
-- test overlap and nooverlap evaluation
 - aggiungere encoding per categorical variables
 https://nixtlaverse.nixtla.io/mlforecast/docs/how-to-guides/sklearn_pipelines.html
 

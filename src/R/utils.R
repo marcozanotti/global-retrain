@@ -190,13 +190,13 @@ compute_relative_metrics <- function(data) {
       dplyr::left_join(reference_data, by = c("method" = "method_ref")) |>
       dplyr::mutate(
         bias = abs(bias) / abs(bias_ref),
-        coverage_level50 = coverage_level50 / coverage_level50_ref,
-        coverage_level60 = coverage_level60 / coverage_level60_ref,
-        coverage_level70 = coverage_level70 / coverage_level70_ref,
-        coverage_level80 = coverage_level80 / coverage_level80_ref,
-        coverage_level90 = coverage_level90 / coverage_level90_ref,
-        coverage_level95 = coverage_level95 / coverage_level95_ref,
-        coverage_level99 = coverage_level99 / coverage_level99_ref,
+        # coverage_level50 = coverage_level50 / coverage_level50_ref,
+        # coverage_level60 = coverage_level60 / coverage_level60_ref,
+        # coverage_level70 = coverage_level70 / coverage_level70_ref,
+        # coverage_level80 = coverage_level80 / coverage_level80_ref,
+        # coverage_level90 = coverage_level90 / coverage_level90_ref,
+        # coverage_level95 = coverage_level95 / coverage_level95_ref,
+        # coverage_level99 = coverage_level99 / coverage_level99_ref,
         mae = mae / mae_ref,
         mase = mase / mase_ref,
         mqloss = mqloss / mqloss_ref,
@@ -381,9 +381,9 @@ analyse_results <- function(config) {
     ) |> 
       tibble::as_tibble() |> 
       dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
-      recode_data(model_type_levels, model_names_abbr) |> 
-      dplyr::mutate(rmse = rm_mse, rmsse = rm_msse) |> 
-      dplyr::select(-dplyr::any_of(c("rm_mse", "rm_msse")))
+      recode_data(model_type_levels, model_names_abbr) #|> 
+      # dplyr::mutate(rmse = rm_mse, rmsse = rm_msse) |> 
+      # dplyr::select(-dplyr::any_of(c("rm_mse", "rm_msse")))
     eval_df_agg_tmp <- eval_df_tmp |> 
       aggregate_data(
         group_columns = c('type', 'method', 'retrain_window'),

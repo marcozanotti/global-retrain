@@ -1,0 +1,32 @@
+
+dataset: {
+    'dataset_name': 'm5',
+    'frequency': 'daily',
+    'ext': '.parquet'
+}
+
+fitting: {
+    horizon: 28,
+    test_window: 364,
+    retrain_scenarios: [
+        7, 
+        14, 
+        21,
+        30, 
+        60,
+        90,
+        120,
+        150,
+        180,
+        364
+    ]
+}
+
+ensembling: {
+    model_names: [
+        ['NBEATSx', 'MLP', 'LGBMRegressor'],
+        ['LinearRegression', 'XGBRegressor', 'CatBoostRegressor']
+    ],
+    methods: ['mean'], # ['mean', 'median']
+    name: ['TOP3ACC', 'TOP3TIME']
+}

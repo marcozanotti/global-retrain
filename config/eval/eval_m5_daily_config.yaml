@@ -26,10 +26,17 @@ fitting: {
 
 model_names: [
     'LinearRegression', 
-    'RandomForestRegressor', 
+    # 'RandomForestRegressor', 
     'XGBRegressor', 
     'LGBMRegressor', 
-    'CatBoostRegressor'
+    'CatBoostRegressor',
+    'MLP',
+    # 'LSTM',
+    'TCN',
+    'NBEATSx',
+    'NHITS',
+    # 'EnsembleMeanTOP3ACC',
+    # 'EnsembleMeanTOP3TIME'
 ]
 
 evaluation: {

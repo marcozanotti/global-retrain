@@ -1,0 +1,32 @@
+
+dataset: {
+    'dataset_name': 'vn1',
+    'frequency': 'weekly',
+    'ext': '.parquet'
+}
+
+fitting: {
+    horizon: 13,
+    test_window: 52,
+    retrain_scenarios: [
+        1, 
+        2, 
+        3,
+        4, 
+        6,
+        8,
+        10,
+        13,
+        26,
+        52
+    ]
+}
+
+ensembling: {
+    model_names: [
+        ['MLP', 'NBEATSx', 'NHITS'],
+        ['LinearRegression', 'XGBRegressor', 'CatBoostRegressor']
+    ],
+    methods: ['mean'], # ['mean', 'median']
+    name: ['TOP3ACC', 'TOP3TIME']
+}

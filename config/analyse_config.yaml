@@ -1,18 +1,48 @@
 
 dataset: {
-    'dataset_names': ['m5', 'm5', 'vn1', 'vn1'],
-    'frequencies': ['monthly', 'weekly', 'monthly', 'weekly'],
+    'dataset_names': [
+        'm5', 
+        'm5', 
+        'vn1', 
+        'vn1'
+    ],
+    'frequencies': [
+        'monthly', 
+        'weekly', 
+        'monthly', 
+        'weekly'
+    ],
     'ext': '.parquet'
 }
 
 models: {
     'model_names': [
-        'LinearRegression', 'RandomForestRegressor', 'XGBRegressor',
-        'LGBMRegressor', 'CatBoostRegressor'
+        'LinearRegression', 
+        'RandomForestRegressor', 
+        'XGBRegressor',
+        'LGBMRegressor', 
+        'CatBoostRegressor',
+        'MLP',
+        'LSTM',
+        'TCN',
+        'NBEATSx',
+        'NHITS',
+        # 'Ensemble_TOP3ACC',
+        # 'Ensemble_TOP3TIME'
     ],
     'model_names_abbr': [
-        'LR', 'RF', 'XGBoost', 
-        'LGBM', 'CatBoost'
+        'LR', 
+        'RF', 
+        'XGBoost', 
+        'LGBM', 
+        'CatBoost',
+        'MLP',
+        'LSTM',
+        'TCN',
+        'NBEATSx',
+        'NHITS',
+        # 'ENSacc',
+        # 'ENStime'
     ]
 }
 
@@ -27,15 +57,15 @@ evaluation: {
         'rmsse', 
         'mqloss', 
         'scaled_crps',
-        'coverage_level50',
-        'coverage_level60',
-        'coverage_level70',
-        'coverage_level80',
-        'coverage_level90',
-        'coverage_level95',
-        'coverage_level99'
+        # 'coverage_level50',
+        # 'coverage_level60',
+        # 'coverage_level70',
+        # 'coverage_level80',
+        # 'coverage_level90',
+        # 'coverage_level95',
+        # 'coverage_level99'
     ],
     time_metric: 'total_sample_time',
     evaluation_sample_type: 'overlap', # nooverlap
-    analysis_type: 'relative', # absolute
+    analysis_type: 'relative', # absolute / relative
 }
