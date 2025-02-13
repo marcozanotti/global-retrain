@@ -107,6 +107,13 @@ get_model_name_abbr <- function(model_name) {
     model_name == 'XGBRegressor' ~ 'XGBoost',
     model_name == 'LGBMRegressor' ~ 'LGBM',
     model_name == 'CatBoostRegressor' ~ 'CatBoost',
+    model_name == 'MLP' ~ 'MLP',
+    model_name == 'LSTM' ~ 'LSTM',
+    model_name == 'TCN' ~ 'TCN',
+    model_name == 'NBEATSx' ~ 'NBEATSx',
+    model_name == 'NHITS' ~ 'NHITS',
+    model_name == 'EnsembleMeanTOP3ACC' ~ 'ENSacc',
+    model_name == 'EnsembleMeanTOP3TIME' ~ 'ENStime',
     TRUE ~ model_name
   )
   return(model_name_abbr)
