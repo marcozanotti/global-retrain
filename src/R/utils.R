@@ -136,7 +136,7 @@ recode_data <- function(data, model_type_levels, model_names_abbr) {
 
 }
 
-dt_table <- function(data, title = "", caption = "", rownames = FALSE, digits = 3) {
+dt_table <- function(data, title = "", caption = "", rownames = FALSE, digits = 2) {
 	
 	p_len <- nrow(data)
 	res <- data |>
@@ -228,7 +228,7 @@ table_retrain_results <- function(data, metric, title = "") {
     dplyr::select(c('method', 'retrain_window', dplyr::all_of(metric))) |> 
     tidyr::pivot_wider(names_from = 'retrain_window', values_from = metric) |> 
     dplyr::rename_with(stringr::str_to_title) |> 
-    dt_table(title = title, caption = '', digits = 3)
+    dt_table(title = title, caption = '', digits = 2)
   return(tab)
 
 }
@@ -248,7 +248,7 @@ plot_retrain_results <- function(data, metric, metric_label = "", title = "", sm
         )
       ) +
       ggplot2::geom_smooth(
-        method = 'lm', formula = 'y ~ log(x)', linewidth = 2, se = FALSE
+        method = 'lm', formula = 'y ~ log(x)', linewidth = 1, se = FALSE
       ) +
       ggplot2::scale_x_continuous(breaks = retrain_scenario) +
       ggplot2::labs(
@@ -264,16 +264,17 @@ plot_retrain_results <- function(data, metric, metric_label = "", title = "", sm
         ggplot2::aes(
           x = .data[['retrain_window']], 
           y = .data[[metric]], 
-          color = .data[['method']]
+          color = .data[['method']],
+          linetype = .data[['method']]
         )
       ) +
-      ggplot2::geom_point(size = 10, shape = 18) +
-      ggplot2::geom_line(linewidth = 2) + 
+      ggplot2::geom_point(size = 2) +
+      ggplot2::geom_line(linewidth = 1) + 
       ggplot2::scale_x_continuous(breaks = retrain_scenario) +
       ggplot2::labs(
         title = title, 
         x = 'Retrain Scenario', y = metric_label,
-        color = 'Method'
+        color = 'Method', linetype = 'Method'
       ) + 
       ggplot2::theme_minimal() +
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
