@@ -9,14 +9,12 @@ source('src/R/utils.R')
 
 # Parameters --------------------------------------------------------------
 
-analysis_file_name <- 'results/analysis/relative_overlap_results_20250213_150955.RData'
-# analysis_file_name <- 'results/analysis/relative_nooverlap_results_20250213_151617.RData'
-# analysis_file_name <- 'results/analysis/absolute_overlap_results_20250213_152539.RData'
-# analysis_file_name <- 'results/analysis/absolute_nooverlap_results_20250213_152208.RData'
+analysis_file_name <- 'results/analysis/relative_overlap_results_20250217_120437.RData'
+analysis_file_name <- 'results/analysis/absolute_overlap_results_20250217_121354.RData'
 
 metrics <- c('rmsse', 'mqloss')
 
-dataset_name <- 'vn1_weekly'
+dataset_name <- 'm5_weekly'
 
 models <- c(
 	'LR',
@@ -83,3 +81,15 @@ for (mod in models) {
 		print(g)
 	}
 }
+
+# for (m in metrics) {
+# 	res_data$test_res |> 
+# 		dplyr::filter(method %in% models, metric == m) |> 
+# 		dplyr::arrange(retrain_window) |> 
+# 		dplyr::select(method, retrain_window, mean) |> 
+# 		tidyr::pivot_wider(names_from = retrain_window, values_from = mean)
+# }
+
+
+
+
