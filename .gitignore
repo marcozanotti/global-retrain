@@ -42,6 +42,7 @@ venv.bak/
 # Data
 data/
 results/
+results.old/
 logs/
 
 # ML Results

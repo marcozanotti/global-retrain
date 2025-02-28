@@ -9,8 +9,8 @@ dataset: {
 }
 
 fitting: {
-    horizon: 28,
-    test_window: 364,
+    horizon: 28, 
+    test_window: 364, 
     retrain_scenarios: [
         7, 
         14, 
@@ -33,11 +33,11 @@ fitting: {
 }
 
 model_names: [
-    'MLP',
+    # 'MLP',
     'LSTM',
-    'TCN',
-    'NBEATSx',
-    'NHITS'
+    # 'TCN',
+    # 'NBEATSx',
+    # 'NHITS'
 ]
 # model_params: null
 model_params: {

@@ -35,9 +35,9 @@ fitting: {
 model_names: [
     # 'LinearRegression', 
     # 'RandomForestRegressor', 
-    'XGBRegressor', 
+    # 'XGBRegressor', 
     'LGBMRegressor', 
-    'CatBoostRegressor'
+    # 'CatBoostRegressor'
 ]
 # model_params: null
 model_params: {

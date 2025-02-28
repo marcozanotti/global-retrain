@@ -3,7 +3,7 @@ dataset: {
     'dataset_name': 'm5',
     'frequency': 'daily',
     'min_series_length': 730,
-    'samples': 10,
+    'samples': null,
     'ext': '.parquet',
     'seed': 1992
 }
@@ -40,6 +40,7 @@ model_names: [
 ]
 
 evaluation: {
-    metrics: ['bias', 'mae', 'mse', 'rmse', 'mase', 'msse', 'rmsse', 'mql', 'cov', 'scrps'], # 'ql', 'cal'
+    metrics: ['bias', 'mae', 'mse', 'rmse', 'mase', 'msse', 'rmsse', 'mql', 'scrps'], # 'ql', 'cal', 'cov', 
+    evaluation_frequency: 'yearly', # frequency for mase, msse, rmsse
     evaluation_sample_type: 'overlap' # nooverlap
 }

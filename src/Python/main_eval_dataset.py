@@ -1,9 +1,11 @@
 
+import sys
+sys.path.insert(0, 'src/Python/utils')
 import os
-from src.Python.utils.utilities import (
+from utilities import (
     get_config, configure_logging, create_logger, stop_logger
 )
-from src.Python.utils.evaluate_forecasts import evaluate_dataset
+from evaluate_forecasts import evaluate_dataset
 
 os.environ['NIXTLA_ID_AS_COL'] = '1'
 config = get_config('config/eval/eval_dataset_config.yaml')
