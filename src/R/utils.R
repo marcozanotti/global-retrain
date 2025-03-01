@@ -221,14 +221,14 @@ compute_relative_metrics <- function(data) {
         
 }
 
-table_retrain_results <- function(data, metric, title = "") {
+table_retrain_results <- function(data, metric, title = "", digits = 2) {
 
   cat("Creating table...\n")  
   tab <- data |> 
     dplyr::select(c('method', 'retrain_window', dplyr::all_of(metric))) |> 
     tidyr::pivot_wider(names_from = 'retrain_window', values_from = metric) |> 
     dplyr::rename_with(stringr::str_to_title) |> 
-    dt_table(title = title, caption = '', digits = 2)
+    dt_table(title = title, caption = '', digits = digits)
   return(tab)
 
 }
@@ -287,27 +287,41 @@ plot_retrain_results <- function(data, metric, metric_label = "", title = "", sm
 test_differences <- function(data, .method, .metric) {
 
   cat(paste0("Testing differences in ", .metric, " for ", .method, "...\n"))
-  n_series = length(unique(data$unique_id))
-  n_scn <- length(unique(data$retrain_window))
   
   data_test <- data |>
-    dplyr::filter(method == .method) |>
-    dplyr::select(dplyr::all_of(c('retrain_window', .metric))) |> 
-    dplyr::mutate(id = rep(1:n_series, n_scn), .before = 1) |> 
-    tidyr::pivot_wider(names_from = 'retrain_window', values_from = .metric) |> 
-    dplyr::select(-id)
+    dplyr::filter(method == .method)
 
-  test_res <- greybox::rmcb(data = data_test, level = 0.95, outplot = "none")
-  data_test <- tibble::tibble(
-    'method' = .method,
-    'metric' = .metric, 
-    'retrain_window' = as.integer(names(test_res$mean)),
-    'mean' = test_res$mean,
-    'lower' = test_res$interval[, 1],
-    'upper' = test_res$interval[, 2],
-    'pvalue' = test_res$p.value
-  )
-  return(data_test)
+  if (nrow(data_test) == 0) {
+
+    return(NULL)
+
+  } else {
+
+    min_n_series <- min(table(data_test$retrain_window))
+    n_scn <- length(unique(data_test$retrain_window))
+    data_test <- data_test |> 
+      dplyr::group_by(retrain_window) |> 
+      dplyr::slice_sample(n = min_n_series) |> # obtain homogenous samples for each retrain window
+      dplyr::ungroup() |> 
+      dplyr::select(dplyr::all_of(c('retrain_window', .metric))) |> 
+      dplyr::mutate(id = rep(1:min_n_series, n_scn), .before = 1) |> 
+      tidyr::pivot_wider(names_from = 'retrain_window', values_from = .metric) |> 
+      dplyr::select(-id)
+  
+    test_res <- greybox::rmcb(data = data_test, level = 0.95, outplot = "none")
+    data_test <- tibble::tibble(
+      'method' = .method,
+      'metric' = .metric, 
+      'retrain_window' = as.integer(names(test_res$mean)),
+      'mean' = test_res$mean,
+      'lower' = test_res$interval[, 1],
+      'upper' = test_res$interval[, 2],
+      'pvalue' = test_res$p.value
+    )
+
+    return(data_test)
+
+  }
 
 }
 
@@ -351,6 +365,34 @@ plot_test_results <- function(data, .method, .metric, metric_label = "", title =
 
 }
 
+plot_distribution_results <- function(data, metric, metric_label = "", title = "") {
+	
+	cat("Creating plot...\n")
+	retrain_scenario <- sort(unique(data[["retrain_window"]]))
+	
+	g <- data |> 
+		ggplot2::ggplot(
+			ggplot2::aes(
+				# x = .data[['retrain_window']], 
+				x = .data[[metric]], 
+				color = .data[['retrain_window']] |> factor(levels = retrain_scenario, ordered = TRUE)
+			)
+		) +
+		ggplot2::geom_density() +
+		ggplot2::facet_wrap(~ .data[['method']], nrow = 4, ncol = 2) + 
+		# ggplot2::scale_x_continuous(breaks = retrain_scenario) +
+		ggplot2::labs(
+			title = title, 
+			x = 'Retrain Scenario', y = metric_label,
+			color = 'Retrain Scenarios'
+		) + 
+		# ggplot2::theme_minimal() +
+		ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5), legend.position = "bottom")
+	
+	return(g)
+	
+}
+
 analyse_results <- function(config) {
 
   # dataset config
@@ -389,9 +431,22 @@ analyse_results <- function(config) {
     ) |> 
       tibble::as_tibble() |> 
       dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
+      dplyr::filter(method %in% model_names) |> 
       recode_data(model_type_levels, model_names_abbr) #|> 
       # dplyr::mutate(rmse = rm_mse, rmsse = rm_msse) |> 
       # dplyr::select(-dplyr::any_of(c("rm_mse", "rm_msse")))
+    # filter out first and last 0.1% of results based on rmsse
+    cat("Filtering the evaluation data based on RMSSE quantiles...\n")
+    n_full <- nrow(eval_df_tmp)
+    qs <- eval_df_tmp |> 
+      dplyr::summarise(
+        q_001 = quantile(rmsse, 0.001),
+        q_999 = quantile(rmsse, 0.999)
+      )
+    eval_df_tmp <- eval_df_tmp |> 
+      dplyr::filter(dplyr::between(rmsse, qs$q_001, qs$q_999 + 10))
+    n_filtered <- nrow(eval_df_tmp)
+    cat(paste0("Removed ", n_full - n_filtered, " (", round((n_full - n_filtered) / n_full * 100, 1), "%) of results\n"))
     eval_df_agg_tmp <- eval_df_tmp |> 
       aggregate_data(
         group_columns = c('type', 'method', 'retrain_window'),
@@ -408,6 +463,7 @@ analyse_results <- function(config) {
     ) |> 
       tibble::as_tibble() |> 
       dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
+      dplyr::filter(method %in% model_names) |> 
       recode_data(model_type_levels, model_names_abbr)
     time_df_agg_tmp <- time_df_tmp |> 
       aggregate_data(
@@ -427,7 +483,8 @@ analyse_results <- function(config) {
     tab_time <- table_retrain_results(
       time_df_agg_tmp, 
       metric = time_metric,
-      title = toupper(paste(dataset_name_tmp, freq_tmp, '-', gsub("_", " ", time_metric)))
+      title = toupper(paste(dataset_name_tmp, freq_tmp, '-', gsub("_", " ", time_metric))),
+      digits = 3
     )
     g_time <- plot_retrain_results(
       time_df_agg_tmp, 
@@ -448,7 +505,8 @@ analyse_results <- function(config) {
       tab_eval[[m]] <- table_retrain_results(
         eval_df_agg_tmp, 
         metric = m,
-        title = toupper(paste(dataset_name_tmp, freq_tmp, '-', gsub("_", " ", m)))
+        title = toupper(paste(dataset_name_tmp, freq_tmp, '-', gsub("_", " ", m))),
+        digits = 3
       )
       g_eval[[m]] <- plot_retrain_results(
         eval_df_agg_tmp, 
@@ -496,6 +554,6 @@ analyse_results <- function(config) {
   save(analysis_results, file = paste0('results/analysis/', file_name))
   cat("Done!\n")
 
-  return(invisible(analysis_results))
+  return(invisible(NULL))
 
 }

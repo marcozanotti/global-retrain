@@ -4,11 +4,6 @@ TODO:
 - funzione obiettivo con costi per scelta di retrain_window (max cost 20k)
 
 
-TEST:
-- fare il round delle previsioni (point e interval) a intero prima della valutazione? 
-  Con l'interval problema di coverage.
-
-
 NOTE:
 
 - valutare l'aggiunta di datasets (Rossmann, Favorita, M4, Wikipedia)

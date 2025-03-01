@@ -9,21 +9,21 @@ source('src/R/utils.R')
 
 # Parameters --------------------------------------------------------------
 
-analysis_file_name <- 'results/analysis/relative_overlap_results_20250217_120437.RData'
-analysis_file_name <- 'results/analysis/absolute_overlap_results_20250217_121354.RData'
+analysis_file_name <- 'results/analysis/relative_overlap_results_20250301_121204.RData'
+analysis_file_name <- 'results/analysis/absolute_overlap_results_20250301_120522.RData'
 
-metrics <- c('rmsse', 'mqloss')
+metrics <- c('rmsse', 'mqloss', 'rmse', 'scaled_crps')
 
-dataset_name <- 'm5_weekly'
+dataset_name <- 'm5_daily'
 
 models <- c(
 	'LR',
-	'RF',
+	# 'RF',
 	'XGBoost',
 	'LGBM',
 	'CatBoost',
 	'MLP',
-	'LSTM',
+	# 'LSTM',
 	'TCN',
 	'NBEATSx',
 	'NHITS'
@@ -89,7 +89,3 @@ for (mod in models) {
 # 		dplyr::select(method, retrain_window, mean) |> 
 # 		tidyr::pivot_wider(names_from = retrain_window, values_from = mean)
 # }
-
-
-
-
