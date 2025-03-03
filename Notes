@@ -1,9 +1,3 @@
-TODO:
-
-1. impostare l'analisi finale
-- funzione obiettivo con costi per scelta di retrain_window (max cost 20k)
-
-
 NOTE:
 
 - valutare l'aggiunta di datasets (Rossmann, Favorita, M4, Wikipedia)

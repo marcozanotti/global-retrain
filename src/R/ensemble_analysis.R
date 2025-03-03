@@ -1,7 +1,7 @@
 # Ensemble analysis
 
 source('src/R/utils.R')
-analysis_file_name <- 'results/analysis/absolute_overlap_results_20250212_144529.RData'
+analysis_file_name <- 'results/analysis/absolute_overlap_results_20250301_120522.RData'
 res <- load(analysis_file_name)
 res <- analysis_results
 rm(analysis_results)
@@ -9,7 +9,7 @@ rm(analysis_results)
 dataset_names <- c(
 	'm5_monthly', 
 	'm5_weekly', 
-	# 'm5_daily', 
+	'm5_daily',
 	'vn1_monthly', 
 	'vn1_weekly'
 )
@@ -27,7 +27,7 @@ for (i in seq_along(dataset_names)) {
 }
 res_top_acc <- res_top_acc |> 
 	dplyr::bind_cols() |> 
-	purrr::set_names(c('M5 MONTHLY', 'M5 WEEKLY', 'VN1 MONTHLY', 'VN1 WEEKLY'))
+	purrr::set_names(c('M5 MONTHLY', 'M5 WEEKLY', 'M5 DAILY', 'VN1 MONTHLY', 'VN1 WEEKLY'))
 
 # top 3 by computation time
 res_top_time <- vector('list', length(dataset_names))
@@ -42,7 +42,7 @@ for (i in seq_along(dataset_names)) {
 }
 res_top_time <- res_top_time |> 
 	dplyr::bind_cols() |> 
-	purrr::set_names(c('M5 MONTHLY', 'M5 WEEKLY', 'VN1 MONTHLY', 'VN1 WEEKLY'))
+	purrr::set_names(c('M5 MONTHLY', 'M5 WEEKLY', 'M5 DAILY', 'VN1 MONTHLY', 'VN1 WEEKLY'))
 
 res_top_acc
 res_top_time

@@ -136,11 +136,24 @@ recode_data <- function(data, model_type_levels, model_names_abbr) {
 
 }
 
-dt_table <- function(data, title = "", caption = "", rownames = FALSE, digits = 2) {
+dt_table <- function(data, title = "", caption = "", rownames = FALSE, digits = 2, format = 'numeric') {
 	
 	p_len <- nrow(data)
-	res <- data |>
-    dplyr::mutate(dplyr::across(where(is.numeric), ~ round(.x, digits = digits))) |> 
+	
+	if (format == 'dollar') {
+		res_data <- data |>
+			dplyr::mutate(dplyr::across(where(is.numeric), ~ round(.x, digits = digits))) |>  
+			dplyr::mutate(dplyr::across(where(is.numeric), ~ scales::dollar(.x, big.mark = ",", decimal.mark = '.')))
+	} else if (format == 'percent') {
+		res_data <- data |>
+			dplyr::mutate(dplyr::across(where(is.numeric), ~ round(.x, digits = digits))) |>  
+			dplyr::mutate(dplyr::across(where(is.numeric), ~ scales::percent(.x, scale = 1)))
+	} else {
+		res_data <- data |>
+			dplyr::mutate(dplyr::across(where(is.numeric), ~ round(.x, digits = digits)))
+	}
+	
+	res <- res_data |> 
 		DT::datatable(
 			extensions = "Buttons",
 			# filter = "top", # for filtering enable searching and lenghtChange
@@ -180,7 +193,18 @@ compute_relative_metrics <- function(data) {
     dplyr::select(-dplyr::any_of(c('type', 'retrain_window'))) |> 
     dplyr::rename_with(~ stringr::str_c(.x, "_ref"))
 
-  if (any(stringr::str_detect(names(data), "_time"))) {
+  if (any(stringr::str_detect(names(data), "cost"))) {
+  	
+  	relative_data <- data |> 
+  		dplyr::left_join(reference_data, by = c("method" = "method_ref")) |> 
+  		dplyr::mutate(
+  			cost_perc = cost / cost_ref * 100,
+  			savings = cost_ref - cost,
+  			savings_perc = (cost_ref - cost) / cost_ref * 100
+  		) |> 
+  		dplyr::select(-dplyr::ends_with("_ref"))
+  	
+  } else if (any(stringr::str_detect(names(data), "_time"))) {
 
     relative_data <- data |> 
       dplyr::left_join(reference_data, by = c("method" = "method_ref")) |> 
@@ -221,14 +245,14 @@ compute_relative_metrics <- function(data) {
         
 }
 
-table_retrain_results <- function(data, metric, title = "", digits = 2) {
+table_retrain_results <- function(data, metric, title = "", digits = 2, format = 'numeric') {
 
   cat("Creating table...\n")  
   tab <- data |> 
     dplyr::select(c('method', 'retrain_window', dplyr::all_of(metric))) |> 
     tidyr::pivot_wider(names_from = 'retrain_window', values_from = metric) |> 
     dplyr::rename_with(stringr::str_to_title) |> 
-    dt_table(title = title, caption = '', digits = digits)
+    dt_table(title = title, caption = '', digits = digits, format = format)
   return(tab)
 
 }
@@ -236,48 +260,100 @@ table_retrain_results <- function(data, metric, title = "", digits = 2) {
 plot_retrain_results <- function(data, metric, metric_label = "", title = "", smooth = FALSE) {
 
   cat("Creating plot...\n")
-  retrain_scenario <- sort(unique(data[["retrain_window"]]))
-
-  if (smooth) {
-    g <- data |> 
-      ggplot2::ggplot(
-        ggplot2::aes(
-          x = .data[['retrain_window']], 
-          y = .data[[metric]], 
-          color = .data[['method']]
-        )
-      ) +
-      ggplot2::geom_smooth(
-        method = 'lm', formula = 'y ~ log(x)', linewidth = 1, se = FALSE
-      ) +
-      ggplot2::scale_x_continuous(breaks = retrain_scenario) +
-      ggplot2::labs(
-        title = title, 
-        x = 'Retrain Scenario', y = metric_label,
-        color = 'Method'
-      ) + 
-      ggplot2::theme_minimal() +
-      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+  data_plot <- data |> 
+    dplyr::mutate(retrain_window = factor(retrain_window, ordered = TRUE))
+  
+  if (metric %in% c('cost', 'savings', 'savings_perc')) {
+  	
+  	data_mean <- data_plot |>
+  		dplyr::filter(method == 'Average')
+  	data_plot <- data_plot |> 
+  		dplyr::filter(method != 'Average') |>
+  		dplyr::mutate(
+  			method = factor(
+  				method, 
+  				levels = c(
+  					'LR', 'RF', 'XGBoost', 'LGBM', 'CatBoost', 
+  					'MLP', 'LSTM', 'TCN', 'NBEATSx', 'NHITS'
+  				), 
+  				ordered = TRUE
+  			)
+  		)
+  	g <- data_plot |> 
+  		ggplot2::ggplot(
+  			ggplot2::aes(
+  				x = .data[['retrain_window']], 
+  				y = .data[[metric]], 
+  				color = .data[['method']],
+  				linetype = .data[['method']],
+  				group = .data[['method']]
+  			)
+  		) +
+  		ggplot2::geom_point(size = 2) +
+  		ggplot2::geom_line(linewidth = 1) +  
+  		ggplot2::labs(
+  			title = title, 
+  			x = 'Retrain Scenario', y = metric_label,
+  			color = 'Method', linetype = 'Method', group = 'Method'
+  		) + 
+  		ggplot2::theme_minimal() +
+  		ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)) +
+  		ggplot2::geom_point(
+  			data = data_mean, 
+  			mapping = ggplot2::aes(linetype = NULL),
+  			col = 'darkred', size = 1
+  		) +
+  		ggplot2::geom_line(
+  			data = data_mean, 
+  			mapping = ggplot2::aes(linetype = NULL),
+  			col = 'darkred', linewidth = 0.5, linetype = 1,
+  		)
+  	
   } else {
-    g <- data |> 
-      ggplot2::ggplot(
-        ggplot2::aes(
-          x = .data[['retrain_window']], 
-          y = .data[[metric]], 
-          color = .data[['method']],
-          linetype = .data[['method']]
-        )
-      ) +
-      ggplot2::geom_point(size = 2) +
-      ggplot2::geom_line(linewidth = 1) + 
-      ggplot2::scale_x_continuous(breaks = retrain_scenario) +
-      ggplot2::labs(
-        title = title, 
-        x = 'Retrain Scenario', y = metric_label,
-        color = 'Method', linetype = 'Method'
-      ) + 
-      ggplot2::theme_minimal() +
-      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+  	
+  	if (smooth) {
+  		g <- data_plot |> 
+  			ggplot2::ggplot(
+  				ggplot2::aes(
+  					x = .data[['retrain_window']], 
+  					y = .data[[metric]], 
+  					color = .data[['method']],
+            linetype = .data[['method']],
+            group = .data[['method']]
+  				)
+  			) +
+  			ggplot2::geom_smooth(
+  				method = 'lm', formula = 'y ~ log(x)', linewidth = 1, se = FALSE
+  			) +
+  			ggplot2::labs(
+  				title = title, 
+  				x = 'Retrain Scenario', y = metric_label,
+  				color = 'Method', linetype = 'Method'
+  			) + 
+  			ggplot2::theme_minimal() +
+  			ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+  	} else {
+  		g <- data_plot |> 
+  			ggplot2::ggplot(
+  				ggplot2::aes(
+  					x = .data[['retrain_window']], 
+  					y = .data[[metric]], 
+  					color = .data[['method']],
+  					linetype = .data[['method']],
+            group = .data[['method']]
+  				)
+  			) +
+  			ggplot2::geom_point(size = 2) +
+  			ggplot2::geom_line(linewidth = 1) + 
+  			ggplot2::labs(
+  				title = title, 
+  				x = 'Retrain Scenario', y = metric_label,
+  				color = 'Method', linetype = 'Method'
+  			) + 
+  			ggplot2::theme_minimal() +
+  			ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+  	}
+  	
   }
 
   return(g)
@@ -342,7 +418,9 @@ extract_significance <- function(p_value) {
 plot_test_results <- function(data, .method, .metric, metric_label = "", title = "") {
 
   cat("Creating plot...\n")
-  data_plot <- data |> dplyr::filter(method == .method, metric == .metric)
+  data_plot <- data |> 
+  	dplyr::filter(method == .method, metric == .metric) |> 
+  	dplyr::mutate(retrain_window = factor(retrain_window, ordered = TRUE))
   data_min <- data_plot |> dplyr::slice_min(mean)
   retrain_scenarios <- sort(unique(data[["retrain_window"]]))
 
@@ -356,13 +434,45 @@ plot_test_results <- function(data, .method, .metric, metric_label = "", title =
     ggplot2::geom_point(data = data_min, size = 2, col = 'red') +
     ggplot2::geom_hline(yintercept = data_min$lower, col = 'gray', linetype = 2) +
     ggplot2::geom_hline(yintercept = data_min$upper, col = 'gray', linetype = 2) +
-    ggplot2::scale_x_continuous(breaks = retrain_scenarios) +
     ggplot2::labs(title = title, x = 'Retrain Scenario', y = metric_label) + 
     ggplot2::theme_minimal() +
     ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
 
   return(g)
 
+}
+
+plot_test_results_facet <- function(data, .facet, .metric, metric_label = "", title = "") {
+	
+	cat("Creating plot...\n")
+	method_lvls <- c('LR', 'RF', 'XGBoost', 'LGBM', 'CatBoost', 'MLP', 'LSTM', 'TCN', 'NBEATSx', 'NHITS')
+	data_plot <- data |> 
+		dplyr::filter(metric == .metric) |> 
+		dplyr::mutate(retrain_window = factor(retrain_window, ordered = TRUE)) |> 
+		dplyr::mutate(method = factor(method, levels = method_lvls, ordered = TRUE))
+	data_min <- data_plot |> 
+		dplyr::group_by(method) |> 
+		dplyr::slice_min(mean) |> 
+		dplyr::ungroup()
+	retrain_scenarios <- sort(unique(data[["retrain_window"]]))
+	
+	g <- data_plot |> 
+		ggplot2::ggplot(ggplot2::aes(x = retrain_window, y = mean)) +
+		ggplot2::geom_errorbar(
+			ggplot2::aes(ymin = lower, ymax = upper), 
+			col = 'lightblue', width = 0.1, linewidth = 1
+		) +
+		ggplot2::geom_point(size = 1, col = 'lightblue') +
+		ggplot2::geom_point(data = data_min, size = 1, col = 'red') +
+		ggplot2::geom_hline(data = data_min, mapping = ggplot2::aes(yintercept = lower), col = 'gray', linetype = 2) +
+		ggplot2::geom_hline(data = data_min, mapping = ggplot2::aes(yintercept = upper), col = 'gray', linetype = 2) +
+		ggplot2::labs(title = title, x = 'Retrain Scenario', y = metric_label) + 
+		ggplot2::facet_wrap(~ .data[[.facet]], ncol = 2, scales = 'free_y') +
+		ggplot2::theme_bw() +
+		ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+	
+	return(g)
+	
 }
 
 plot_distribution_results <- function(data, metric, metric_label = "", title = "") {
@@ -393,6 +503,44 @@ plot_distribution_results <- function(data, metric, metric_label = "", title = "
 	
 }
 
+clean_outliers <- function(data, .metric, q = c(0.001, 0.999)) {
+	
+	cat("Removing outliers...\n")
+	
+	q_funs <- list(
+		'qlow' = function(x) { round(quantile(x, q[1]), 3) },
+		'qhigh' = function(x) { round(quantile(x, q[2]), 3) }
+	)
+	qs_df <- data |> 
+		dplyr::summarise(dplyr::across(.metric, .fns = q_funs)) |> 
+		tidyr::pivot_longer(cols = dplyr::everything()) |>
+		tidyr::separate(name, into = c('metric', 'q'), sep = "_") |>
+		tidyr::pivot_wider(names_from = q, values_from = value)
+	
+	data_cln <- data
+	for (i in 1:nrow(qs_df)) {
+		m <- qs_df[['metric']][i]
+		q_low <- qs_df[['qlow']][i]
+		q_high <- qs_df[['qhigh']][i]
+		cat(paste0("Metric: ", m, ", Q Low: ", q_low, ", Q High: ", q_high, "\n"))
+		data_cln <- data_cln |> 
+			dplyr::filter(dplyr::between(.data[[m]], q_low, q_high))
+	}
+	
+	n_full <- nrow(data)
+	n_filtered <- nrow(data_cln)
+	cat(
+		paste0(
+			"Removed ", n_full - n_filtered, " (", 
+			round((n_full - n_filtered) / n_full * 100, 1), 
+			"%) of results\n"
+		)
+	)
+	
+	return(data_cln)
+	
+}
+
 analyse_results <- function(config) {
 
   # dataset config
@@ -409,6 +557,7 @@ analyse_results <- function(config) {
   time_metric <- config$evaluation$time_metric
   eval_type <- config$evaluation$evaluation_sample_type
   analysis_type <- config$evaluation$analysis_type
+  outlier_cleaning_metrics <- config$evaluation$outlier_cleaning_metrics
 
   analysis_results <- vector("list", length(dataset_names))
   names(analysis_results) <- paste(dataset_names, frequencies, sep = "_")
@@ -432,21 +581,8 @@ analyse_results <- function(config) {
       tibble::as_tibble() |> 
       dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
       dplyr::filter(method %in% model_names) |> 
-      recode_data(model_type_levels, model_names_abbr) #|> 
-      # dplyr::mutate(rmse = rm_mse, rmsse = rm_msse) |> 
-      # dplyr::select(-dplyr::any_of(c("rm_mse", "rm_msse")))
-    # filter out first and last 0.1% of results based on rmsse
-    cat("Filtering the evaluation data based on RMSSE quantiles...\n")
-    n_full <- nrow(eval_df_tmp)
-    qs <- eval_df_tmp |> 
-      dplyr::summarise(
-        q_001 = quantile(rmsse, 0.001),
-        q_999 = quantile(rmsse, 0.999)
-      )
-    eval_df_tmp <- eval_df_tmp |> 
-      dplyr::filter(dplyr::between(rmsse, qs$q_001, qs$q_999 + 10))
-    n_filtered <- nrow(eval_df_tmp)
-    cat(paste0("Removed ", n_full - n_filtered, " (", round((n_full - n_filtered) / n_full * 100, 1), "%) of results\n"))
+      recode_data(model_type_levels, model_names_abbr) |> 
+    	clean_outliers(.metric = outlier_cleaning_metrics, q = c(0.001, 0.999))
     eval_df_agg_tmp <- eval_df_tmp |> 
       aggregate_data(
         group_columns = c('type', 'method', 'retrain_window'),
@@ -556,4 +692,95 @@ analyse_results <- function(config) {
 
   return(invisible(NULL))
 
+}
+
+compute_costs <- function(data, dataset_name, time_var, n_skus, cost_per_hour = 3.5) {
+	
+	if (dataset_name == 'm5_daily') {
+		dataset_n_skus <- 28298
+	} else {
+		dataset_n_skus <- 15053
+	}
+	
+	data_cost <- data |> 
+		dplyr::mutate(
+			ct_per_sku = .data[[time_var]] / dataset_n_skus,
+			ct_hour = .data[[time_var]] / 60 / 60,
+			ct_hour_per_sku = ct_hour / dataset_n_skus,
+			ct_hour_tot = ct_hour_per_sku * n_skus,
+			cost = ct_hour_tot * cost_per_hour
+		) |> 
+		dplyr::select(dplyr::all_of(c('method', 'retrain_window', 'cost'))) |> 
+		compute_relative_metrics()
+	
+	return (data_cost)
+	
+}
+
+cost_analysis <- function(data, dataset_name, time_var, n_skus, cost_per_hour) {
+	
+	data_mean <- data |> 
+		dplyr::group_by(retrain_window) |> 
+		dplyr::summarise(
+			total_fit_time = mean(total_fit_time), 
+			total_predict_time = mean(total_predict_time), 
+			total_sample_time = mean(total_sample_time),
+			method = 'Average'
+		) |> 
+		dplyr::relocate('method', .before = 1)
+	
+	data_cost <- data |> 
+		dplyr::bind_rows(data_mean) |>
+		compute_costs(
+			dataset_name = dataset_name, 
+			time_var = 'total_sample_time', 
+			n_skus = n_skus,
+			cost_per_hour = cost_per_hour
+		)
+	
+	# costs table
+	tab_cost <- data_cost |> 
+		table_retrain_results(metric = 'cost', title = '', digits = 0, format = 'dollar')
+	# savings table
+	tab_sav <- data_cost |> 
+		table_retrain_results(metric = 'savings', title = '', digits = 0, format = 'dollar')
+	# savings table perc
+	tab_savperc <- data_cost |> 
+		table_retrain_results(metric = 'savings_perc', title = '', digits = 0, format = 'percent')
+	
+	# plots
+	g_cost <- plot_retrain_results(
+		data = data_cost, 
+		metric = 'cost', 
+		metric_label = 'Cost ($)',
+		title = toupper(stringr::str_replace_all(toupper(dataset_name), "_.*", ""))
+	)
+	g_sav <- plot_retrain_results(
+		data = data_cost, 
+		metric = 'savings', 
+		metric_label = 'Savings ($)',
+		title = toupper(stringr::str_replace_all(toupper(dataset_name), "_.*", ""))
+	)
+	g_savperc <- plot_retrain_results(
+		data = data_cost, 
+		metric = 'savings_perc', 
+		metric_label = 'Savings (%)',
+		title = toupper(stringr::str_replace_all(toupper(dataset_name), "_.*", ""))
+	)
+	
+	cat("Combining evaluation and time plot...\n")
+	g_cost_comb <- g_cost + g_savperc + 
+		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
+	
+	res_list <- list(
+		'tab_cost' = tab_cost,
+		'tab_sav' = tab_sav,
+		'tab_savperc' = tab_savperc,
+		'g_cost' = g_cost,
+		'g_sav' = g_sav,
+		'g_savperc' = g_savperc,
+		'g_cost_comb' = g_cost_comb
+	)
+	return(res_list)
+	
 }

@@ -7,39 +7,40 @@ library(patchwork)
 source('src/R/utils.R')
 
 
-# Parameters --------------------------------------------------------------
-
-analysis_file_name <- 'results/analysis/relative_overlap_results_20250301_121204.RData'
-analysis_file_name <- 'results/analysis/absolute_overlap_results_20250301_120522.RData'
-
-metrics <- c('rmsse', 'mqloss', 'rmse', 'scaled_crps')
-
-dataset_name <- 'm5_daily'
-
-models <- c(
-	'LR',
-	# 'RF',
-	'XGBoost',
-	'LGBM',
-	'CatBoost',
-	'MLP',
-	# 'LSTM',
-	'TCN',
-	'NBEATSx',
-	'NHITS'
-)
-
-
 # Load & prepare data -----------------------------------------------------
+
+analysis_file_name <- 'results/analysis/absolute_overlap_results_20250301_145252.RData'
+analysis_file_name <- 'results/analysis/relative_overlap_results_20250303_191303.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results
 rm(analysis_results)
 
-res_data <- res[[dataset_name]] 
+
+# Parameters --------------------------------------------------------------
+
+metrics <- c('rmsse', 'mqloss')
+dataset_name <- 'm5_daily'
+# dataset_name <- 'vn1_weekly'
+models <- c(
+	'LR',
+	'RF',
+	'XGBoost',
+	'LGBM',
+	'CatBoost',
+	'MLP',
+	'LSTM',
+	'TCN',
+	'NBEATSx',
+	'NHITS'
+)
+n_skus = 200000 * 5000
+cost_per_hour = 3.5
 
 
 # Analysis ----------------------------------------------------------------
+
+res_data <- res[[dataset_name]] 
 
 # * Time table ------------------------------------------------------------
 
@@ -76,16 +77,37 @@ for (mod in models) {
 			.method = mod, 
 			.metric = m, 
 			metric_label = toupper(gsub("_", " ", m)),
-			title = toupper(paste(stringr::str_replace_all(toupper(dataset_name), "_", " "), "- Nemenyi Test -", mod))
+			title = toupper(paste(stringr::str_replace_all(toupper(dataset_name), "_.*", " "), "- Nemenyi Test -", mod))
 		)
 		print(g)
 	}
 }
 
-# for (m in metrics) {
-# 	res_data$test_res |> 
-# 		dplyr::filter(method %in% models, metric == m) |> 
-# 		dplyr::arrange(retrain_window) |> 
-# 		dplyr::select(method, retrain_window, mean) |> 
-# 		tidyr::pivot_wider(names_from = retrain_window, values_from = mean)
-# }
+for (m in metrics) {
+	g <- plot_test_results_facet(
+		data = res_data$test_res,
+		.facet = 'method', 
+		.metric = m, 
+		metric_label = toupper(gsub("_", " ", m)),
+		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name), "_.*", ""), "- Nemenyi Test"))
+	)
+	print(g)
+}
+
+# * Cost Analysis ---------------------------------------------------------
+
+cost_res <- res_data$time_df_agg |> 
+	cost_analysis(
+		dataset_name = dataset_name, 
+		time_var = 'total_sample_time', 
+		n_skus = n_skus, 
+		cost_per_hour = cost_per_hour
+	)
+
+cost_res$tab_cost
+cost_res$tab_sav
+cost_res$tab_savperc
+cost_res$g_cost
+cost_res$g_sav
+cost_res$g_savperc
+cost_res$g_cost_comb
