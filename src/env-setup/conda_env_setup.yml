@@ -22,7 +22,7 @@ dependencies:
       - numpy >= 1.24.0, < 2.0.0
       - pandas >= 2.2.0, < 3.0.0
       - pyarrow
-      # - polars >= 1.6.0, < 2.0.0
+      - polars >= 1.6.0, < 2.0.0
       # - openpyxl >= 3.0.0, < 4.0.0
 
       # Visualization
