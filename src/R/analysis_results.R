@@ -9,8 +9,8 @@ source('src/R/utils.R')
 
 # Load & prepare data -----------------------------------------------------
 
-analysis_file_name <- 'results/analysis/absolute_overlap_results_20250301_145252.RData'
-analysis_file_name <- 'results/analysis/relative_overlap_results_20250303_191303.RData'
+analysis_file_name <- 'results/analysis/absolute_overlap_results_20250324_112601.RData'
+analysis_file_name <- 'results/analysis/relative_overlap_results_20250324_112525.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results
@@ -21,7 +21,7 @@ rm(analysis_results)
 
 metrics <- c('rmsse', 'mqloss')
 dataset_name <- 'm5_daily'
-# dataset_name <- 'vn1_weekly'
+dataset_name2 <- 'vn1_weekly'
 models <- c(
 	'LR',
 	'RF',
@@ -40,7 +40,8 @@ cost_per_hour = 3.5
 
 # Analysis ----------------------------------------------------------------
 
-res_data <- res[[dataset_name]] 
+res_data <- res[[dataset_name]]
+res_data2 <- res[[dataset_name2]]
 
 # * Time table ------------------------------------------------------------
 
@@ -49,6 +50,10 @@ res_data$tab_time
 # * Time plot -------------------------------------------------------------
 
 res_data$g_time
+
+res_data$g_time + ggplot2::theme(legend.position = "bottom") +
+	res_data2$g_time + ggplot2::theme(legend.position = "bottom")
+
 
 # * Evaluation table ------------------------------------------------------
 
@@ -59,7 +64,10 @@ for (m in metrics) {
 # * Evaluation plot -------------------------------------------------------
 
 for (m in metrics) {
-	print(res_data$g_eval[[m]])
+	print(
+		res_data$g_eval[[m]] + ggplot2::theme(legend.position = "bottom") +
+			res_data2$g_eval[[m]] + ggplot2::theme(legend.position = "bottom")
+	)
 }
 
 # * Evaluation plot (combined) --------------------------------------------
@@ -111,3 +119,11 @@ cost_res$g_cost
 cost_res$g_sav
 cost_res$g_savperc
 cost_res$g_cost_comb
+
+x <- res_data$time_df_agg |> 
+	select(method, retrain_window, total_sample_time) |>
+	pivot_wider(names_from = retrain_window, values_from = total_sample_time)
+x[4, 2:ncol(x)] |> round(0) |> paste(collapse = ' & ')
+
+
+

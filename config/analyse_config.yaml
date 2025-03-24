@@ -69,6 +69,6 @@ evaluation: {
     ],
     time_metric: 'total_sample_time',
     evaluation_sample_type: 'overlap', # overlap / nooverlap
-    analysis_type: 'relative', # absolute / relative
+    analysis_type: 'absolute', # absolute / relative
     outlier_cleaning_metrics: ['rmsse', 'mqloss']
 }

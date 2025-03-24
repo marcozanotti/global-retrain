@@ -24,9 +24,9 @@ fitting: {
 
 ensembling: {
     model_names: [
-        ['XGBRegressor', 'LGBMRegressor', 'LinearRegression'],
-        ['CatBoostRegressor', 'LinearRegression', 'XGBRegressor']
+        ['XGBRegressor', 'LGBMRegressor', 'LinearRegression', 'NBEATSx', 'MLP'],
+        ['CatBoostRegressor', 'LinearRegression', 'XGBRegressor', 'MLP', 'NBEATSx']
     ],
     methods: ['mean'], # ['mean', 'median']
-    name: ['TOP3ACC', 'TOP3TIME']
+    name: ['TOP5ACC', 'TOP5TIME']
 }
