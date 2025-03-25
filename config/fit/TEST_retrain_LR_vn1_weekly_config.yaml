@@ -13,8 +13,8 @@ fitting: {
     test_window: 52,
     retrain_scenarios: [
         1, 
-        # 2, 
-        # 3,
+        2, 
+        3,
         # 4, 
         # 6,
         # 8,

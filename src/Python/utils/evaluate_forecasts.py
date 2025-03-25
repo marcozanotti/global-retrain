@@ -7,7 +7,7 @@ import pandas as pd
 import pandas_flavor as pf
 from functools import partial
 from utilsforecast.losses import (
-    bias, mae, mse, rmse, mase, msse, rmsse,
+    bias, mae, mse, rmse, mase, msse, rmsse, smape,
     quantile_loss, mqloss, coverage, calibration, scaled_crps
 )
 from utilsforecast.evaluation import evaluate
@@ -149,6 +149,15 @@ def get_metrics(metric_names, frequency = None):
         metrics.append(calibration)
     if 'scrps' in metric_names:
         metrics.append(scaled_crps)
+
+    if 'stab_bias' in metric_names:
+        metrics.append(bias)
+    if 'mac' in metric_names:
+        metrics.append(mae)
+    if 'rmsc' in metric_names:
+        metrics.append(rmse)
+    if 'smapc' in metric_names:
+        metrics.append(smape)
 
     return metrics
 

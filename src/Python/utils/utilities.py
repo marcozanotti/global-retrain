@@ -271,7 +271,9 @@ def get_frequency(frequency):
 
     module_logger.info('Defining frequency...')
 
-    if frequency == 'hourly':
+    if frequency == None:
+        freq = [None, None, None]
+    elif frequency == 'hourly':
         freq = ['H', 24, 'h']
     elif frequency == 'daily':
         freq = ['D', 7, 'D']

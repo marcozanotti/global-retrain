@@ -5,11 +5,7 @@ import gc
 import numpy as np
 import pandas as pd
 import pandas_flavor as pf
-from functools import partial
-from utilsforecast.losses import (
-    bias, mae, mse, rmse, mase, msse, rmsse,
-    quantile_loss, mqloss, coverage, calibration, scaled_crps
-)
+from utilsforecast.losses import bias, mae, rmse, smape
 from utilsforecast.evaluation import evaluate
 from utilities import (
     create_file_path, create_file_name, get_file_name, 
@@ -17,83 +13,15 @@ from utilities import (
 )
 from collect_data import get_data
 from fit_models import get_retrain_ids
-from evaluate_forecasts import get_aggregate_function, aggregate_data
+from evaluate_forecasts import get_metrics, get_aggregate_function, aggregate_data, evaluate_forecasts
 
 import logging
 module_logger = logging.getLogger('evaluate_forecasts')
 
-def get_stability_metrics(metric_names, frequency = None):
 
-    """Function to get the stability metrics.
-
-    Args:
-        metric_names (list): list of stability metric names.
-    
-    Returns:
-        list: list of stability metrics.
-    """
-
-    module_logger.info('Defining stability metrics...')
-    freq = get_frequency(frequency)[1]
-
-    metrics = []
-    if 'smapc' in metric_names:
-        metrics.append(smapc)
-    if 'mac' in metric_names:
-        metrics.append(mac)
-    if 'rmsc' in metric_names:
-        metrics.append(rmsc)
-
-    return metrics
-
-@pf.register_dataframe_method
-def evaluate_forecasts_stability(
-    out_sample_df, 
-    metrics = [smapc], 
-    train_df = None,
-    levels = None
-):
-
-    """Function to evaluate the forecasts' stability.
-    
-    Args:
-        out_sample_df (pd.DataFrame): dataframe with columns 'unique_id', 'ds', 'y', 'fcst'.
-        metrics (list): list of evaluation metrics.
-        train_df (pd.DataFrame, optional): training data in the Nixtla's format. 
-        Defaults to None.
-
-    Returns:
-        pd.DataFrame: dataframe with evaluation results for each metric.
-    """
-
-    module_logger.info('Evaluating forecasts stability...')
-    samples = list(out_sample_df['sample'].unique())
-    # n_samples = len(samples)
-
-    stab_df = pd.DataFrame()
-
-    for s in samples:
-
-        # module_logger.info(f'Samlple {s} of {n_samples}...')
-        stab_df_tmp = evaluate(
-            out_sample_df[out_sample_df['sample'] == s], 
-            metrics = metrics,
-            models = ['fcst'],
-            train_df = train_df,
-            id_col = 'unique_id',
-            level = levels   
-        ) \
-            .pivot(index = 'unique_id', columns = 'metric', values = 'fcst') \
-            .reset_index()
-        stab_df_tmp['sample'] = s
-        stab_df = pd.concat([stab_df, stab_df_tmp], axis = 0)
-
-    stab_df['method'] = out_sample_df['method'][0]
-    stab_df['test_window'] = out_sample_df['test_window'][0]
-    stab_df['horizon'] = out_sample_df['horizon'][0]
-    stab_df['retrain_window'] = out_sample_df['retrain_window'][0]
-
-    return stab_df
+def get_stability_metrics():
+    stab_met = {'bias': 'stability_bias', 'mae': 'mac', 'rmse': 'rmsc', 'smape': 'smapc'}
+    return stab_met    
 
 def evaluate_model_stability(config):
 
@@ -118,20 +46,7 @@ def evaluate_model_stability(config):
     # model parameters
     model_names = config['model_names']
     # evaluation parameters
-    eval_freq = config['evaluation']['evaluation_frequency']
-    metrics = get_stability_metrics(config['evaluation']['metrics'], eval_freq)
-
-    # load the dataset
-    if samples is not None:
-        np.random.seed(seed)
-    train_df = get_data(
-        path_list = ['data', dataset_name],
-        name_list = [dataset_name, frequency, 'prep'],
-        ext = '.parquet',
-        min_series_length = min_series_length,
-        samples = samples
-    )
-    train_df = train_df[['unique_id', 'ds', 'y']]
+    metrics = get_metrics(config['evaluation']['metrics'])
 
     for m in model_names:
 
@@ -149,28 +64,34 @@ def evaluate_model_stability(config):
             )
             file_names_tmp.sort(key = lambda x: int("".join([i for i in x if i.isdigit()])))
             
-            for i in range(len(file_names_tmp)):
+            for i in range(len(file_names_tmp) - 1):
 
                 stab0_df_tmp = load_data(
                     path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'],
                     name_list = [file_names_tmp[i]],
                     ext = ext
                 )
+                stab0_df_tmp = stab0_df_tmp[['unique_id', 'ds', 'fcst']]
+                stab0_df_tmp.rename({'fcst': 'y'}, axis = 1, inplace = True)
                 stab0_df_tmp.reset_index(drop = True, inplace = True)
 
                 stab1_df_tmp = load_data(
                     path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'],
                     name_list = [file_names_tmp[i + 1]],
                     ext = ext
-                )                
+                )    
+                stab1_df_tmp.drop('y', axis = 1, inplace = True)            
                 stab1_df_tmp.reset_index(drop = True, inplace = True)
+                
+                stab_df_tmp = stab1_df_tmp.merge(stab0_df_tmp, how = 'inner', on = ['unique_id', 'ds'])
 
-                stab_df_tmp = evaluate_forecasts_stability(
-                    out_sample_df = eval_df_tmp, #FIXME: unire stab0 e stab1
+                stab_df_tmp = evaluate_forecasts(
+                    out_sample_df = stab_df_tmp,
                     metrics = metrics, 
-                    train_df = train_df,
+                    train_df = None,
                     levels = levels
                 )
+                stab_df_tmp.rename(get_stability_metrics(), axis = 1, inplace = True)
                 stab_df_retrain = pd.concat([stab_df_retrain, stab_df_tmp], axis = 0)
                 del stab_df_tmp
                 if (i % 10) == 0:
@@ -221,7 +142,6 @@ def evaluate_dataset_stability(config):
     frequencies = config['dataset']['frequencies']
     ext = config['dataset']['ext']
     model_names = config['model_names']
-    eval_sample_type = config['evaluation']['evaluation_sample_type']
 
     for i in range(len(dataset_names)):
 
@@ -229,44 +149,26 @@ def evaluate_dataset_stability(config):
         freq_tmp = frequencies[i]
         module_logger.info(f'[ Dataset: {dataset_name_tmp} | Frequency: {freq_tmp} ]')
 
-        # get file paths and names of evaluation and time samples
-        eval_f_list = []
-        time_f_lst = []
+        # get file paths and names of stability and time samples
+        stab_f_list = []
         for m in model_names:
-            eval_f_list += [
+            stab_f_list += [
                 create_file_path(
-                    path_list = ['results', dataset_name_tmp, freq_tmp, m, 'evaluation']
+                    path_list = ['results', dataset_name_tmp, freq_tmp, m, 'stability']
                 ) + 
                 create_file_name(
-                    name_list = [dataset_name_tmp, freq_tmp, m, 'eval', eval_sample_type],
+                    name_list = [dataset_name_tmp, freq_tmp, m, 'stab'],
                     ext = ext
                 )
             ]
-            time_f_lst += [
-                create_file_path(
-                    path_list = ['results', dataset_name_tmp, freq_tmp, m, 'time']
-                ) + 
-                create_file_name(
-                    name_list = [dataset_name_tmp, freq_tmp, m, 'time'],
-                    ext = ext
-                )
-            ]        
 
-        # combine and save evaluation results
+        # combine and save stability results
         combine_and_save_files(
             path_list_to_read = None,
-            path_list_to_write = ['results', dataset_name_tmp, freq_tmp, 'evaluation'],
-            name_list = [dataset_name_tmp, freq_tmp, 'eval', eval_sample_type],
+            path_list_to_write = ['results', dataset_name_tmp, freq_tmp, 'stability'],
+            name_list = [dataset_name_tmp, freq_tmp, 'stab'],
             ext = ext,  
-            files_to_read = eval_f_list
-        )
-        # combine and save time results
-        combine_and_save_files(
-            path_list_to_read = None,
-            path_list_to_write = ['results', dataset_name_tmp, freq_tmp, 'evaluation'],
-            name_list = [dataset_name_tmp, freq_tmp, 'time'],
-            ext = ext,
-            files_to_read = time_f_lst
+            files_to_read = stab_f_list
         )
 
     module_logger.info('----------------------------- END -----------------------------')

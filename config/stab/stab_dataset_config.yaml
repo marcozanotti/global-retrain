@@ -1,0 +1,33 @@
+
+dataset: {
+    'dataset_names': [
+        # 'm5', 
+        # 'm5', 
+        'm5',
+        # 'vn1', 
+        'vn1'
+    ],
+    'frequencies': [
+        # 'monthly', 
+        # 'weekly',
+        'daily', 
+        # 'monthly', 
+        'weekly'
+    ],
+    'ext': '.parquet'
+}
+
+model_names: [
+    'LinearRegression', 
+    # 'RandomForestRegressor', 
+    # 'XGBRegressor', 
+    # 'LGBMRegressor', 
+    # 'CatBoostRegressor',
+    # 'MLP',
+    # 'LSTM',
+    # 'TCN',
+    # 'NBEATSx',
+    # 'NHITS',
+    # 'EnsembleMeanTOP3ACC',
+    # 'EnsembleMeanTOP3TIME'
+]
