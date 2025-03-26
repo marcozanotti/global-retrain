@@ -3,7 +3,7 @@ dataset: {
     'dataset_name': 'm5',
     'frequency': 'daily',
     'min_series_length': 730,
-    'samples': 10,
+    'samples': null,
     'ext': '.parquet',
     'seed': 1992
 }
@@ -11,8 +11,8 @@ dataset: {
 fitting: {
     'retrain_scenarios': [
         7, 
-        14, 
-        21,
+        # 14, 
+        # 21,
         # 30, 
         # 60,
         # 90,

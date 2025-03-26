@@ -41,7 +41,11 @@ venv.bak/
 
 # Data
 data/
+data.loc/
+data.net/
 results/
+results.loc/
+results.net/
 results.old/
 logs/
 

@@ -3,7 +3,7 @@ dataset: {
     'dataset_name': 'vn1',
     'frequency': 'weekly',
     'min_series_length': 157,
-    'samples': 10,
+    'samples': null,
     'ext': '.parquet',
     'seed': 1992
 }
@@ -11,8 +11,8 @@ dataset: {
 fitting: {
     'retrain_scenarios': [
         1, 
-        2, 
-        3,
+        # 2, 
+        # 3,
         # 4, 
         # 6,
         # 8,
