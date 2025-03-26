@@ -5,7 +5,7 @@ import gc
 import numpy as np
 import pandas as pd
 import pandas_flavor as pf
-from utilsforecast.losses import bias, mae, rmse, smape
+from utilsforecast.losses import bias, mae, rmse, smape, quantile_loss, mqloss
 from utilsforecast.evaluation import evaluate
 from utilities import (
     create_file_path, create_file_name, get_file_name, 
@@ -20,7 +20,13 @@ module_logger = logging.getLogger('evaluate_forecasts')
 
 
 def get_stability_metrics():
-    stab_met = {'bias': 'stability_bias', 'mae': 'mac', 'rmse': 'rmsc', 'smape': 'smapc'}
+    stab_met = {
+        'bias': 'stability_bias', 
+        'mae': 'mac', 
+        'rmse': 'rmsc', 
+        'smape': 'smapc',
+        'mqloss': 'mqlossc'
+    }
     return stab_met    
 
 def evaluate_model_stability(config):

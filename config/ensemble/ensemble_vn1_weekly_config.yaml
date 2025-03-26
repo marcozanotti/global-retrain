@@ -28,5 +28,5 @@ ensembling: {
         ['LinearRegression', 'XGBRegressor', 'CatBoostRegressor', 'MLP', 'TCN']
     ],
     methods: ['mean'], # ['mean', 'median']
-    name: ['TOP5ACC', 'TOP5TIME']
+    name: ['5A', '5T']
 }
