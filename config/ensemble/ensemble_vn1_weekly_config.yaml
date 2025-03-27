@@ -24,9 +24,21 @@ fitting: {
 
 ensembling: {
     model_names: [
-        ['MLP', 'NBEATSx', 'NHITS', 'RandomForestRegressor', 'XGBRegressor'],
-        ['LinearRegression', 'XGBRegressor', 'CatBoostRegressor', 'MLP', 'TCN']
+        [
+            'MLP', 
+            'NBEATSx', 
+            # 'NHITS', 
+            # 'RandomForestRegressor', 
+            # 'XGBRegressor'
+        ],
+        [
+            'LinearRegression', 
+            'XGBRegressor', 
+            # 'CatBoostRegressor', 
+            # 'MLP', 
+            # 'TCN'
+        ]
     ],
     methods: ['mean'], # ['mean', 'median']
-    name: ['5A', '5T']
+    name: ['2A', '2T']
 }
