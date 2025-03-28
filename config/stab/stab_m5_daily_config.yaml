@@ -40,5 +40,6 @@ model_names: [
 ]
 
 evaluation: {
-    metrics: ['stab_bias', 'mac', 'rmsc', 'smapc', 'mqlc']
+    metrics: ['stab_bias', 'mac', 'rmsc', 'smapc', 'mqlc'],
+    skip: 7
 }

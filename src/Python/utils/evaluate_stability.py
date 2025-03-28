@@ -53,6 +53,7 @@ def evaluate_model_stability(config):
     model_names = config['model_names']
     # evaluation parameters
     metrics = get_metrics(config['evaluation']['metrics'])
+    skip =  config['evaluation']['skip']
 
     for m in model_names:
 
@@ -69,8 +70,8 @@ def evaluate_model_stability(config):
                 ext = ext
             )
             file_names_tmp.sort(key = lambda x: int("".join([i for i in x if i.isdigit()])))
-            
-            for i in range(len(file_names_tmp) - 1):
+
+            for i in range(len(file_names_tmp) - skip):
 
                 stab0_df_tmp = load_data(
                     path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'],
@@ -83,13 +84,15 @@ def evaluate_model_stability(config):
 
                 stab1_df_tmp = load_data(
                     path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'],
-                    name_list = [file_names_tmp[i + 1]],
+                    name_list = [file_names_tmp[i + skip]],
                     ext = ext
                 )    
                 stab1_df_tmp.drop('y', axis = 1, inplace = True)            
                 stab1_df_tmp.reset_index(drop = True, inplace = True)
                 
                 stab_df_tmp = stab1_df_tmp.merge(stab0_df_tmp, how = 'inner', on = ['unique_id', 'ds'])
+                # nobs = stab_df_tmp.shape[0] / len(stab_df_tmp['unique_id'].unique())
+                # module_logger.info(f'Evaluation based on {nobs} observations')
 
                 stab_df_tmp = evaluate_forecasts(
                     out_sample_df = stab_df_tmp,
