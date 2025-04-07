@@ -5,29 +5,35 @@ dataset: {
         # 'm5', 
         'm5',
         # 'vn1', 
-        'vn1'
+        # 'vn1'
     ],
     'frequencies': [
         # 'monthly', 
         # 'weekly',
         'daily', 
         # 'monthly', 
-        'weekly'
+        # 'weekly'
     ],
     'ext': '.parquet'
 }
 
 model_names: [
     'LinearRegression', 
-    # 'RandomForestRegressor', 
-    # 'XGBRegressor', 
-    # 'LGBMRegressor', 
-    # 'CatBoostRegressor',
-    # 'MLP',
-    # 'LSTM',
-    # 'TCN',
-    # 'NBEATSx',
-    # 'NHITS',
-    # 'EnsembleMeanTOP3ACC',
-    # 'EnsembleMeanTOP3TIME'
+    'RandomForestRegressor', 
+    'XGBRegressor', 
+    'LGBMRegressor', 
+    'CatBoostRegressor',
+    'MLP',
+    'LSTM',
+    'TCN',
+    'NBEATSx',
+    'NHITS',
+    'EnsembleMean2A',
+    'EnsembleMean2T',
+    'EnsembleMean3A',
+    'EnsembleMean3T',
+    'EnsembleMean4A',
+    'EnsembleMean4T',
+    'EnsembleMean5A',
+    'EnsembleMean5T'
 ]

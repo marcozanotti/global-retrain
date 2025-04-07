@@ -2,18 +2,12 @@
 import sys
 sys.path.insert(0, 'src/Python/utils')
 import gc
-import numpy as np
 import pandas as pd
-import pandas_flavor as pf
-from utilsforecast.losses import bias, mae, rmse, smape, quantile_loss, mqloss
-from utilsforecast.evaluation import evaluate
 from utilities import (
     create_file_path, create_file_name, get_file_name, 
-    save_data, load_data, combine_and_save_files, get_frequency
+    save_data, load_data, combine_and_save_files
 )
-from collect_data import get_data
-from fit_models import get_retrain_ids
-from evaluate_forecasts import get_metrics, get_aggregate_function, aggregate_data, evaluate_forecasts
+from evaluate_forecasts import get_metrics, aggregate_data, evaluate_forecasts
 
 import logging
 module_logger = logging.getLogger('evaluate_forecasts')
@@ -42,10 +36,7 @@ def evaluate_model_stability(config):
     # dataset parameters
     dataset_name = config['dataset']['dataset_name']
     frequency = config['dataset']['frequency']
-    min_series_length = config['dataset']['min_series_length']
-    samples = config['dataset']['samples']
     ext = config['dataset']['ext']
-    seed = config['dataset']['seed']
     # fitting parameters    
     retrain_scenarios = config['fitting']['retrain_scenarios']
     levels = config['fitting']['levels']

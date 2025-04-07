@@ -40,5 +40,8 @@ ensembling: {
         ]
     ],
     methods: ['mean'], # ['mean', 'median']
-    name: ['5A', '5T']
+    name: [
+        '5A', 
+        '5T'
+    ]
 }
