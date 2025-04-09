@@ -1,9 +1,15 @@
+FIXME:
+- evaluation 2A 30 in poi
+- evaluation 2T
+- stab 5A 5T
+- group eval 
+- group stab
+
 
 GLOBAL STABILITY
 TODO:
 - valutare la stability dei global models per la retrain frequency di base
 - valutare come varia la stability dei global models al variare delle retrain freq
-- come stimare la stability per quantili?
 
 
 
@@ -12,8 +18,6 @@ TODO:
 - creare ensembles 2, 3, 4, 5 modelli con media per ogni retrain frequency
 - studiare l'effetto di ensembling su accuracy / cost / stability al variare della
   retraining frequency
-
-
 
 
 
