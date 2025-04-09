@@ -238,6 +238,7 @@ def evaluate_model(config):
     # fitting parameters    
     retrain_scenarios = config['fitting']['retrain_scenarios']
     levels = config['fitting']['levels']
+    combine_only = config['fitting']['combine_only']
     # model parameters
     model_names = config['model_names']
     # evaluation parameters
@@ -262,66 +263,68 @@ def evaluate_model(config):
         module_logger.info('---------------------------- START ----------------------------')
         module_logger.info(f'[ Model name: {m} ]')
 
-        for rs in retrain_scenarios:
+        if not combine_only:
 
-            module_logger.info(f'Evaluate predictions for retrain scenario: {rs}')
-            eval_df_retrain = pd.DataFrame() # eval_df_retrain.shape[0] = 30.000 * 365 = 11.000.000
-            file_names_tmp = get_file_name(
-                path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'], 
-                name_list = None,
-                ext = ext
-            )
-            file_names_tmp.sort(key = lambda x: int("".join([i for i in x if i.isdigit()])))
-            
-            for i in range(len(file_names_tmp)):
-                eval_df_tmp = load_data(
-                    path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'],
-                    name_list = [file_names_tmp[i]],
+            for rs in retrain_scenarios:
+
+                module_logger.info(f'Evaluate predictions for retrain scenario: {rs}')
+                eval_df_retrain = pd.DataFrame() # eval_df_retrain.shape[0] = 30.000 * 365 = 11.000.000
+                file_names_tmp = get_file_name(
+                    path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'], 
+                    name_list = None,
                     ext = ext
                 )
+                file_names_tmp.sort(key = lambda x: int("".join([i for i in x if i.isdigit()])))
+                
+                for i in range(len(file_names_tmp)):
+                    eval_df_tmp = load_data(
+                        path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'],
+                        name_list = [file_names_tmp[i]],
+                        ext = ext
+                    )
 
-                if eval_sample_type == 'nooverlap':
-                    if i == 0: 
-                        ds_tmp = set(eval_df_tmp['ds'].unique())
-                        ds_to_keep = set([eval_df_tmp['ds'].max()]) # keep only last date to be consistent among samples
-                        ds_to_remove = ds_tmp - ds_to_keep
-                        eval_df_tmp = eval_df_tmp.loc[eval_df_tmp['ds'].isin(ds_to_keep)]
-                        ds_to_remove = ds_to_remove | ds_to_keep # update ds_to_remove
-                    else:
-                        ds_tmp = set(eval_df_tmp['ds'].unique())
-                        ds_to_keep = ds_tmp - ds_to_remove
-                        eval_df_tmp = eval_df_tmp.loc[eval_df_tmp['ds'].isin(ds_to_keep)]
-                        ds_to_remove = ds_to_remove | ds_to_keep # update ds_to_remove
+                    if eval_sample_type == 'nooverlap':
+                        if i == 0: 
+                            ds_tmp = set(eval_df_tmp['ds'].unique())
+                            ds_to_keep = set([eval_df_tmp['ds'].max()]) # keep only last date to be consistent among samples
+                            ds_to_remove = ds_tmp - ds_to_keep
+                            eval_df_tmp = eval_df_tmp.loc[eval_df_tmp['ds'].isin(ds_to_keep)]
+                            ds_to_remove = ds_to_remove | ds_to_keep # update ds_to_remove
+                        else:
+                            ds_tmp = set(eval_df_tmp['ds'].unique())
+                            ds_to_keep = ds_tmp - ds_to_remove
+                            eval_df_tmp = eval_df_tmp.loc[eval_df_tmp['ds'].isin(ds_to_keep)]
+                            ds_to_remove = ds_to_remove | ds_to_keep # update ds_to_remove
 
-                eval_df_tmp.reset_index(drop = True, inplace = True)
+                    eval_df_tmp.reset_index(drop = True, inplace = True)
 
-                eval_df_tmp = evaluate_forecasts(
-                    out_sample_df = eval_df_tmp, 
-                    metrics = metrics, 
-                    train_df = train_df,
-                    levels = levels
+                    eval_df_tmp = evaluate_forecasts(
+                        out_sample_df = eval_df_tmp, 
+                        metrics = metrics, 
+                        train_df = train_df,
+                        levels = levels
+                    )
+                    eval_df_retrain = pd.concat([eval_df_retrain, eval_df_tmp], axis = 0)
+                    del eval_df_tmp
+                    if (i % 10) == 0:
+                        gc.collect()
+
+                # eval_df_agg_by_id.shape[0] = 30.000
+                eval_df_agg_by_id_tmp = aggregate_data(
+                    data = eval_df_retrain,
+                    group_columns = ['method', 'test_window', 'horizon', 'retrain_window', 'unique_id'],
+                    drop_columns = ['sample'],
+                    function_name = 'mean',
+                    adjust_metrics = True
                 )
-                eval_df_retrain = pd.concat([eval_df_retrain, eval_df_tmp], axis = 0)
-                del eval_df_tmp
-                if (i % 10) == 0:
-                    gc.collect()
-
-            # eval_df_agg_by_id.shape[0] = 30.000
-            eval_df_agg_by_id_tmp = aggregate_data(
-                data = eval_df_retrain,
-                group_columns = ['method', 'test_window', 'horizon', 'retrain_window', 'unique_id'],
-                drop_columns = ['sample'],
-                function_name = 'mean',
-                adjust_metrics = True
-            )
-            del eval_df_retrain
-            save_data(
-                eval_df_agg_by_id_tmp,
-                path_list = ['results', dataset_name, frequency, m, 'evaluation', 'byretrain'],
-                name_list = [dataset_name, frequency, m, rs, 'eval', eval_sample_type],
-                ext = ext
-            )
-            del eval_df_agg_by_id_tmp
+                del eval_df_retrain
+                save_data(
+                    eval_df_agg_by_id_tmp,
+                    path_list = ['results', dataset_name, frequency, m, 'evaluation', 'byretrain'],
+                    name_list = [dataset_name, frequency, m, rs, 'eval', eval_sample_type],
+                    ext = ext
+                )
+                del eval_df_agg_by_id_tmp
 
         # combine and save evaluation results
         combine_and_save_files(

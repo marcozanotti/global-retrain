@@ -40,6 +40,7 @@ def evaluate_model_stability(config):
     # fitting parameters    
     retrain_scenarios = config['fitting']['retrain_scenarios']
     levels = config['fitting']['levels']
+    combine_only = config['fitting']['combine_only']
     # model parameters
     model_names = config['model_names']
     # evaluation parameters
@@ -51,67 +52,69 @@ def evaluate_model_stability(config):
         module_logger.info('---------------------------- START ----------------------------')
         module_logger.info(f'[ Model name: {m} ]')
 
-        for rs in retrain_scenarios:
+        if not combine_only:
 
-            module_logger.info(f'Evaluate predictions for retrain scenario: {rs}')
-            stab_df_retrain = pd.DataFrame() 
-            file_names_tmp = get_file_name(
-                path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'], 
-                name_list = None,
-                ext = ext
-            )
-            file_names_tmp.sort(key = lambda x: int("".join([i for i in x if i.isdigit()])))
+            for rs in retrain_scenarios:
 
-            for i in range(len(file_names_tmp) - skip):
-
-                stab0_df_tmp = load_data(
-                    path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'],
-                    name_list = [file_names_tmp[i]],
+                module_logger.info(f'Evaluate predictions for retrain scenario: {rs}')
+                stab_df_retrain = pd.DataFrame() 
+                file_names_tmp = get_file_name(
+                    path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'], 
+                    name_list = None,
                     ext = ext
                 )
-                stab0_df_tmp = stab0_df_tmp[['unique_id', 'ds', 'fcst']]
-                stab0_df_tmp.rename({'fcst': 'y'}, axis = 1, inplace = True)
-                stab0_df_tmp.reset_index(drop = True, inplace = True)
+                file_names_tmp.sort(key = lambda x: int("".join([i for i in x if i.isdigit()])))
 
-                stab1_df_tmp = load_data(
-                    path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'],
-                    name_list = [file_names_tmp[i + skip]],
-                    ext = ext
-                )    
-                stab1_df_tmp.drop('y', axis = 1, inplace = True)            
-                stab1_df_tmp.reset_index(drop = True, inplace = True)
-                
-                stab_df_tmp = stab1_df_tmp.merge(stab0_df_tmp, how = 'inner', on = ['unique_id', 'ds'])
-                # nobs = stab_df_tmp.shape[0] / len(stab_df_tmp['unique_id'].unique())
-                # module_logger.info(f'Evaluation based on {nobs} observations')
+                for i in range(len(file_names_tmp) - skip):
 
-                stab_df_tmp = evaluate_forecasts(
-                    out_sample_df = stab_df_tmp,
-                    metrics = metrics, 
-                    train_df = None,
-                    levels = levels
+                    stab0_df_tmp = load_data(
+                        path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'],
+                        name_list = [file_names_tmp[i]],
+                        ext = ext
+                    )
+                    stab0_df_tmp = stab0_df_tmp[['unique_id', 'ds', 'fcst']]
+                    stab0_df_tmp.rename({'fcst': 'y'}, axis = 1, inplace = True)
+                    stab0_df_tmp.reset_index(drop = True, inplace = True)
+
+                    stab1_df_tmp = load_data(
+                        path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'],
+                        name_list = [file_names_tmp[i + skip]],
+                        ext = ext
+                    )    
+                    stab1_df_tmp.drop('y', axis = 1, inplace = True)            
+                    stab1_df_tmp.reset_index(drop = True, inplace = True)
+                    
+                    stab_df_tmp = stab1_df_tmp.merge(stab0_df_tmp, how = 'inner', on = ['unique_id', 'ds'])
+                    # nobs = stab_df_tmp.shape[0] / len(stab_df_tmp['unique_id'].unique())
+                    # module_logger.info(f'Evaluation based on {nobs} observations')
+
+                    stab_df_tmp = evaluate_forecasts(
+                        out_sample_df = stab_df_tmp,
+                        metrics = metrics, 
+                        train_df = None,
+                        levels = levels
+                    )
+                    stab_df_tmp.rename(get_stability_metrics(), axis = 1, inplace = True)
+                    stab_df_retrain = pd.concat([stab_df_retrain, stab_df_tmp], axis = 0)
+                    del stab_df_tmp
+                    if (i % 10) == 0:
+                        gc.collect()
+
+                stab_df_agg_by_id_tmp = aggregate_data(
+                    data = stab_df_retrain,
+                    group_columns = ['method', 'test_window', 'horizon', 'retrain_window', 'unique_id'],
+                    drop_columns = ['sample'],
+                    function_name = 'mean',
+                    adjust_metrics = False
                 )
-                stab_df_tmp.rename(get_stability_metrics(), axis = 1, inplace = True)
-                stab_df_retrain = pd.concat([stab_df_retrain, stab_df_tmp], axis = 0)
-                del stab_df_tmp
-                if (i % 10) == 0:
-                    gc.collect()
-
-            stab_df_agg_by_id_tmp = aggregate_data(
-                data = stab_df_retrain,
-                group_columns = ['method', 'test_window', 'horizon', 'retrain_window', 'unique_id'],
-                drop_columns = ['sample'],
-                function_name = 'mean',
-                adjust_metrics = False
-            )
-            del stab_df_retrain
-            save_data(
-                stab_df_agg_by_id_tmp,
-                path_list = ['results', dataset_name, frequency, m, 'stability', 'byretrain'],
-                name_list = [dataset_name, frequency, m, rs, 'stab'],
-                ext = ext
-            )
-            del stab_df_agg_by_id_tmp
+                del stab_df_retrain
+                save_data(
+                    stab_df_agg_by_id_tmp,
+                    path_list = ['results', dataset_name, frequency, m, 'stability', 'byretrain'],
+                    name_list = [dataset_name, frequency, m, rs, 'stab'],
+                    ext = ext
+                )
+                del stab_df_agg_by_id_tmp
 
         # combine and save evaluation results
         combine_and_save_files(
