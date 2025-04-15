@@ -43,11 +43,18 @@ venv.bak/
 data/
 data.loc/
 data.net/
+data
+data.loc
+data.net
 results/
 results.loc/
 results.net/
 results.old/
+results
+results.loc
+results.net
 logs/
+
 
 # ML Results
 catboost_info/

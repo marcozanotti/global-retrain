@@ -22,28 +22,28 @@ fitting: {
         364
     ],
     levels: [50, 60, 70, 80, 90, 95, 99],
-    combine_only: False
+    combine_only: True
 }
 
 model_names: [
-    # 'LinearRegression', 
-    # # 'RandomForestRegressor', 
-    # 'XGBRegressor', 
-    # 'LGBMRegressor', 
-    # 'CatBoostRegressor',
-    # 'MLP',
-    # # 'LSTM',
-    # 'TCN',
-    # 'NBEATSx',
-    # 'NHITS',
-    # 'EnsembleMean2A',
+    'LinearRegression', 
+    # 'RandomForestRegressor', 
+    'XGBRegressor', 
+    'LGBMRegressor', 
+    'CatBoostRegressor',
+    'MLP',
+    # 'LSTM',
+    'TCN',
+    'NBEATSx',
+    'NHITS',
+    'EnsembleMean2A',
     'EnsembleMean2T',
-    # 'EnsembleMean3A',
-    # 'EnsembleMean3T',
-    # 'EnsembleMean4A',
-    # 'EnsembleMean4T',
-    # 'EnsembleMean5A',
-    # 'EnsembleMean5T'
+    'EnsembleMean3A',
+    'EnsembleMean3T',
+    'EnsembleMean4A',
+    'EnsembleMean4T',
+    'EnsembleMean5A',
+    'EnsembleMean5T'
 ]
 
 evaluation: {

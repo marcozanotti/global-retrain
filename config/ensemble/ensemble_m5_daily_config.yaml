@@ -9,39 +9,39 @@ fitting: {
     horizon: 28,
     test_window: 364,
     retrain_scenarios: [
-        # 7, 
-        # 14, 
-        # 21,
+        7, 
+        14, 
+        21,
         30, 
-        # 60,
-        # 90,
-        # 120,
-        # 150,
-        # 180,
-        # 364
+        60,
+        90,
+        120,
+        150,
+        180,
+        364
     ]
 }
 
 ensembling: {
     model_names: [
-        # [
-        #     # 'XGBRegressor', 
-        #     # 'LGBMRegressor', 
-        #     # 'LinearRegression', 
-        #     # 'NBEATSx', 
-        #     # 'MLP'
-        # ],
+        [
+            'XGBRegressor', 
+            'LGBMRegressor', 
+            'LinearRegression', 
+            'NBEATSx', 
+            'MLP'
+        ],
         [
             'CatBoostRegressor', 
             'LinearRegression', 
-            # 'XGBRegressor', 
-            # 'MLP', 
-            # 'NBEATSx'
+            'XGBRegressor', 
+            'MLP', 
+            'NBEATSx'
         ]
     ],
     methods: ['mean'], # ['mean', 'median']
     name: [
-        # '2A', 
-        '2T'
+        '5A', 
+        '5T'
     ]
 }

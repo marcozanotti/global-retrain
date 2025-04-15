@@ -19,12 +19,12 @@ dataset: {
 
 model_names: [
     'LinearRegression', 
-    'RandomForestRegressor', 
+    # 'RandomForestRegressor', 
     'XGBRegressor', 
     'LGBMRegressor', 
     'CatBoostRegressor',
     'MLP',
-    'LSTM',
+    # 'LSTM',
     'TCN',
     'NBEATSx',
     'NHITS',
