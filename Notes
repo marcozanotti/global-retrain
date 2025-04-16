@@ -4,14 +4,16 @@ TODO:
 - valutare la stability dei global models per la retrain frequency di base
 - valutare come varia la stability dei global models al variare delle retrain freq
 
-
-
 GLOBAL ENSEMBLING
 TODO:
 - creare ensembles 2, 3, 4, 5 modelli con media per ogni retrain frequency
 - studiare l'effetto di ensembling su accuracy / cost / stability al variare della
   retraining frequency
 
+
+FIXME:
+- aggiustare digits, format, label, ecc (set_params)
+- creare grafico combinato costi
 
 
 NOTE:

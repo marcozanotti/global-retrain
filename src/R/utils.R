@@ -112,8 +112,14 @@ get_model_name_abbr <- function(model_name) {
     model_name == 'TCN' ~ 'TCN',
     model_name == 'NBEATSx' ~ 'NBEATSx',
     model_name == 'NHITS' ~ 'NHITS',
-    model_name == 'EnsembleMeanTOP3ACC' ~ 'ENSacc',
-    model_name == 'EnsembleMeanTOP3TIME' ~ 'ENStime',
+    model_name == 'EnsembleMean2A' ~ 'Ens2A',
+    model_name == 'EnsembleMean2T' ~ 'Ens2T',
+    model_name == 'EnsembleMean3A' ~ 'Ens3A',
+    model_name == 'EnsembleMean3T' ~ 'Ens3T',
+    model_name == 'EnsembleMean4A' ~ 'Ens4A',
+    model_name == 'EnsembleMean4T' ~ 'Ens4T',
+    model_name == 'EnsembleMean5A' ~ 'Ens5A',
+    model_name == 'EnsembleMean5T' ~ 'Ens5T',
     TRUE ~ model_name
   )
   return(model_name_abbr)
@@ -184,7 +190,7 @@ dt_table <- function(data, title = "", caption = "", rownames = FALSE, digits = 
 	
 }
 
-compute_relative_metrics <- function(data) {
+compute_relative_metrics <- function(data, type) {
 
   reference_data <- data |> 
     dplyr::group_by(method) |> 
@@ -193,29 +199,7 @@ compute_relative_metrics <- function(data) {
     dplyr::select(-dplyr::any_of(c('type', 'retrain_window'))) |> 
     dplyr::rename_with(~ stringr::str_c(.x, "_ref"))
 
-  if (any(stringr::str_detect(names(data), "cost"))) {
-  	
-  	relative_data <- data |> 
-  		dplyr::left_join(reference_data, by = c("method" = "method_ref")) |> 
-  		dplyr::mutate(
-  			cost_perc = cost / cost_ref * 100,
-  			savings = cost_ref - cost,
-  			savings_perc = (cost_ref - cost) / cost_ref * 100
-  		) |> 
-  		dplyr::select(-dplyr::ends_with("_ref"))
-  	
-  } else if (any(stringr::str_detect(names(data), "_time"))) {
-
-    relative_data <- data |> 
-      dplyr::left_join(reference_data, by = c("method" = "method_ref")) |> 
-      dplyr::mutate(
-        total_fit_time = total_fit_time / total_fit_time_ref,
-        total_predict_time = total_predict_time / total_predict_time_ref,
-        total_sample_time = total_sample_time / total_sample_time_ref
-      ) |> 
-      dplyr::select(-dplyr::ends_with("_ref"))
-
-  } else {
+  if (type == 'evaluation') {
 
     relative_data <- data |> 
       dplyr::left_join(reference_data, by = c("method" = "method_ref")) |>
@@ -239,8 +223,45 @@ compute_relative_metrics <- function(data) {
       ) |> 
       dplyr::select(-dplyr::ends_with("_ref"))
 
+  } else if (type == 'time') {
+
+    relative_data <- data |> 
+      dplyr::left_join(reference_data, by = c("method" = "method_ref")) |> 
+      dplyr::mutate(
+        total_fit_time = total_fit_time / total_fit_time_ref,
+        total_predict_time = total_predict_time / total_predict_time_ref,
+        total_sample_time = total_sample_time / total_sample_time_ref
+      ) |> 
+      dplyr::select(-dplyr::ends_with("_ref"))
+
+  } else if (type == 'stability') {
+
+    relative_data <- data |> 
+      dplyr::left_join(reference_data, by = c("method" = "method_ref")) |>
+      dplyr::mutate(
+        stability_bias = abs(stability_bias) / abs(stability_bias_ref),
+        mac = mac / mac_ref,
+        mqlossc = mqlossc / mqlossc_ref,
+        rmsc = rmsc / rmsc_ref,
+        smapc = smapc / smapc_ref
+      ) |> 
+      dplyr::select(-dplyr::ends_with("_ref"))
+
+  } else if (type == 'cost') {
+
+    relative_data <- data |> 
+      dplyr::left_join(reference_data, by = c("method" = "method_ref")) |> 
+      dplyr::mutate(
+  			cost_perc = cost / cost_ref * 100,
+        savings = cost_ref - cost,
+  			savings_perc = (cost_ref - cost) / cost_ref * 100
+      ) |> 
+      dplyr::select(-dplyr::ends_with("_ref"))
+
+  } else {
+    stop(paste0('Unknown type ', type))
   }
-  
+
   return(relative_data)
         
 }
@@ -541,145 +562,336 @@ clean_outliers <- function(data, .metric, q = c(0.001, 0.999)) {
 	
 }
 
+compute_costs <- function(
+  data, 
+  time_var, 
+  n_skus, 
+  dataset_n_skus, 
+  cost_per_hour = 3.5, 
+  add_average = FALSE
+) {
+	
+  if (add_average) {
+    data_mean <- data |> 
+      aggregate_data(
+        group_columns = c('retrain_window'),
+        drop_columns = c('type', 'method', 'sample', 'test_window', 'horizon'),
+        function_name = 'mean',
+        adjust_metrics = FALSE
+      ) |> 
+      dplyr::mutate(method = 'Average', .before = 1) |> 
+      dplyr::mutate(type = NA_character_, .before = 1)
+    data_cost <- data |> dplyr::bind_rows(data_mean)
+  } else {
+    data_cost <- data
+  }
+
+  data_cost <- data_cost |>  
+		dplyr::mutate(
+			ct_per_sku = .data[[time_var]] / dataset_n_skus,
+			ct_hour = .data[[time_var]] / 60 / 60,
+			ct_hour_per_sku = ct_hour / dataset_n_skus,
+			ct_hour_tot = ct_hour_per_sku * n_skus,
+			cost = ct_hour_tot * cost_per_hour
+		) |> 
+		dplyr::select(dplyr::all_of(c('type', 'method', 'retrain_window', 'cost'))) |> 
+    compute_relative_metrics(type = 'cost')
+	
+	return (data_cost)
+	
+}
+
+flatten_list <- function(list) {
+  return(purrr::map_chr(list, ~ paste0(.x, collapse = "_")))
+}
+
+create_results_list <- function(dataset_names, analysis_types, data_types, model_types, final_analyses) {
+
+  dataset_names <- flatten_list(dataset_names)
+  analysis_types <- flatten_list(analysis_types)
+  data_types <- flatten_list(data_types)
+  model_types <- flatten_list(model_types)
+  final_analyses <- flatten_list(final_analyses)
+
+  # level 1 list of dataset names 
+  res_list <- vector("list", length(dataset_names)) |> 
+    purrr::set_names(dataset_names)
+
+  for (i in seq_along(res_list)) {
+    res_list[[i]] <- vector("list", length(analysis_types)) |> 
+      purrr::set_names(analysis_types)
+  }
+  for (i in seq_along(res_list)) {
+    for (j in seq_along(res_list[[i]])) {
+      res_list[[i]][[j]] <- vector("list", length(data_types)) |> 
+        purrr::set_names(data_types)
+    }
+  }
+  for (i in seq_along(res_list)) {
+    for (j in seq_along(res_list[[i]])) {
+      res_list[[i]][[j]][[2]] <- vector("list", length(model_types)) |> 
+        purrr::set_names(model_types)
+    }
+  }
+  for (i in seq_along(res_list)) {
+    for (j in seq_along(res_list[[i]])) {
+      for (k in seq_along(res_list[[i]][[j]])) {
+        res_list[[i]][[j]][[2]][[k]] <- vector("list", length(final_analyses)) |> 
+          purrr::set_names(final_analyses)
+      }
+    }
+  }
+
+  gc()
+  return(res_list)
+
+}
+
 analyse_results <- function(config) {
 
+  # analysis config
+  analysis_types <- config$analysis$types
+  analysis_method <- config$analysis$method
+  analysis_sample_type <- config$analysis$sample_type
   # dataset config
   dataset_names <- config$dataset$dataset_names
   frequencies <- config$dataset$frequencies
-  retrain_scenarios <- purrr::map(frequencies, get_retrain_scenarios)
+  dataset_names_full <- paste(dataset_names, frequencies, sep = "_")
+  retrain_scenarios <- purrr::map(frequencies, get_retrain_scenarios) |> 
+    purrr::set_names(dataset_names_full)
   ext <- config$dataset$ext
   # model config
+  model_types <- config$models$types
   model_names <- config$models$model_names
   model_names_abbr <- config$models$model_names_abbr
   model_type_levels <- c('SF', 'ML', 'DL', 'ENS')
-  # evaluation config
-  eval_metrics <- config$evaluation$metrics
-  time_metric <- config$evaluation$time_metric
-  eval_type <- config$evaluation$evaluation_sample_type
-  analysis_type <- config$evaluation$analysis_type
-  outlier_cleaning_metrics <- config$evaluation$outlier_cleaning_metrics
+  # evaluation, time, stability and cost config
+  eval_metrics <- config$evaluation_params$metrics
+  eval_outlier_cleaning_metrics <- config$evaluation_params$outlier_cleaning_metrics
+  time_metrics <- config$time_params$metrics
+  stab_metrics <- config$stability_params$metrics
+  stab_outlier_cleaning_metrics <- config$stability_params$outlier_cleaning_metrics
+  cost_metrics <- config$cost_params$metrics
+  cost_time_var <- config$cost_params$time_var
+  cost_n_skus <- config$cost_params$n_skus
+  cost_per_hour <- config$cost_params$cost_per_hour
+  cost_datasets_n_skus <- as.list(unlist(config$cost_params$cost_datasets_n_skus))
+  
+  # final analysis names
+  data_types <- c('data', 'results')
+  final_analyses <- c('tables', 'plots', 'tests')  
+  analysis_results <- create_results_list(
+    dataset_names_full, analysis_types, data_types, model_types, final_analyses
+  )
+  
+  for (dn in dataset_names_full) {
 
-  analysis_results <- vector("list", length(dataset_names))
-  names(analysis_results) <- paste(dataset_names, frequencies, sep = "_")
+    cat(paste0("*************** Analysing ", dn, " ***************\n"))
+    dataset_name_tmp <- unlist(strsplit(dn, "_"))[1]
+    freq_tmp <- unlist(strsplit(dn, "_"))[2]
+    retrain_scn_tmp <- retrain_scenarios[[dn]]
 
-  for (i in seq_along(dataset_names)) {
+    for (at in analysis_types) {
 
-    dataset_name_tmp <- dataset_names[i]
-    freq_tmp <- frequencies[i]
-    retrain_scn_tmp <- retrain_scenarios[[i]]
-    cat(paste0("Analysing ", dataset_name_tmp, " ", freq_tmp, "...\n"))
+      cat(paste0("--- [ Analysis: ", at, " ] ---\n"))
 
-    # load, aggregate and prepare data
-    # eval_df.shape[0] = n_series * n_retrain_scenarios * n_models = 30.000 * 10 * 10
-    # time_df.shape[0] = n_samples * n_retrain_scenarios * n_models = 365 * 10 * 10
-    cat("Loading and preparing the evaluation data...\n")
-    eval_df_tmp = load_data(
-      path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
-      name_list = c(dataset_name_tmp, freq_tmp, 'eval', eval_type),
-      ext = ext
-    ) |> 
-      tibble::as_tibble() |> 
-      dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
-      dplyr::filter(method %in% model_names) |> 
-      recode_data(model_type_levels, model_names_abbr) |> 
-    	clean_outliers(.metric = outlier_cleaning_metrics, q = c(0.001, 0.999))
-    eval_df_agg_tmp <- eval_df_tmp |> 
-      aggregate_data(
-        group_columns = c('type', 'method', 'retrain_window'),
-        drop_columns = c('unique_id', 'test_window', 'horizon'),
-        function_name = 'mean',
-        adjust_metrics = TRUE
-      )
+      if (at == "evaluation") {
 
-    cat("Loading and preparing the time data...\n")
-    time_df_tmp = load_data(
-      path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
-      name_list = c(dataset_name_tmp, freq_tmp, 'time'),
-      ext = ext
-    ) |> 
-      tibble::as_tibble() |> 
-      dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
-      dplyr::filter(method %in% model_names) |> 
-      recode_data(model_type_levels, model_names_abbr)
-    time_df_agg_tmp <- time_df_tmp |> 
-      aggregate_data(
-        group_columns = c('method', 'retrain_window'),
-        drop_columns = c('sample', 'test_window', 'horizon'),
-        function_name = 'sum',
-        adjust_metrics = TRUE
-      )
+        cat("Loading and preparing the evaluation data...\n")
+        anal_df_tmp = load_data(
+          path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
+          name_list = c(dataset_name_tmp, freq_tmp, 'eval', analysis_sample_type),
+          ext = ext
+        ) |> 
+          tibble::as_tibble() |> 
+          dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
+          dplyr::filter(method %in% model_names) |> 
+          recode_data(model_type_levels, model_names_abbr) |> 
+          clean_outliers(.metric = eval_outlier_cleaning_metrics, q = c(0.001, 0.999))
+        anal_df_agg_tmp <- anal_df_tmp |> 
+          aggregate_data(
+            group_columns = c('type', 'method', 'retrain_window'),
+            drop_columns = c('unique_id', 'test_window', 'horizon'),
+            function_name = 'mean',
+            adjust_metrics = TRUE
+          )
+        # set the metrics to be used
+        anal_metrics <- eval_metrics
 
-    if (analysis_type == 'relative') {
-      cat("Compute relative metrics...\n")
-      eval_df_agg_tmp <- compute_relative_metrics(eval_df_agg_tmp)
-      time_df_agg_tmp <- compute_relative_metrics(time_df_agg_tmp)
+      } else if (at == "time") {
+
+        cat("Loading and preparing the time data...\n")
+        anal_df_tmp = load_data(
+          path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
+          name_list = c(dataset_name_tmp, freq_tmp, 'time'),
+          ext = ext
+        ) |> 
+          tibble::as_tibble() |> 
+          dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
+          dplyr::filter(method %in% model_names) |> 
+          recode_data(model_type_levels, model_names_abbr)
+        anal_df_agg_tmp <- anal_df_tmp |> 
+          aggregate_data(
+            group_columns = c('type', 'method', 'retrain_window'),
+            drop_columns = c('sample', 'test_window', 'horizon'),
+            function_name = 'sum',
+            adjust_metrics = TRUE
+          )
+        # set the metrics to be used
+        anal_metrics <- time_metrics
+
+      } else if (at == "stability") {
+
+        cat("Loading and preparing the stability data...\n")
+        anal_df_tmp = load_data(
+          path_list = c('results', dataset_name_tmp, freq_tmp, 'stability'),
+          name_list = c(dataset_name_tmp, freq_tmp, 'stab'),
+          ext = ext
+        ) |> 
+          tibble::as_tibble() |> 
+          dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
+          dplyr::filter(method %in% model_names) |> 
+          recode_data(model_type_levels, model_names_abbr) |> 
+          clean_outliers(.metric = stab_outlier_cleaning_metrics, q = c(0.001, 0.999))
+        anal_df_agg_tmp <- anal_df_tmp |> 
+          aggregate_data(
+            group_columns = c('type', 'method', 'retrain_window'),
+            drop_columns = c('unique_id', 'test_window', 'horizon'),
+            function_name = 'mean',
+            adjust_metrics = TRUE
+          )
+        # set the metrics to be used
+        anal_metrics <- stab_metrics
+
+      } else if (at == "cost") {
+
+        cat("Loading and preparing the time data for cost analysis...\n")
+        cost_dataset_n_skus_tmp <- cost_datasets_n_skus[[dn]]
+
+        anal_df_tmp = load_data(
+          path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
+          name_list = c(dataset_name_tmp, freq_tmp, 'time'),
+          ext = ext
+        ) |> 
+          tibble::as_tibble() |> 
+          dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
+          dplyr::filter(method %in% model_names) |> 
+          recode_data(model_type_levels, model_names_abbr)
+        anal_df_agg_tmp <- anal_df_tmp |> 
+          aggregate_data(
+            group_columns = c('type', 'method', 'retrain_window'),
+            drop_columns = c('sample', 'test_window', 'horizon'),
+            function_name = 'sum',
+            adjust_metrics = TRUE
+          ) |> 
+          compute_costs(
+            time_var = cost_time_var, 
+            n_skus = cost_n_skus,
+            dataset_n_skus = cost_dataset_n_skus_tmp,
+            cost_per_hour = cost_per_hour, 
+            add_average = FALSE
+          )
+        # set the metrics to be used
+        anal_metrics <- cost_metrics
+
+      } else {
+        stop(paste0("Unknown analysis type: ", at))
+      }
+
+      # absolute or relative analysis
+      if (analysis_method == 'relative' & at != 'cost') {
+        cat("Compute relative metrics...\n")
+        anal_df_agg_tmp <- compute_relative_metrics(anal_df_agg_tmp, type = at)
+      }
+
+      # store data of the analysis
+      analysis_results[[dn]][[at]][['data']] <- anal_df_agg_tmp
+
+      for (mt in model_types) {
+
+        cat(paste0("--- [ Model Types: ", paste0(mt, collapse = ", "), " ] ---\n"))
+        # filter datasets
+        anal_df_mt_tmp <- anal_df_tmp |> dplyr::filter(type %in% mt)
+        anal_df_agg_mt_tmp <- anal_df_agg_tmp |> dplyr::filter(type %in% mt)
+        model_names_abbr_mt_tmp <- unique(as.character(anal_df_mt_tmp$method))
+
+        # analysis tables, plots and tests
+        anal_tab <- anal_plot <- anal_test <- vector("list", length(anal_metrics)) |> 
+          purrr::set_names(anal_metrics)
+        for (am in anal_metrics) {
+
+          if (am == 'total_sample_time') {
+            am_label <- 'Computing Time'
+          } else if (am == 'cost') {
+            am_label <- 'Cost ($)'
+          } else if (am == 'savings') {
+            am_label <- 'Savings ($)'
+          } else if (am == 'savings_perc') {
+            am_label <- 'Savings (%)'
+          } else {
+            am_label <- toupper(am) 
+          }
+
+          if (at == 'cost') {
+            digits <- 0
+            if (am == 'savings_perc') {
+              format <- 'percent'
+            } else {
+              format <- 'dollar'
+            }
+          } else {
+            digits <- 3
+            format <- 'numeric'
+          }
+
+          cat(paste0("Creating evaluation table, plot and tests for ", toupper(am), "...\n"))
+          anal_tab[[am]] <- table_retrain_results(
+            anal_df_agg_mt_tmp, 
+            metric = am,
+            title = toupper(paste(dataset_name_tmp, '-', am_label)),
+            digits = digits,
+            format = format
+          )
+
+          anal_plot[[am]] <- plot_retrain_results(
+            anal_df_agg_mt_tmp, 
+            metric = am, 
+            metric_label = am_label,
+            title = toupper(dataset_name_tmp)
+          )
+
+          if (at != 'cost') {
+            anal_test[[am]] <- model_names_abbr_mt_tmp |> 
+              purrr::map(~ test_differences(anal_df_mt_tmp, .method = .x, .metric = am)) |> 
+              dplyr::bind_rows()
+          } else {
+            anal_test[[am]] <- NULL
+          }
+
+        }
+
+        # store results
+        mt_name <- paste0(mt, collapse = "_")
+        analysis_results[[dn]][[at]][['results']][[mt_name]][['tables']] <- anal_tab 
+        analysis_results[[dn]][[at]][['results']][[mt_name]][['plots']] <- anal_plot 
+        analysis_results[[dn]][[at]][['results']][[mt_name]][['tests']] <- anal_test 
+
+      }
+      
     }
 
-    # time table and plot
-    tab_time <- table_retrain_results(
-      time_df_agg_tmp, 
-      metric = time_metric,
-      title = toupper(paste(dataset_name_tmp, freq_tmp, '-', gsub("_", " ", time_metric))),
-      digits = 3
-    )
-    g_time <- plot_retrain_results(
-      time_df_agg_tmp, 
-      metric = time_metric, metric_label = 'Computing Time',
-      title = toupper(paste(dataset_name_tmp, freq_tmp))
-    )
-
-    # evaluation tables and plots
-    tab_eval <- vector("list", length(eval_metrics))
-    names(tab_eval) <- eval_metrics
-    g_eval <- vector("list", length(eval_metrics))
-    names(g_eval) <- eval_metrics
-    g_eval_comb <- vector("list", length(eval_metrics))
-    names(g_eval_comb) <- eval_metrics
-
-    for (m in eval_metrics) {
-      cat(paste0("Creating evaluation table, plot and tests for ", toupper(m), "...\n"))
-      tab_eval[[m]] <- table_retrain_results(
-        eval_df_agg_tmp, 
-        metric = m,
-        title = toupper(paste(dataset_name_tmp, freq_tmp, '-', gsub("_", " ", m))),
-        digits = 3
-      )
-      g_eval[[m]] <- plot_retrain_results(
-        eval_df_agg_tmp, 
-        metric = m, metric_label = toupper(gsub("_", " ", m)),
-        title = toupper(paste(dataset_name_tmp, freq_tmp))
-      )
-      cat("Combining evaluation and time plot...\n")
-      g_eval_comb[[m]] <- g_eval[[m]] + g_time + 
-        patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
-    }
-
-    # testing differences
-    test_res <- model_names_abbr |> 
-      purrr::map(
-        ~ purrr::map2(
-          .x, eval_metrics, 
-          ~ test_differences(eval_df_tmp, .method = .x, .metric = .y)
-        )
-      ) |> 
-      dplyr::bind_rows()
-
-    analysis_results[[i]] <- list(
-      "eval_df_agg" = eval_df_agg_tmp,
-      "time_df_agg" = time_df_agg_tmp,
-      "tab_time" = tab_time,
-      "g_time" = g_time,
-      "tab_eval" = tab_eval,
-      "g_eval" = g_eval,
-      "g_eval_comb" = g_eval_comb,
-      "test_res" = test_res
-    )
-    
   }
 
   cat("Saving results...\n")
   file_name <- paste0(
-    analysis_type, "_", eval_type, "_results_", 
+    analysis_method,
+    "_",
+    stringr::str_sub_all(analysis_types, start = 1, end = 4) |> 
+      unlist() |> 
+      paste0(collapse = ""),  
+    "_",
+    analysis_sample_type, 
+    "_", 
     Sys.time() |> 
       as.character() |> 
       stringr::str_remove_all("\\..*") |> 
@@ -694,75 +906,33 @@ analyse_results <- function(config) {
 
 }
 
-compute_costs <- function(data, dataset_name, time_var, n_skus, cost_per_hour = 3.5) {
-	
-	if (dataset_name == 'm5_daily') {
-		dataset_n_skus <- 28298
-	} else {
-		dataset_n_skus <- 15053
-	}
-	
-	data_cost <- data |> 
-		dplyr::mutate(
-			ct_per_sku = .data[[time_var]] / dataset_n_skus,
-			ct_hour = .data[[time_var]] / 60 / 60,
-			ct_hour_per_sku = ct_hour / dataset_n_skus,
-			ct_hour_tot = ct_hour_per_sku * n_skus,
-			cost = ct_hour_tot * cost_per_hour
-		) |> 
-		dplyr::select(dplyr::all_of(c('method', 'retrain_window', 'cost'))) |> 
-		compute_relative_metrics()
-	
-	return (data_cost)
-	
-}
-
 cost_analysis <- function(data, dataset_name, time_var, n_skus, cost_per_hour) {
 	
-	data_mean <- data |> 
-		dplyr::group_by(retrain_window) |> 
-		dplyr::summarise(
-			total_fit_time = mean(total_fit_time), 
-			total_predict_time = mean(total_predict_time), 
-			total_sample_time = mean(total_sample_time),
-			method = 'Average'
-		) |> 
-		dplyr::relocate('method', .before = 1)
-	
-	data_cost <- data |> 
-		dplyr::bind_rows(data_mean) |>
-		compute_costs(
-			dataset_name = dataset_name, 
-			time_var = 'total_sample_time', 
-			n_skus = n_skus,
-			cost_per_hour = cost_per_hour
-		)
-	
 	# costs table
-	tab_cost <- data_cost |> 
+	tab_cost <- data |> 
 		table_retrain_results(metric = 'cost', title = '', digits = 0, format = 'dollar')
 	# savings table
-	tab_sav <- data_cost |> 
+	tab_sav <- data |> 
 		table_retrain_results(metric = 'savings', title = '', digits = 0, format = 'dollar')
 	# savings table perc
-	tab_savperc <- data_cost |> 
+	tab_savperc <- data |> 
 		table_retrain_results(metric = 'savings_perc', title = '', digits = 0, format = 'percent')
 	
 	# plots
 	g_cost <- plot_retrain_results(
-		data = data_cost, 
+		data = data, 
 		metric = 'cost', 
 		metric_label = 'Cost ($)',
 		title = toupper(stringr::str_replace_all(toupper(dataset_name), "_.*", ""))
 	)
 	g_sav <- plot_retrain_results(
-		data = data_cost, 
+		data = data, 
 		metric = 'savings', 
 		metric_label = 'Savings ($)',
 		title = toupper(stringr::str_replace_all(toupper(dataset_name), "_.*", ""))
 	)
 	g_savperc <- plot_retrain_results(
-		data = data_cost, 
+		data = data, 
 		metric = 'savings_perc', 
 		metric_label = 'Savings (%)',
 		title = toupper(stringr::str_replace_all(toupper(dataset_name), "_.*", ""))
