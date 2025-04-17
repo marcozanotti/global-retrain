@@ -46,11 +46,14 @@ data.net/
 data
 data.loc
 data.net
-results/
+
+results/m5
+results/plots
+results/vn1
+
 results.loc/
 results.net/
 results.old/
-results
 results.loc
 results.net
 logs/

@@ -5,7 +5,7 @@ analysis: {
         'stability',
         'cost'
     ],
-    'method': 'absolute', # absolute / relative
+    'method': 'relative', # absolute / relative
     'sample_type': 'overlap' # overlap / nooverlap
 }
 
