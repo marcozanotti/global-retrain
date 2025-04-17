@@ -647,6 +647,41 @@ create_results_list <- function(dataset_names, analysis_types, data_types, model
 
 }
 
+get_table_plot_params <- function(analysis_type, analysis_metric) {
+
+  if (analysis_type == 'cost') {
+    digits <- 0
+    if (analysis_metric == 'savings_perc') {
+      format <- 'percent'
+    } else {
+      format <- 'dollar'
+    }
+  } else {
+    digits <- 3
+    format <- 'numeric'
+  }
+
+  if (analysis_metric == 'total_sample_time') {
+    label <- 'Computing Time'
+  } else if (analysis_metric == 'cost') {
+    label <- 'Cost ($)'
+  } else if (analysis_metric == 'savings') {
+    label <- 'Savings ($)'
+  } else if (analysis_metric == 'savings_perc') {
+    label <- 'Savings (%)'
+  } else {
+    label <- toupper(analysis_metric) 
+  }
+
+  res <- list(
+    'digits' = digits,
+    'format' = format,
+    'label' = label
+  )
+  return(res)
+
+}
+
 analyse_results <- function(config) {
 
   # analysis config
@@ -818,45 +853,24 @@ analyse_results <- function(config) {
         # analysis tables, plots and tests
         anal_tab <- anal_plot <- anal_test <- vector("list", length(anal_metrics)) |> 
           purrr::set_names(anal_metrics)
+
         for (am in anal_metrics) {
 
-          if (am == 'total_sample_time') {
-            am_label <- 'Computing Time'
-          } else if (am == 'cost') {
-            am_label <- 'Cost ($)'
-          } else if (am == 'savings') {
-            am_label <- 'Savings ($)'
-          } else if (am == 'savings_perc') {
-            am_label <- 'Savings (%)'
-          } else {
-            am_label <- toupper(am) 
-          }
-
-          if (at == 'cost') {
-            digits <- 0
-            if (am == 'savings_perc') {
-              format <- 'percent'
-            } else {
-              format <- 'dollar'
-            }
-          } else {
-            digits <- 3
-            format <- 'numeric'
-          }
-
           cat(paste0("Creating evaluation table, plot and tests for ", toupper(am), "...\n"))
+          tp_par <- get_table_plot_params(at, am)
+
           anal_tab[[am]] <- table_retrain_results(
             anal_df_agg_mt_tmp, 
             metric = am,
-            title = toupper(paste(dataset_name_tmp, '-', am_label)),
-            digits = digits,
-            format = format
+            title = toupper(paste(dataset_name_tmp, '-', tp_par$label)),
+            digits = tp_par$digits,
+            format = tp_par$format
           )
 
           anal_plot[[am]] <- plot_retrain_results(
             anal_df_agg_mt_tmp, 
             metric = am, 
-            metric_label = am_label,
+            metric_label = tp_par$label,
             title = toupper(dataset_name_tmp)
           )
 
@@ -904,53 +918,4 @@ analyse_results <- function(config) {
 
   return(invisible(NULL))
 
-}
-
-cost_analysis <- function(data, dataset_name, time_var, n_skus, cost_per_hour) {
-	
-	# costs table
-	tab_cost <- data |> 
-		table_retrain_results(metric = 'cost', title = '', digits = 0, format = 'dollar')
-	# savings table
-	tab_sav <- data |> 
-		table_retrain_results(metric = 'savings', title = '', digits = 0, format = 'dollar')
-	# savings table perc
-	tab_savperc <- data |> 
-		table_retrain_results(metric = 'savings_perc', title = '', digits = 0, format = 'percent')
-	
-	# plots
-	g_cost <- plot_retrain_results(
-		data = data, 
-		metric = 'cost', 
-		metric_label = 'Cost ($)',
-		title = toupper(stringr::str_replace_all(toupper(dataset_name), "_.*", ""))
-	)
-	g_sav <- plot_retrain_results(
-		data = data, 
-		metric = 'savings', 
-		metric_label = 'Savings ($)',
-		title = toupper(stringr::str_replace_all(toupper(dataset_name), "_.*", ""))
-	)
-	g_savperc <- plot_retrain_results(
-		data = data, 
-		metric = 'savings_perc', 
-		metric_label = 'Savings (%)',
-		title = toupper(stringr::str_replace_all(toupper(dataset_name), "_.*", ""))
-	)
-	
-	cat("Combining evaluation and time plot...\n")
-	g_cost_comb <- g_cost + g_savperc + 
-		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
-	
-	res_list <- list(
-		'tab_cost' = tab_cost,
-		'tab_sav' = tab_sav,
-		'tab_savperc' = tab_savperc,
-		'g_cost' = g_cost,
-		'g_sav' = g_sav,
-		'g_savperc' = g_savperc,
-		'g_cost_comb' = g_cost_comb
-	)
-	return(res_list)
-	
 }

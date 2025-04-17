@@ -12,8 +12,8 @@ TODO:
 
 
 FIXME:
-- aggiustare digits, format, label, ecc (set_params)
-- creare grafico combinato costi
+- aggiungere test per i costi sia tra retrain window per singolo modello
+- che tra modelli diversi complessivamente e/o per retrain window di riferimento
 
 
 NOTE:

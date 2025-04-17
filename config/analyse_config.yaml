@@ -5,7 +5,7 @@ analysis: {
         'stability',
         'cost'
     ],
-    'method': 'relative', # absolute / relative
+    'method': 'absolute', # absolute / relative
     'sample_type': 'overlap' # overlap / nooverlap
 }
 
@@ -101,11 +101,11 @@ time_params: {
 
 stability_params: {
     'metrics': [
-        'stab_bias', 
+        'stability_bias', 
         'mac', 
         'rmsc', 
         'smapc', 
-        'mqlc'
+        'mqlossc'
     ],
     'outlier_cleaning_metrics': ['smapc', 'mqlossc']
 }
@@ -118,9 +118,9 @@ cost_params: {
     ],
     'time_var': 'total_sample_time',
     'n_skus': 1000000000, # 200000 * 5000,
-    'cost_per_hour': 3.5,
     'cost_datasets_n_skus': [
         'm5_daily': 28298,
         'vn1_weekly': 15053
-    ]
+    ],
+    'cost_per_hour': 3.5,
 }
