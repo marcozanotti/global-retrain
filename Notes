@@ -11,11 +11,6 @@ TODO:
   retraining frequency
 
 
-FIXME:
-- aggiungere test per i costi sia tra retrain window per singolo modello
-- che tra modelli diversi complessivamente e/o per retrain window di riferimento
-
-
 NOTE:
 
 - valutare l'aggiunta di datasets (Rossmann, Favorita, M4, Wikipedia)

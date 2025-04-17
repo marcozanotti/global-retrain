@@ -381,43 +381,83 @@ plot_retrain_results <- function(data, metric, metric_label = "", title = "", sm
 
 }
 
-test_differences <- function(data, .method, .metric) {
+test_differences <- function(data, .metric, by = 'retrain_window', .method = NULL, .retrain_window = NULL) {
 
-  cat(paste0("Testing differences in ", .metric, " for ", .method, "...\n"))
+  if (by == 'retrain_window') {
+
+    cat(paste0("Testing differences in ", .metric, " for method ", .method, "...\n"))
+    if (is.null(.method)) {.method <- unique(data$method)[1]}
+    data_test <- data |> dplyr::filter(method == .method)
+
+    if (nrow(data_test) == 0) {
+      return(NULL)
+    } else {
   
-  data_test <- data |>
-    dplyr::filter(method == .method)
+      min_n_series <- min(table(data_test$retrain_window))
+      n_scn <- length(unique(data_test$retrain_window))
+      data_test <- data_test |> 
+        dplyr::group_by(retrain_window) |> 
+        dplyr::slice_sample(n = min_n_series) |> # obtain homogenous samples for each retrain window
+        dplyr::ungroup() |> 
+        dplyr::select(dplyr::all_of(c('retrain_window', .metric))) |> 
+        dplyr::mutate(id = rep(1:min_n_series, n_scn), .before = 1) |> 
+        tidyr::pivot_wider(names_from = 'retrain_window', values_from = .metric) |> 
+        dplyr::select(-id)
+      
+      test_res <- greybox::rmcb(data = data_test, level = 0.95, outplot = "none")
+      data_test <- tibble::tibble(
+        'method' = as.character(.method),
+        'retrain_window' = as.integer(names(test_res$mean)),
+        'metric' = .metric, 
+        'mean' = test_res$mean,
+        'lower' = test_res$interval[, 1],
+        'upper' = test_res$interval[, 2],
+        'pvalue' = test_res$p.value
+      )
+  
+      return(data_test)
+  
+    }
 
-  if (nrow(data_test) == 0) {
+  } else if (by == 'method') {
 
-    return(NULL)
+    cat(paste0("Testing differences in ", .metric, " for retrain window ", .retrain_window, "...\n"))
+
+    if (is.null(.retrain_window)) {.retrain_window <- min(data$retrain_window)}
+    data_test <- data |> dplyr::filter(retrain_window == .retrain_window)
+
+    if (nrow(data_test) == 0) {
+      return(NULL)
+    } else {
+  
+      min_n_series <- min(table(as.character(data_test$method)))
+      n_met <- length(unique(data_test$method))
+      data_test <- data_test |> 
+        dplyr::group_by(method) |> 
+        dplyr::slice_sample(n = min_n_series) |> # obtain homogenous samples for each retrain window
+        dplyr::ungroup() |> 
+        dplyr::select(dplyr::all_of(c('method', .metric))) |> 
+        dplyr::mutate(id = rep(1:min_n_series, n_met), .before = 1) |> 
+        tidyr::pivot_wider(names_from = 'method', values_from = .metric) |> 
+        dplyr::select(-id)
+      
+      test_res <- greybox::rmcb(data = data_test, level = 0.95, outplot = "none")
+      data_test <- tibble::tibble(
+        'method' = as.character(names(test_res$mean)),
+        'retrain_window' = as.integer(.retrain_window),
+        'metric' = .metric, 
+        'mean' = test_res$mean,
+        'lower' = test_res$interval[, 1],
+        'upper' = test_res$interval[, 2],
+        'pvalue' = test_res$p.value
+      )
+  
+      return(data_test)
+  
+    }    
 
   } else {
-
-    min_n_series <- min(table(data_test$retrain_window))
-    n_scn <- length(unique(data_test$retrain_window))
-    data_test <- data_test |> 
-      dplyr::group_by(retrain_window) |> 
-      dplyr::slice_sample(n = min_n_series) |> # obtain homogenous samples for each retrain window
-      dplyr::ungroup() |> 
-      dplyr::select(dplyr::all_of(c('retrain_window', .metric))) |> 
-      dplyr::mutate(id = rep(1:min_n_series, n_scn), .before = 1) |> 
-      tidyr::pivot_wider(names_from = 'retrain_window', values_from = .metric) |> 
-      dplyr::select(-id)
-  
-    test_res <- greybox::rmcb(data = data_test, level = 0.95, outplot = "none")
-    data_test <- tibble::tibble(
-      'method' = .method,
-      'metric' = .metric, 
-      'retrain_window' = as.integer(names(test_res$mean)),
-      'mean' = test_res$mean,
-      'lower' = test_res$interval[, 1],
-      'upper' = test_res$interval[, 2],
-      'pvalue' = test_res$p.value
-    )
-
-    return(data_test)
-
+    stop(paste0('Unknown by ', by))
   }
 
 }
@@ -436,61 +476,183 @@ extract_significance <- function(p_value) {
 	
 }
 
-plot_test_results <- function(data, .method, .metric, metric_label = "", title = "") {
+plot_test_results <- function(
+  data, 
+  .metric, 
+  by = "retrain_window", 
+  .method = NULL, 
+  .retrain_window = NULL, 
+  metric_label = "", 
+  title = ""
+) {
 
   cat("Creating plot...\n")
-  data_plot <- data |> 
-  	dplyr::filter(method == .method, metric == .metric) |> 
-  	dplyr::mutate(retrain_window = factor(retrain_window, ordered = TRUE))
-  data_min <- data_plot |> dplyr::slice_min(mean)
-  retrain_scenarios <- sort(unique(data[["retrain_window"]]))
 
-  g <- data_plot |> 
-    ggplot2::ggplot(ggplot2::aes(x = retrain_window, y = mean)) +
-    ggplot2::geom_errorbar(
-      ggplot2::aes(ymin = lower, ymax = upper), 
-      col = 'lightblue', width = 0.1, linewidth = 1
-    ) +
-    ggplot2::geom_point(size = 2, col = 'lightblue') +
-    ggplot2::geom_point(data = data_min, size = 2, col = 'red') +
-    ggplot2::geom_hline(yintercept = data_min$lower, col = 'gray', linetype = 2) +
-    ggplot2::geom_hline(yintercept = data_min$upper, col = 'gray', linetype = 2) +
-    ggplot2::labs(title = title, x = 'Retrain Scenario', y = metric_label) + 
-    ggplot2::theme_minimal() +
-    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+  method_lvls <- c(
+    'LR',
+    'RF',
+    'XGBoost',
+    'LGBM',
+    'CatBoost',
+    'MLP',
+    'LSTM',
+    'TCN',
+    'NBEATSx',
+    'NHITS',
+    'Ens2A',
+    'Ens2T',
+    'Ens3A',
+    'Ens3T',
+    'Ens4A',
+    'Ens4T',
+    'Ens5A',
+    'Ens5T'
+  )
+  
+  if (by == "retrain_window") {
 
+    if (is.null(.method)) {.method <- unique(data$method)[1]}
+
+    data_plot <- data |> 
+      dplyr::filter(testing == by) |> 
+      dplyr::filter(method == .method, metric == .metric) |> 
+      dplyr::mutate(retrain_window = factor(retrain_window, ordered = TRUE))
+    data_min <- data_plot |> dplyr::slice_min(mean)
+  
+    g <- data_plot |> 
+      ggplot2::ggplot(ggplot2::aes(x = retrain_window, y = mean)) +
+      ggplot2::geom_errorbar(
+        ggplot2::aes(ymin = lower, ymax = upper), 
+        col = 'lightblue', width = 0.1, linewidth = 1
+      ) +
+      ggplot2::geom_point(size = 2, col = 'lightblue') +
+      ggplot2::geom_point(data = data_min, size = 2, col = 'red') +
+      ggplot2::geom_hline(yintercept = data_min$lower, col = 'gray', linetype = 2) +
+      ggplot2::geom_hline(yintercept = data_min$upper, col = 'gray', linetype = 2) +
+      ggplot2::labs(title = title, x = 'Retrain Scenario', y = metric_label) + 
+      ggplot2::theme_minimal() +
+      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+
+  } else if (by == "method") {
+
+    if (is.null(.retrain_window)) {.retrain_window <- min(data$retrain_window)}
+
+    data_plot <- data |> 
+      dplyr::filter(testing == by) |> 
+      dplyr::filter(retrain_window == .retrain_window, metric == .metric) |> 
+      dplyr::mutate(method = factor(method, levels = method_lvls, ordered = TRUE))
+    data_min <- data_plot |> dplyr::slice_min(mean)
+  
+    g <- data_plot |> 
+      ggplot2::ggplot(ggplot2::aes(x = method, y = mean)) +
+      ggplot2::geom_errorbar(
+        ggplot2::aes(ymin = lower, ymax = upper), 
+        col = 'lightblue', width = 0.1, linewidth = 1
+      ) +
+      ggplot2::geom_point(size = 2, col = 'lightblue') +
+      ggplot2::geom_point(data = data_min, size = 2, col = 'red') +
+      ggplot2::geom_hline(yintercept = data_min$lower, col = 'gray', linetype = 2) +
+      ggplot2::geom_hline(yintercept = data_min$upper, col = 'gray', linetype = 2) +
+      ggplot2::labs(title = title, x = 'Retrain Scenario', y = metric_label) + 
+      ggplot2::theme_minimal() +
+      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+
+  } else {
+    stop(paste0('Unknown by ', by))
+  }
+  
   return(g)
 
 }
 
-plot_test_results_facet <- function(data, .facet, .metric, metric_label = "", title = "") {
+plot_test_results_facet <- function(
+  data, 
+  .metric, 
+  by = "retrain_window",  
+  metric_label = "", 
+  title = ""
+) {
 	
 	cat("Creating plot...\n")
-	method_lvls <- c('LR', 'RF', 'XGBoost', 'LGBM', 'CatBoost', 'MLP', 'LSTM', 'TCN', 'NBEATSx', 'NHITS')
-	data_plot <- data |> 
-		dplyr::filter(metric == .metric) |> 
-		dplyr::mutate(retrain_window = factor(retrain_window, ordered = TRUE)) |> 
-		dplyr::mutate(method = factor(method, levels = method_lvls, ordered = TRUE))
-	data_min <- data_plot |> 
-		dplyr::group_by(method) |> 
-		dplyr::slice_min(mean) |> 
-		dplyr::ungroup()
-	retrain_scenarios <- sort(unique(data[["retrain_window"]]))
-	
-	g <- data_plot |> 
-		ggplot2::ggplot(ggplot2::aes(x = retrain_window, y = mean)) +
-		ggplot2::geom_errorbar(
-			ggplot2::aes(ymin = lower, ymax = upper), 
-			col = 'lightblue', width = 0.1, linewidth = 1
-		) +
-		ggplot2::geom_point(size = 1, col = 'lightblue') +
-		ggplot2::geom_point(data = data_min, size = 1, col = 'red') +
-		ggplot2::geom_hline(data = data_min, mapping = ggplot2::aes(yintercept = lower), col = 'gray', linetype = 2) +
-		ggplot2::geom_hline(data = data_min, mapping = ggplot2::aes(yintercept = upper), col = 'gray', linetype = 2) +
-		ggplot2::labs(title = title, x = 'Retrain Scenario', y = metric_label) + 
-		ggplot2::facet_wrap(~ .data[[.facet]], ncol = 2, scales = 'free_y') +
-		ggplot2::theme_bw() +
-		ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+
+  method_lvls <- c(
+    'LR',
+    'RF',
+    'XGBoost',
+    'LGBM',
+    'CatBoost',
+    'MLP',
+    'LSTM',
+    'TCN',
+    'NBEATSx',
+    'NHITS',
+    'Ens2A',
+    'Ens2T',
+    'Ens3A',
+    'Ens3T',
+    'Ens4A',
+    'Ens4T',
+    'Ens5A',
+    'Ens5T'
+  )
+
+  if (by == "retrain_window") {
+
+    data_plot <- data |> 
+      dplyr::filter(testing == by) |> 
+      dplyr::filter(metric == .metric) |> 
+      dplyr::mutate(retrain_window = factor(retrain_window, ordered = TRUE)) |> 
+      dplyr::mutate(method = factor(method, levels = method_lvls, ordered = TRUE))
+    data_min <- data_plot |> 
+      dplyr::group_by(method) |> 
+      dplyr::slice_min(mean) |> 
+      dplyr::ungroup()
+    
+    g <- data_plot |> 
+      ggplot2::ggplot(ggplot2::aes(x = retrain_window, y = mean)) +
+      ggplot2::geom_errorbar(
+        ggplot2::aes(ymin = lower, ymax = upper), 
+        col = 'lightblue', width = 0.1, linewidth = 1
+      ) +
+      ggplot2::geom_point(size = 1, col = 'lightblue') +
+      ggplot2::geom_point(data = data_min, size = 1, col = 'red') +
+      ggplot2::geom_hline(data = data_min, mapping = ggplot2::aes(yintercept = lower), col = 'gray', linetype = 2) +
+      ggplot2::geom_hline(data = data_min, mapping = ggplot2::aes(yintercept = upper), col = 'gray', linetype = 2) +
+      ggplot2::labs(title = title, x = 'Retrain Scenario', y = metric_label) + 
+      ggplot2::facet_wrap(~ method, ncol = 2, scales = 'free_y') +
+      ggplot2::theme_bw() +
+      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+
+  } else if (by == "method") {
+
+    data_plot <- data |> 
+      dplyr::filter(testing == by) |> 
+      dplyr::filter(metric == .metric) |> 
+      dplyr::mutate(retrain_window = factor(retrain_window, ordered = TRUE)) |> 
+      dplyr::mutate(method = factor(method, levels = method_lvls, ordered = TRUE))
+    data_min <- data_plot |> 
+      dplyr::group_by(retrain_window) |> 
+      dplyr::slice_min(mean) |> 
+      dplyr::ungroup()
+    
+    g <- data_plot |> 
+      ggplot2::ggplot(ggplot2::aes(x = method, y = mean)) +
+      ggplot2::geom_errorbar(
+        ggplot2::aes(ymin = lower, ymax = upper), 
+        col = 'lightblue', width = 0.1, linewidth = 1
+      ) +
+      ggplot2::geom_point(size = 1, col = 'lightblue') +
+      ggplot2::geom_point(data = data_min, size = 1, col = 'red') +
+      ggplot2::geom_hline(data = data_min, mapping = ggplot2::aes(yintercept = lower), col = 'gray', linetype = 2) +
+      ggplot2::geom_hline(data = data_min, mapping = ggplot2::aes(yintercept = upper), col = 'gray', linetype = 2) +
+      ggplot2::labs(title = title, x = 'Method', y = metric_label) + 
+      ggplot2::facet_wrap(~ retrain_window, ncol = 2, scales = 'free_y') +
+      ggplot2::theme_bw() +
+      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+
+  } else {
+    stop(paste0('Unknown by ', by))
+  }
 	
 	return(g)
 	
@@ -568,7 +730,8 @@ compute_costs <- function(
   n_skus, 
   dataset_n_skus, 
   cost_per_hour = 3.5, 
-  add_average = FALSE
+  add_average = FALSE,
+  compute_relative_costs = TRUE
 ) {
 	
   if (add_average) {
@@ -594,8 +757,12 @@ compute_costs <- function(
 			ct_hour_tot = ct_hour_per_sku * n_skus,
 			cost = ct_hour_tot * cost_per_hour
 		) |> 
-		dplyr::select(dplyr::all_of(c('type', 'method', 'retrain_window', 'cost'))) |> 
-    compute_relative_metrics(type = 'cost')
+		dplyr::select(dplyr::all_of(c('type', 'method', 'retrain_window', 'cost'))) 
+  
+  if (compute_relative_costs) {
+    data_cost <- data_cost |> 
+      compute_relative_metrics(type = 'cost')
+  }
 	
 	return (data_cost)
 	
@@ -826,6 +993,15 @@ analyse_results <- function(config) {
             cost_per_hour = cost_per_hour, 
             add_average = FALSE
           )
+        anal_df_tmp <- anal_df_tmp |>
+          compute_costs(
+            time_var = cost_time_var, 
+            n_skus = cost_n_skus,
+            dataset_n_skus = cost_dataset_n_skus_tmp,
+            cost_per_hour = cost_per_hour, 
+            add_average = FALSE,
+            compute_relative_costs = FALSE
+          )
         # set the metrics to be used
         anal_metrics <- cost_metrics
 
@@ -874,10 +1050,31 @@ analyse_results <- function(config) {
             title = toupper(dataset_name_tmp)
           )
 
-          if (at != 'cost') {
-            anal_test[[am]] <- model_names_abbr_mt_tmp |> 
-              purrr::map(~ test_differences(anal_df_mt_tmp, .method = .x, .metric = am)) |> 
-              dplyr::bind_rows()
+          if (!am %in% c('savings', 'savings_perc')) {
+            anal_test[[am]] <- dplyr::bind_rows(
+              model_names_abbr_mt_tmp |> 
+                purrr::map(
+                  ~ test_differences(
+                    anal_df_mt_tmp, 
+                    .metric = am, 
+                    by = "retrain_window",
+                    .method = .x, 
+                  )
+                ) |> 
+                dplyr::bind_rows() |> 
+                dplyr::mutate("testing" = "retrain_window", .before = 1),
+              retrain_scn_tmp |> 
+                purrr::map(
+                  ~ test_differences(
+                    anal_df_mt_tmp, 
+                    .metric = am, 
+                    by = "method",
+                    .retrain_window = .x, 
+                  )
+                ) |> 
+                dplyr::bind_rows() |> 
+                  dplyr::mutate("testing" = "method", .before = 1)
+            )
           } else {
             anal_test[[am]] <- NULL
           }
