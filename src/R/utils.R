@@ -87,12 +87,16 @@ get_model_type <- function(model_name) {
     'XGBRegressor', 'LGBMRegressor', 'CatBoostRegressor' 
   )
   dl <- c('MLP', 'LSTM', 'TCN', 'NBEATSx', 'NHITS')
+  ens_acc <- c('EnsembleMean2A', 'EnsembleMean3A', 'EnsembleMean4A', 'EnsembleMean5A')
+  ens_time <- c('EnsembleMean2T', 'EnsembleMean3T', 'EnsembleMean4T', 'EnsembleMean5T')
 
   model_type <- dplyr::case_when(
     model_name %in% sf ~ 'SF',
     model_name %in% ml ~ 'ML',
     model_name %in% dl ~ 'DL',
-    TRUE ~ 'ENS'
+    model_name %in% ens_acc ~ 'ENSACC',
+    model_name %in% ens_time ~ 'ENSTIME',
+    TRUE ~ NA_character_
   )
 
   return(model_type)
@@ -113,12 +117,12 @@ get_model_name_abbr <- function(model_name) {
     model_name == 'NBEATSx' ~ 'NBEATSx',
     model_name == 'NHITS' ~ 'NHITS',
     model_name == 'EnsembleMean2A' ~ 'Ens2A',
-    model_name == 'EnsembleMean2T' ~ 'Ens2T',
     model_name == 'EnsembleMean3A' ~ 'Ens3A',
-    model_name == 'EnsembleMean3T' ~ 'Ens3T',
     model_name == 'EnsembleMean4A' ~ 'Ens4A',
-    model_name == 'EnsembleMean4T' ~ 'Ens4T',
     model_name == 'EnsembleMean5A' ~ 'Ens5A',
+    model_name == 'EnsembleMean2T' ~ 'Ens2T',
+    model_name == 'EnsembleMean3T' ~ 'Ens3T',
+    model_name == 'EnsembleMean4T' ~ 'Ens4T',
     model_name == 'EnsembleMean5T' ~ 'Ens5T',
     TRUE ~ model_name
   )
@@ -270,7 +274,7 @@ table_retrain_results <- function(data, metric, title = "", digits = 2, format =
 
   cat("Creating table...\n")  
   tab <- data |> 
-    dplyr::select(c('method', 'retrain_window', dplyr::all_of(metric))) |> 
+    dplyr::select(dplyr::all_of(c('method', 'retrain_window', metric))) |> 
     tidyr::pivot_wider(names_from = 'retrain_window', values_from = metric) |> 
     dplyr::rename_with(stringr::str_to_title) |> 
     dt_table(title = title, caption = '', digits = digits, format = format)
@@ -278,105 +282,97 @@ table_retrain_results <- function(data, metric, title = "", digits = 2, format =
 
 }
 
-plot_retrain_results <- function(data, metric, metric_label = "", title = "", smooth = FALSE) {
+plot_retrain_results <- function(
+		data, 
+		metric, 
+		format = 'numeric',
+		metric_label = "", 
+		title = "", 
+		smooth = FALSE, 
+		add_average = FALSE
+) {
 
   cat("Creating plot...\n")
+	
+	method_lvls <- c(
+		'LR', 'RF', 'XGBoost', 'LGBM', 'CatBoost', 'MLP',	'LSTM', 'TCN', 'NBEATSx', 'NHITS',
+		'Ens2A', 'Ens3A', 'Ens4A', 'Ens5A',	'Ens2T', 'Ens3T',	'Ens4T', 'Ens5T'
+	)
+	if (format == 'dollar') {
+		scaling_fun <- function(x) { scales::dollar(x, big.mark = ",", decimal.mark = '.') }
+	} else if (format == 'percent') {
+		scaling_fun <- function(x) { scales::percent(x, scale = 1) }
+	} else {
+		scaling_fun <- function(x) { scales::number(x) }
+	}
+	
   data_plot <- data |> 
     dplyr::mutate(retrain_window = factor(retrain_window, ordered = TRUE))
   
-  if (metric %in% c('cost', 'savings', 'savings_perc')) {
-  	
-  	data_mean <- data_plot |>
-  		dplyr::filter(method == 'Average')
-  	data_plot <- data_plot |> 
-  		dplyr::filter(method != 'Average') |>
-  		dplyr::mutate(
-  			method = factor(
-  				method, 
-  				levels = c(
-  					'LR', 'RF', 'XGBoost', 'LGBM', 'CatBoost', 
-  					'MLP', 'LSTM', 'TCN', 'NBEATSx', 'NHITS'
-  				), 
-  				ordered = TRUE
-  			)
+  g <- data_plot |> 
+  	ggplot2::ggplot(
+  		ggplot2::aes(
+  			x = .data[['retrain_window']], 
+  			y = .data[[metric]], 
+  			color = .data[['method']],
+  			linetype = .data[['type']],
+  			group = .data[['method']]
   		)
-  	g <- data_plot |> 
-  		ggplot2::ggplot(
-  			ggplot2::aes(
-  				x = .data[['retrain_window']], 
-  				y = .data[[metric]], 
-  				color = .data[['method']],
-  				linetype = .data[['method']],
-  				group = .data[['method']]
-  			)
-  		) +
-  		ggplot2::geom_point(size = 2) +
-  		ggplot2::geom_line(linewidth = 1) +  
-  		ggplot2::labs(
-  			title = title, 
-  			x = 'Retrain Scenario', y = metric_label,
-  			color = 'Method', linetype = 'Method', group = 'Method'
-  		) + 
-  		ggplot2::theme_minimal() +
-  		ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)) +
-  		ggplot2::geom_point(
-  			data = data_mean, 
-  			mapping = ggplot2::aes(linetype = NULL),
-  			col = 'darkred', size = 1
-  		) +
-  		ggplot2::geom_line(
-  			data = data_mean, 
-  			mapping = ggplot2::aes(linetype = NULL),
-  			col = 'darkred', linewidth = 0.5, linetype = 1,
+  	)
+  
+  if (smooth) {
+  	g <- g + 
+  		ggplot2::geom_smooth(
+  			method = 'lm', formula = 'y ~ log(x)', linewidth = 1, se = FALSE
   		)
-  	
   } else {
+  	g <- g +  
+  		ggplot2::geom_point(size = 2) +
+  		ggplot2::geom_line(linewidth = 1)
+  }
+  
+  if (add_average) {
   	
-  	if (smooth) {
-  		g <- data_plot |> 
-  			ggplot2::ggplot(
-  				ggplot2::aes(
-  					x = .data[['retrain_window']], 
-  					y = .data[[metric]], 
-  					color = .data[['method']],
-            linetype = .data[['method']],
-            group = .data[['method']]
-  				)
-  			) +
+  	data_ave <- data_plot |> 
+  		dplyr::group_by(retrain_window) |> 
+  		dplyr::summarise('average' = mean(.data[[metric]]), .groups = 'drop') |>
+  		dplyr::mutate(method = 'Average', .before = 1) |> 
+  		purrr::set_names(c('method', 'retrain_window', metric))
+  	
+  	if (smooth)  {
+  		g <- g +
   			ggplot2::geom_smooth(
-  				method = 'lm', formula = 'y ~ log(x)', linewidth = 1, se = FALSE
-  			) +
-  			ggplot2::labs(
-  				title = title, 
-  				x = 'Retrain Scenario', y = metric_label,
-  				color = 'Method', linetype = 'Method'
-  			) + 
-  			ggplot2::theme_minimal() +
-  			ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+  				data = data_ave, 
+  				mapping = ggplot2::aes(linetype = NULL),
+  				method = 'lm', formula = 'y ~ log(x)', se = FALSE,
+  				col = 'darkred', linewidth = 0.5, linetype = 1,
+  			)
   	} else {
-  		g <- data_plot |> 
-  			ggplot2::ggplot(
-  				ggplot2::aes(
-  					x = .data[['retrain_window']], 
-  					y = .data[[metric]], 
-  					color = .data[['method']],
-  					linetype = .data[['method']],
-            group = .data[['method']]
-  				)
+  		g <- g +
+  			ggplot2::geom_point(
+  				data = data_ave, 
+  				mapping = ggplot2::aes(linetype = NULL),
+  				col = 'darkred', size = 1
   			) +
-  			ggplot2::geom_point(size = 2) +
-  			ggplot2::geom_line(linewidth = 1) + 
-  			ggplot2::labs(
-  				title = title, 
-  				x = 'Retrain Scenario', y = metric_label,
-  				color = 'Method', linetype = 'Method'
-  			) + 
-  			ggplot2::theme_minimal() +
-  			ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+  			ggplot2::geom_line(
+  				data = data_ave, 
+  				mapping = ggplot2::aes(linetype = NULL),
+  				col = 'darkred', linewidth = 0.5, linetype = 1,
+  			)
   	}
   	
   }
-
+  
+  g <- g +
+  	ggplot2::scale_y_continuous(labels = scaling_fun) +
+  	ggplot2::labs(
+  		title = title, 
+  		x = 'Retrain Scenario', y = metric_label,
+  		color = 'Method', linetype = 'Method Type', group = 'Method'
+  	) + 
+  	ggplot2::theme_minimal() +
+  	ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+  
   return(g)
 
 }
@@ -488,26 +484,10 @@ plot_test_results <- function(
 
   cat("Creating plot...\n")
 
-  method_lvls <- c(
-    'LR',
-    'RF',
-    'XGBoost',
-    'LGBM',
-    'CatBoost',
-    'MLP',
-    'LSTM',
-    'TCN',
-    'NBEATSx',
-    'NHITS',
-    'Ens2A',
-    'Ens2T',
-    'Ens3A',
-    'Ens3T',
-    'Ens4A',
-    'Ens4T',
-    'Ens5A',
-    'Ens5T'
-  )
+	method_lvls <- c(
+		'LR', 'RF', 'XGBoost', 'LGBM', 'CatBoost', 'MLP',	'LSTM', 'TCN', 'NBEATSx', 'NHITS',
+		'Ens2A', 'Ens3A', 'Ens4A', 'Ens5A',	'Ens2T', 'Ens3T',	'Ens4T', 'Ens5T'
+	)
   
   if (by == "retrain_window") {
 
@@ -575,26 +555,10 @@ plot_test_results_facet <- function(
 	
 	cat("Creating plot...\n")
 
-  method_lvls <- c(
-    'LR',
-    'RF',
-    'XGBoost',
-    'LGBM',
-    'CatBoost',
-    'MLP',
-    'LSTM',
-    'TCN',
-    'NBEATSx',
-    'NHITS',
-    'Ens2A',
-    'Ens2T',
-    'Ens3A',
-    'Ens3T',
-    'Ens4A',
-    'Ens4T',
-    'Ens5A',
-    'Ens5T'
-  )
+	method_lvls <- c(
+		'LR', 'RF', 'XGBoost', 'LGBM', 'CatBoost', 'MLP',	'LSTM', 'TCN', 'NBEATSx', 'NHITS',
+		'Ens2A', 'Ens3A', 'Ens4A', 'Ens5A',	'Ens2T', 'Ens3T',	'Ens4T', 'Ens5T'
+	)
 
   if (by == "retrain_window") {
 
@@ -686,7 +650,7 @@ plot_distribution_results <- function(data, metric, metric_label = "", title = "
 	
 }
 
-clean_outliers <- function(data, .metric, q = c(0.001, 0.999)) {
+clean_outliers <- function(data, .metric, q = c(0.003, 0.997)) {
 	
 	cat("Removing outliers...\n")
 	
@@ -814,36 +778,40 @@ create_results_list <- function(dataset_names, analysis_types, data_types, model
 
 }
 
-get_table_plot_params <- function(analysis_type, analysis_metric) {
+get_table_plot_params <- function(analysis_metric) {
 
-  if (analysis_type == 'cost') {
-    digits <- 0
-    if (analysis_metric == 'savings_perc') {
-      format <- 'percent'
-    } else {
-      format <- 'dollar'
-    }
-  } else {
-    digits <- 3
-    format <- 'numeric'
-  }
+	# default values
+	digits <- 3
+	format <- 'numeric'
+	label <- toupper(analysis_metric)
+	add_average <- FALSE
 
   if (analysis_metric == 'total_sample_time') {
     label <- 'Computing Time'
   } else if (analysis_metric == 'cost') {
+  	digits <- 0
+  	format <- 'dollar'
     label <- 'Cost ($)'
+    add_average <- TRUE
   } else if (analysis_metric == 'savings') {
+  	digits <- 0
+  	format <- 'dollar'
     label <- 'Savings ($)'
+    add_average <- TRUE
   } else if (analysis_metric == 'savings_perc') {
+  	digits <- 0
+  	format <- 'percent'
     label <- 'Savings (%)'
+    add_average <- TRUE
   } else {
-    label <- toupper(analysis_metric) 
+  	x <- 'Keep default'
   }
 
   res <- list(
     'digits' = digits,
     'format' = format,
-    'label' = label
+    'label' = label,
+    'add_average' = add_average
   )
   return(res)
 
@@ -866,13 +834,15 @@ analyse_results <- function(config) {
   model_types <- config$models$types
   model_names <- config$models$model_names
   model_names_abbr <- config$models$model_names_abbr
-  model_type_levels <- c('SF', 'ML', 'DL', 'ENS')
+  model_type_levels <- unlist(model_types) # c('SF', 'ML', 'DL', 'ENSACC', 'ENSTIME')
   # evaluation, time, stability and cost config
   eval_metrics <- config$evaluation_params$metrics
   eval_outlier_cleaning_metrics <- config$evaluation_params$outlier_cleaning_metrics
+  eval_outlier_cleaning_quantiles <- config$evaluation_params$outlier_cleaning_quantiles
   time_metrics <- config$time_params$metrics
   stab_metrics <- config$stability_params$metrics
   stab_outlier_cleaning_metrics <- config$stability_params$outlier_cleaning_metrics
+  stab_outlier_cleaning_quantiles <- config$stability_params$outlier_cleaning_quantiles
   cost_metrics <- config$cost_params$metrics
   cost_time_var <- config$cost_params$time_var
   cost_n_skus <- config$cost_params$n_skus
@@ -909,7 +879,7 @@ analyse_results <- function(config) {
           dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
           dplyr::filter(method %in% model_names) |> 
           recode_data(model_type_levels, model_names_abbr) |> 
-          clean_outliers(.metric = eval_outlier_cleaning_metrics, q = c(0.001, 0.999))
+          clean_outliers(.metric = eval_outlier_cleaning_metrics, q = eval_outlier_cleaning_quantiles)
         anal_df_agg_tmp <- anal_df_tmp |> 
           aggregate_data(
             group_columns = c('type', 'method', 'retrain_window'),
@@ -954,7 +924,7 @@ analyse_results <- function(config) {
           dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
           dplyr::filter(method %in% model_names) |> 
           recode_data(model_type_levels, model_names_abbr) |> 
-          clean_outliers(.metric = stab_outlier_cleaning_metrics, q = c(0.001, 0.999))
+          clean_outliers(.metric = stab_outlier_cleaning_metrics, q = stab_outlier_cleaning_quantiles)
         anal_df_agg_tmp <- anal_df_tmp |> 
           aggregate_data(
             group_columns = c('type', 'method', 'retrain_window'),
@@ -1033,7 +1003,7 @@ analyse_results <- function(config) {
         for (am in anal_metrics) {
 
           cat(paste0("Creating evaluation table, plot and tests for ", toupper(am), "...\n"))
-          tp_par <- get_table_plot_params(at, am)
+          tp_par <- get_table_plot_params(am)
 
           anal_tab[[am]] <- table_retrain_results(
             anal_df_agg_mt_tmp, 
@@ -1046,8 +1016,10 @@ analyse_results <- function(config) {
           anal_plot[[am]] <- plot_retrain_results(
             anal_df_agg_mt_tmp, 
             metric = am, 
+            format = tp_par$format,
             metric_label = tp_par$label,
-            title = toupper(dataset_name_tmp)
+            title = toupper(dataset_name_tmp),
+            add_average = tp_par$add_average
           )
 
           if (!am %in% c('savings', 'savings_perc')) {

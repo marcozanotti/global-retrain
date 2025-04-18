@@ -28,7 +28,7 @@ dataset: {
 }
 
 models: {
-    'types': [['ML', 'DL'], 'ENS'], # ML and DL together, ENS alone
+    'types': [['ML', 'DL'], ['ENSACC', 'ENSTIME']], # ML and DL together, ENS alone
     'model_names': [
         'LinearRegression', 
         'RandomForestRegressor', 
@@ -41,12 +41,12 @@ models: {
         'NBEATSx',
         'NHITS',
         'EnsembleMean2A',
-        'EnsembleMean2T',
         'EnsembleMean3A',
-        'EnsembleMean3T',
         'EnsembleMean4A',
-        'EnsembleMean4T',
         'EnsembleMean5A',
+        'EnsembleMean2T',
+        'EnsembleMean3T',
+        'EnsembleMean4T',
         'EnsembleMean5T'
     ],
     'model_names_abbr': [
@@ -61,12 +61,12 @@ models: {
         'NBEATSx',
         'NHITS',
         'Ens2A',
-        'Ens2T',
         'Ens3A',
-        'Ens3T',
         'Ens4A',
-        'Ens4T',
         'Ens5A',
+        'Ens2T',
+        'Ens3T',
+        'Ens4T',
         'Ens5T'
     ]
 }
@@ -90,7 +90,8 @@ evaluation_params: {
         # 'coverage_level95',
         # 'coverage_level99'
     ],
-    'outlier_cleaning_metrics': ['rmsse', 'mqloss']
+    'outlier_cleaning_metrics': ['rmsse', 'mqloss'],
+    'outlier_cleaning_quantiles': [0.000, 0.995]
 }
 
 time_params: {
@@ -101,13 +102,14 @@ time_params: {
 
 stability_params: {
     'metrics': [
-        'stability_bias', 
-        'mac', 
-        'rmsc', 
+        # 'stability_bias', 
+        # 'mac', 
+        # 'rmsc', 
         'smapc', 
         'mqlossc'
     ],
-    'outlier_cleaning_metrics': ['smapc', 'mqlossc']
+    'outlier_cleaning_metrics': ['smapc', 'mqlossc'],
+    'outlier_cleaning_quantiles': [0.000, 0.995]
 }
 
 cost_params: {

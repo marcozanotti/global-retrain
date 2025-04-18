@@ -7,20 +7,23 @@ library(patchwork)
 source('src/R/utils.R')
 
 
+
 # Load & prepare data -----------------------------------------------------
 
-analysis_file_name <- 'results/analysis/absolute_evaltimestabcost_overlap_20250417_102106.RData'
-analysis_file_name <- 'results/analysis/relative_evaltimestabcost_overlap_20250417_101712.RData'
+analysis_file_name <- 'results/analysis/absolute_evaltimestabcost_overlap_20250418_155348.RData'
+analysis_file_name <- 'results/analysis/relative_evaltimestabcost_overlap_20250418_154911.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results
 rm(analysis_results)
 
 
+
 # Parameters --------------------------------------------------------------
 
 dataset_name1 <- 'm5_daily'
 dataset_name2 <- 'vn1_weekly'
+
 models_type <- 'ML_DL'
 models <- c(
 	'LR',
@@ -33,6 +36,8 @@ models <- c(
 	'TCN',
 	'NBEATSx'
 )
+
+models_type <- 'ENSACC_ENSTIME'
 models <- c(
 	'Ens2A',
 	'Ens2T',
@@ -45,9 +50,12 @@ models <- c(
 )
 
 
+
 # Analysis ----------------------------------------------------------------
 
+# =========================================================================
 # * Evaluation ------------------------------------------------------------
+# =========================================================================
 
 eval_res1 <- res[[dataset_name1]][['evaluation']][['results']][[models_type]]
 eval_res2 <- res[[dataset_name2]][['evaluation']][['results']][[models_type]]
@@ -64,8 +72,8 @@ for (m in eval_metrics) {
 
 for (m in eval_metrics) {
 	print(
-		eval_res1$plots[[m]] + ggplot2::theme(legend.position = "bottom") +
-			eval_res2$plots[[m]] + ggplot2::theme(legend.position = "bottom")
+		eval_res1$plots[[m]] + eval_res2$plots[[m]] +
+			patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
 	)
 }
 
@@ -74,45 +82,48 @@ for (m in eval_metrics) {
 for (m in eval_metrics) {
 	g1 <- plot_test_results_facet(
 		data = eval_res1$tests[[m]],
-		.facet = 'method', 
 		.metric = m, 
+		by = "retrain_window", 
 		metric_label = toupper(gsub("_", " ", m)),
 		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name1), "_.*", ""), "- Nemenyi Test"))
 	)
 	print(g1)
 	g2 <- plot_test_results_facet(
 		data = eval_res2$tests[[m]],
-		.facet = 'method', 
 		.metric = m, 
+		by = "retrain_window", 
 		metric_label = toupper(gsub("_", " ", m)),
 		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name2), "_.*", ""), "- Nemenyi Test"))
 	)
 	print(g2)
 }
 
-# for (mod in models) {
-# 	for (m in eval_metrics) {
-# 		g <- plot_test_results(
-# 			data = eval_res1$tests[[m]],
-# 			.method = mod, 
-# 			.metric = m, 
-# 			metric_label = toupper(gsub("_", " ", m)),
-# 			title = toupper(paste(stringr::str_replace_all(toupper(dataset_name), "_.*", " "), "- Nemenyi Test -", mod))
-# 		)
-# 		print(g)
-# 		g <- plot_test_results(
-# 			data = eval_res2$tests[[m]],
-# 			.method = mod, 
-# 			.metric = m, 
-# 			metric_label = toupper(gsub("_", " ", m)),
-# 			title = toupper(paste(stringr::str_replace_all(toupper(dataset_name), "_.*", " "), "- Nemenyi Test -", mod))
-# 		)
-# 		print(g)
-# 	}
-# }
+for (m in eval_metrics) {
+	g1 <- plot_test_results(
+		data = eval_res1$tests[[m]],
+		.metric = m, 
+		by = "method", 
+		.retrain_window = 7,
+		metric_label = toupper(gsub("_", " ", m)),
+		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name1), "_.*", " "), "- Nemenyi Test"))
+	)
+	print(g1)
+	g2 <- plot_test_results(
+		data = eval_res2$tests[[m]],
+		.metric = m, 
+		by = "method", 
+		.retrain_window = 1,
+		metric_label = toupper(gsub("_", " ", m)),
+		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name2), "_.*", " "), "- Nemenyi Test"))
+	)
+	print(g2)
+}
 
 
+
+# =========================================================================
 # * Time ------------------------------------------------------------------
+# =========================================================================
 
 time_res1 <- res[[dataset_name1]][['time']][['results']][[models_type]]
 time_res2 <- res[[dataset_name2]][['time']][['results']][[models_type]]
@@ -129,8 +140,8 @@ for (m in time_metrics) {
 
 for (m in time_metrics) {
 	print(
-		time_res1$plots[[m]] + ggplot2::theme(legend.position = "bottom") +
-			time_res2$plots[[m]] + ggplot2::theme(legend.position = "bottom")
+		time_res1$plots[[m]] + time_res2$plots[[m]] +
+			patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
 	)
 }
 
@@ -139,28 +150,52 @@ for (m in time_metrics) {
 for (m in time_metrics) {
 	g1 <- plot_test_results_facet(
 		data = time_res1$tests[[m]],
-		.facet = 'method', 
-		.metric = m, 
+		.metric = m,
+		by = 'retrain_window',  
 		metric_label = toupper(gsub("_", " ", m)),
 		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name1), "_.*", ""), "- Nemenyi Test"))
 	)
 	print(g1)
 	g2 <- plot_test_results_facet(
 		data = time_res2$tests[[m]],
-		.facet = 'method', 
 		.metric = m, 
+		by = 'retrain_window', 
 		metric_label = toupper(gsub("_", " ", m)),
 		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name2), "_.*", ""), "- Nemenyi Test"))
 	)
 	print(g2)
 }
 
+for (m in time_metrics) {
+	g1 <- plot_test_results(
+		data = time_res1$tests[[m]],
+		.metric = m, 
+		by = "method", 
+		.retrain_window = 7,
+		metric_label = toupper(gsub("_", " ", m)),
+		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name1), "_.*", " "), "- Nemenyi Test"))
+	)
+	print(g1)
+	g2 <- plot_test_results(
+		data = time_res2$tests[[m]],
+		.metric = m, 
+		by = "method", 
+		.retrain_window = 1,
+		metric_label = toupper(gsub("_", " ", m)),
+		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name2), "_.*", " "), "- Nemenyi Test"))
+	)
+	print(g2)
+}
 
+
+
+# =========================================================================
 # * Stability -------------------------------------------------------------
+# =========================================================================
 
 stab_res1 <- res[[dataset_name1]][['stability']][['results']][[models_type]]
 stab_res2 <- res[[dataset_name2]][['stability']][['results']][[models_type]]
-stab_metrics <- c('stability_bias', 'mac', 'rmsc', 'smapc', 'mqlossc')
+stab_metrics <- c('smapc', 'mqlossc')
 
 # ** Tables ---------------------------------------------------------------
 
@@ -173,8 +208,8 @@ for (m in stab_metrics) {
 
 for (m in stab_metrics) {
 	print(
-		stab_res1$plots[[m]] + ggplot2::theme(legend.position = "bottom") +
-			stab_res2$plots[[m]] + ggplot2::theme(legend.position = "bottom")
+		stab_res1$plots[[m]] + stab_res2$plots[[m]] +
+			patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
 	)
 }
 
@@ -183,24 +218,48 @@ for (m in stab_metrics) {
 for (m in stab_metrics) {
 	g1 <- plot_test_results_facet(
 		data = stab_res1$tests[[m]],
-		.facet = 'method', 
 		.metric = m, 
+		by = 'retrain_window', 
 		metric_label = toupper(gsub("_", " ", m)),
 		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name1), "_.*", ""), "- Nemenyi Test"))
 	)
 	print(g1)
 	g2 <- plot_test_results_facet(
 		data = stab_res2$tests[[m]],
-		.facet = 'method', 
 		.metric = m, 
+		by = 'retrain_window', 
 		metric_label = toupper(gsub("_", " ", m)),
 		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name2), "_.*", ""), "- Nemenyi Test"))
 	)
 	print(g2)
 }
 
+for (m in stab_metrics) {
+	g1 <- plot_test_results(
+		data = stab_res1$tests[[m]],
+		.metric = m, 
+		by = "method", 
+		.retrain_window = 7,
+		metric_label = toupper(gsub("_", " ", m)),
+		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name1), "_.*", " "), "- Nemenyi Test"))
+	)
+	print(g1)
+	g2 <- plot_test_results(
+		data = stab_res2$tests[[m]],
+		.metric = m, 
+		by = "method", 
+		.retrain_window = 1,
+		metric_label = toupper(gsub("_", " ", m)),
+		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name2), "_.*", " "), "- Nemenyi Test"))
+	)
+	print(g2)
+}
 
-# * Cost -------------------------------------------------------------
+
+
+# =========================================================================
+# * Cost ------------------------------------------------------------------
+# =========================================================================
 
 cost_res1 <- res[[dataset_name1]][['cost']][['results']][[models_type]]
 cost_res2 <- res[[dataset_name2]][['cost']][['results']][[models_type]]
@@ -230,21 +289,42 @@ cost_res2$plots[['cost']] + cost_res2$plots[['savings_perc']] +
 
 # ** Tests -----------------------------------------------------------------
 
-for (m in cost_metrics) {
+for (m in 'cost') {
 	g1 <- plot_test_results_facet(
 		data = cost_res1$tests[[m]],
-		.facet = 'method', 
 		.metric = m, 
+		by = 'retrain_window', 
 		metric_label = toupper(gsub("_", " ", m)),
 		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name1), "_.*", ""), "- Nemenyi Test"))
 	)
 	print(g1)
 	g2 <- plot_test_results_facet(
 		data = cost_res2$tests[[m]],
-		.facet = 'method', 
 		.metric = m, 
+		by = 'retrain_window', 
 		metric_label = toupper(gsub("_", " ", m)),
 		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name2), "_.*", ""), "- Nemenyi Test"))
+	)
+	print(g2)
+}
+
+for (m in 'cost') {
+	g1 <- plot_test_results(
+		data = cost_res1$tests[[m]],
+		.metric = m, 
+		by = "method", 
+		.retrain_window = 7,
+		metric_label = toupper(gsub("_", " ", m)),
+		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name1), "_.*", " "), "- Nemenyi Test"))
+	)
+	print(g1)
+	g2 <- plot_test_results(
+		data = cost_res2$tests[[m]],
+		.metric = m, 
+		by = "method", 
+		.retrain_window = 1,
+		metric_label = toupper(gsub("_", " ", m)),
+		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name2), "_.*", " "), "- Nemenyi Test"))
 	)
 	print(g2)
 }
