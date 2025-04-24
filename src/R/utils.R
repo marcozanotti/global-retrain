@@ -298,6 +298,13 @@ plot_retrain_results <- function(
 		'LR', 'RF', 'XGBoost', 'LGBM', 'CatBoost', 'MLP',	'LSTM', 'TCN', 'NBEATSx', 'NHITS',
 		'Ens2A', 'Ens3A', 'Ens4A', 'Ens5A',	'Ens2T', 'Ens3T',	'Ens4T', 'Ens5T'
 	)
+	colors_lbls <- c(
+		"LR" = "#003366", "RF" = "#17BECF", "XGBoost" = "#B3E5FC", "LGBM" = "#2CA02C", "CatBoost" = "#B2DF8A",   
+		"MLP" = "#FEE08B", "LSTM" = "#FFD700", "TCN" = "#FFA500", "NBEATSx" = "#FF6961", "NHITS" = "#E31A1C",  
+		"Ens2A" = "#003366", "Ens3A" = "#17BECF", "Ens4A" = "#2CA02C", "Ens5A" = "#B2DF8A",   
+		"Ens2T" = "#FFD700", "Ens3T" = "#FFA500",	"Ens4T" = "#FF6961", "Ens5T" = "#E31A1C"
+	)
+
 	if (format == 'dollar') {
 		scaling_fun <- function(x) { scales::dollar(x, big.mark = ",", decimal.mark = '.') }
 	} else if (format == 'percent') {
@@ -345,19 +352,19 @@ plot_retrain_results <- function(
   				data = data_ave, 
   				mapping = ggplot2::aes(linetype = NULL),
   				method = 'lm', formula = 'y ~ log(x)', se = FALSE,
-  				col = 'darkred', linewidth = 0.5, linetype = 1,
+  				col = 'black', linewidth = 0.5, linetype = 1,
   			)
   	} else {
   		g <- g +
   			ggplot2::geom_point(
   				data = data_ave, 
   				mapping = ggplot2::aes(linetype = NULL),
-  				col = 'darkred', size = 1
+  				col = 'black', size = 1
   			) +
   			ggplot2::geom_line(
   				data = data_ave, 
   				mapping = ggplot2::aes(linetype = NULL),
-  				col = 'darkred', linewidth = 0.5, linetype = 1,
+  				col = 'black', linewidth = 0.5, linetype = 1,
   			)
   	}
   	
@@ -365,6 +372,7 @@ plot_retrain_results <- function(
   
   g <- g +
   	ggplot2::scale_y_continuous(labels = scaling_fun) +
+  	ggplot2::scale_color_manual(values = colors_lbls) +
   	ggplot2::labs(
   		title = title, 
   		x = 'Retrain Scenario', y = metric_label,
@@ -533,7 +541,7 @@ plot_test_results <- function(
       ggplot2::geom_point(data = data_min, size = 2, col = 'red') +
       ggplot2::geom_hline(yintercept = data_min$lower, col = 'gray', linetype = 2) +
       ggplot2::geom_hline(yintercept = data_min$upper, col = 'gray', linetype = 2) +
-      ggplot2::labs(title = title, x = 'Retrain Scenario', y = metric_label) + 
+      ggplot2::labs(title = title, x = '', y = metric_label) + 
       ggplot2::theme_minimal() +
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
 
