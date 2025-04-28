@@ -6,13 +6,11 @@ TODO:
 
 GLOBAL ENSEMBLING
 TODO:
-- creare ensembles 2, 3, 4, 5 modelli con media per ogni retrain frequency
 - studiare l'effetto di ensembling su accuracy / cost / stability al variare della
   retraining frequency
 
 
 NOTE:
-
 - valutare l'aggiunta di datasets (Rossmann, Favorita, M4, Wikipedia)
 - valutare l'aggiunta di un parametro skip per saltare di k le iterazioni 
 (deve essere minore di horizon e della retrain_window)
