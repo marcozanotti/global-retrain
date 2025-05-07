@@ -932,7 +932,8 @@ analyse_results <- function(config) {
           dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
           dplyr::filter(method %in% model_names) |> 
           recode_data(model_type_levels, model_names_abbr) |> 
-          clean_outliers(.metric = stab_outlier_cleaning_metrics, q = stab_outlier_cleaning_quantiles)
+          clean_outliers(.metric = stab_outlier_cleaning_metrics, q = stab_outlier_cleaning_quantiles) |> 
+        	dplyr::filter(type != 'ENSTIME') # remove ensemble time from stability analysis
         anal_df_agg_tmp <- anal_df_tmp |> 
           aggregate_data(
             group_columns = c('type', 'method', 'retrain_window'),

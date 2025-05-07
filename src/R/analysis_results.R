@@ -10,12 +10,13 @@ source('src/R/utils.R')
 # NOTE:
 # plot andamenti 1120x525
 # plot test 730x635
+# plot test doppio 1120x525
 
 
 # Load & prepare data -----------------------------------------------------
 
-analysis_file_name <- 'results/analysis/absolute_evaltimestabcost_overlap_20250418_170731.RData'
-analysis_file_name <- 'results/analysis/relative_evaltimestabcost_overlap_20250418_171216.RData'
+analysis_file_name <- 'results/analysis/absolute_evaltimestabcost_overlap_20250507_104930.RData'
+analysis_file_name <- 'results/analysis/relative_evaltimestabcost_overlap_20250507_104555.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results

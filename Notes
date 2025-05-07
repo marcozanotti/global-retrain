@@ -1,9 +1,4 @@
 
-GLOBAL STABILITY
-TODO:
-- valutare la stability dei global models per la retrain frequency di base
-- valutare come varia la stability dei global models al variare delle retrain freq
-
 GLOBAL ENSEMBLING
 TODO:
 - studiare l'effetto di ensembling su accuracy / cost / stability al variare della
