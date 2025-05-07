@@ -54,10 +54,10 @@ for (m in eval_metrics) {
 # latex
 for (m in eval_metrics) {
 	cat(paste(dataset_name1, m, "\n\n"))
-	print(xtable::xtable(eval_res1$tables[[m]]$x$data, digits = 3))
+	print(xtable::xtable(eval_res1$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
 	cat("\n\n")
 	cat(paste(dataset_name2, m, "\n\n"))
-	print(xtable::xtable(eval_res2$tables[[m]]$x$data, digits = 3))
+	print(xtable::xtable(eval_res2$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
 	cat("\n\n")
 }
 
@@ -132,10 +132,10 @@ for (m in time_metrics) {
 # latex
 for (m in time_metrics) {
 	cat(paste(dataset_name1, m, "\n\n"))
-	print(xtable::xtable(time_res1$tables[[m]]$x$data, digits = 3))
+	print(xtable::xtable(time_res1$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
 	cat("\n\n")
 	cat(paste(dataset_name2, m, "\n\n"))
-	print(xtable::xtable(time_res2$tables[[m]]$x$data, digits = 3))
+	print(xtable::xtable(time_res2$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
 	cat("\n\n")
 }
 
@@ -210,10 +210,10 @@ for (m in stab_metrics) {
 # latex
 for (m in stab_metrics) {
 	cat(paste(dataset_name1, m, "\n\n"))
-	print(xtable::xtable(stab_res1$tables[[m]]$x$data, digits = 3))
+	print(xtable::xtable(stab_res1$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
 	cat("\n\n")
 	cat(paste(dataset_name2, m, "\n\n"))
-	print(xtable::xtable(stab_res2$tables[[m]]$x$data, digits = 3))
+	print(xtable::xtable(stab_res2$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
 	cat("\n\n")
 }
 
@@ -288,10 +288,10 @@ for (m in cost_metrics) {
 # latex
 for (m in cost_metrics) {
 	cat(paste(dataset_name1, m, "\n\n"))
-	print(xtable::xtable(cost_res1$tables[[m]]$x$data, digits = 3))
+	print(xtable::xtable(cost_res1$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
 	cat("\n\n")
 	cat(paste(dataset_name2, m, "\n\n"))
-	print(xtable::xtable(cost_res2$tables[[m]]$x$data, digits = 3))
+	print(xtable::xtable(cost_res2$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
 	cat("\n\n")
 }
 
@@ -352,3 +352,305 @@ for (m in 'cost') {
 	print(g3)
 }
 
+
+
+# =========================================================================
+# * Ensemble Comparisons --------------------------------------------------
+# =========================================================================
+
+models_types <- c('ML_DL', 'ENSACC_ENSTIME')
+
+
+# Overall Results ---------------------------------------------------------
+
+# * Evaluation ------------------------------------------------------------
+
+eval_res1 <- res[[dataset_name1]][['evaluation']][['results']]
+eval_res2 <- res[[dataset_name2]][['evaluation']][['results']]
+eval_metrics <- c('bias', 'rmsse', 'mqloss')
+
+# ** Tables ---------------------------------------------------------------
+for (m in eval_metrics) {
+	cat(paste(dataset_name1, m, "\n\n"))
+	print(
+		xtable::xtable(
+			dplyr::bind_rows(
+				eval_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
+				eval_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
+			), 
+			digits = 3
+		),
+		include.rownames = FALSE
+	)
+	cat("\n\n")
+	cat(paste(dataset_name2, m, "\n\n"))
+	print(
+		xtable::xtable(
+			dplyr::bind_rows(
+				eval_res2[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
+				eval_res2[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
+			), 
+			digits = 3
+		),
+		include.rownames = FALSE
+	)
+	cat("\n\n")
+}
+
+# ** Plots ----------------------------------------------------------------
+for (m in eval_metrics) {
+	g1 <- plot_compared_results(
+		dplyr::bind_rows(
+			eval_res1[[models_types[[1]]]]$plots[[m]]$data,
+			eval_res1[[models_types[[2]]]]$plots[[m]]$data
+		), 
+		metric = m, .retrain_window = 7, title = "M5"
+	)
+	print(g1)
+	g2 <- plot_compared_results(
+		dplyr::bind_rows(
+			eval_res2[[models_types[[1]]]]$plots[[m]]$data,
+			eval_res2[[models_types[[2]]]]$plots[[m]]$data
+		), 
+		metric = m, .retrain_window = 1, title = "VN1"
+	)
+	print(g2)
+}
+
+# ** Tests ----------------------------------------------------------------
+
+
+# * Time ------------------------------------------------------------------
+time_res1 <- res[[dataset_name1]][['time']][['results']]
+time_res2 <- res[[dataset_name2]][['time']][['results']]
+time_metrics <- c('total_sample_time')
+
+# ** Tables ---------------------------------------------------------------
+for (m in time_metrics) {
+	cat(paste(dataset_name1, m, "\n\n"))
+	print(
+		xtable::xtable(
+			dplyr::bind_rows(
+				time_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
+				time_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
+			), 
+			digits = 3
+		),
+		include.rownames = FALSE
+	)
+	cat("\n\n")
+	cat(paste(dataset_name2, m, "\n\n"))
+	print(
+		xtable::xtable(
+			dplyr::bind_rows(
+				time_res2[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
+				time_res2[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
+			), 
+			digits = 3
+		),
+		include.rownames = FALSE
+	)
+	cat("\n\n")
+}
+
+# ** Plots ----------------------------------------------------------------
+for (m in time_metrics) {
+	g1 <- plot_compared_results(
+		dplyr::bind_rows(
+			time_res1[[models_types[[1]]]]$plots[[m]]$data,
+			time_res1[[models_types[[2]]]]$plots[[m]]$data
+		), 
+		metric = m, .retrain_window = 7, title = "M5"
+	)
+	print(g1)
+	g2 <- plot_compared_results(
+		dplyr::bind_rows(
+			time_res2[[models_types[[1]]]]$plots[[m]]$data,
+			time_res2[[models_types[[2]]]]$plots[[m]]$data
+		), 
+		metric = m, .retrain_window = 1, title = "VN1"
+	)
+	print(g2)
+}
+
+
+# * Stability -------------------------------------------------------------
+
+stab_res1 <- res[[dataset_name1]][['stability']][['results']]
+stab_res2 <- res[[dataset_name2]][['stability']][['results']]
+stab_metrics <- c('smapc', 'mqlossc')
+
+# ** Tables ---------------------------------------------------------------
+for (m in stab_metrics) {
+	cat(paste(dataset_name1, m, "\n\n"))
+	print(
+		xtable::xtable(
+			dplyr::bind_rows(
+				stab_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
+				stab_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
+			), 
+			digits = 3
+		),
+		include.rownames = FALSE
+	)
+	cat("\n\n")
+	cat(paste(dataset_name2, m, "\n\n"))
+	print(
+		xtable::xtable(
+			dplyr::bind_rows(
+				stab_res2[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
+				stab_res2[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
+			), 
+			digits = 3
+		),
+		include.rownames = FALSE
+	)
+	cat("\n\n")
+}
+
+# ** Plots ----------------------------------------------------------------
+for (m in stab_metrics) {
+	g1 <- plot_compared_results(
+		dplyr::bind_rows(
+			stab_res1[[models_types[[1]]]]$plots[[m]]$data,
+			stab_res1[[models_types[[2]]]]$plots[[m]]$data
+		), 
+		metric = m, .retrain_window = 7, title = "M5"
+	)
+	print(g1)
+	g2 <- plot_compared_results(
+		dplyr::bind_rows(
+			stab_res2[[models_types[[1]]]]$plots[[m]]$data,
+			stab_res2[[models_types[[2]]]]$plots[[m]]$data
+		), 
+		metric = m, .retrain_window = 1, title = "VN1"
+	)
+	print(g2)
+}
+
+
+# * Cost ------------------------------------------------------------------
+
+cost_res1 <- res[[dataset_name1]][['cost']][['results']]
+cost_res2 <- res[[dataset_name2]][['cost']][['results']]
+cost_metrics <- c('cost')
+
+# ** Tables ---------------------------------------------------------------
+for (m in cost_metrics) {
+	cat(paste(dataset_name1, m, "\n\n"))
+	print(
+		xtable::xtable(
+			dplyr::bind_rows(
+				cost_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
+				cost_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
+			), 
+			digits = 3
+		),
+		include.rownames = FALSE
+	)
+	cat("\n\n")
+	cat(paste(dataset_name2, m, "\n\n"))
+	print(
+		xtable::xtable(
+			dplyr::bind_rows(
+				cost_res2[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
+				cost_res2[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
+			), 
+			digits = 3
+		),
+		include.rownames = FALSE
+	)
+	cat("\n\n")
+}
+
+# ** Plots ----------------------------------------------------------------
+for (m in cost_metrics) {
+	g1 <- plot_compared_results(
+		dplyr::bind_rows(
+			cost_res1[[models_types[[1]]]]$plots[[m]]$data,
+			cost_res1[[models_types[[2]]]]$plots[[m]]$data
+		), 
+		metric = m, .retrain_window = 7, title = "M5"
+	)
+	print(g1)
+	g2 <- plot_compared_results(
+		dplyr::bind_rows(
+			cost_res2[[models_types[[1]]]]$plots[[m]]$data,
+			cost_res2[[models_types[[2]]]]$plots[[m]]$data
+		), 
+		metric = m, .retrain_window = 1, title = "VN1"
+	)
+	print(g2)
+}
+
+
+
+# Retraining Results ------------------------------------------------------
+
+# * Evaluation ------------------------------------------------------------
+
+eval_res1 <- res[[dataset_name1]][['evaluation']][['results']]
+eval_res2 <- res[[dataset_name2]][['evaluation']][['results']]
+eval_metrics <- c('bias', 'rmsse', 'mqloss')
+
+for (m in eval_metrics) {
+	print(
+		eval_res1[[models_types[1]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom") +
+		eval_res1[[models_types[2]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom")
+	)
+	print(
+		eval_res2[[models_types[1]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom") +
+		eval_res2[[models_types[2]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom")
+	)
+}
+
+# * Time ------------------------------------------------------------------
+
+time_res1 <- res[[dataset_name1]][['time']][['results']]
+time_res2 <- res[[dataset_name2]][['time']][['results']]
+time_metrics <- c('total_sample_time')
+
+for (m in time_metrics) {
+	print(
+		time_res1[[models_types[1]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom") +
+		time_res1[[models_types[2]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom")
+	)
+	print(
+		time_res2[[models_types[1]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom") +
+		time_res2[[models_types[2]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom")
+	)
+}
+
+# * Stability -------------------------------------------------------------
+
+stab_res1 <- res[[dataset_name1]][['stability']][['results']]
+stab_res2 <- res[[dataset_name2]][['stability']][['results']]
+stab_metrics <- c('smapc', 'mqlossc')
+
+for (m in stab_metrics) {
+	print(
+		stab_res1[[models_types[1]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom") +
+		stab_res1[[models_types[2]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom")
+	)
+	print(
+		stab_res2[[models_types[1]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom") +
+		stab_res2[[models_types[2]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom")
+	)
+}
+
+# * Cost ------------------------------------------------------------------
+
+cost_res1 <- res[[dataset_name1]][['cost']][['results']]
+cost_res2 <- res[[dataset_name2]][['cost']][['results']]
+cost_metrics <- c('cost', 'savings', 'savings_perc')
+
+for (m in cost_metrics) {
+	print(
+		cost_res1[[models_types[1]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom") +
+		cost_res1[[models_types[2]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom")
+	)
+	print(
+		cost_res2[[models_types[1]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom") +
+		cost_res2[[models_types[2]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom")
+	)
+}

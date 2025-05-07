@@ -1097,3 +1097,70 @@ analyse_results <- function(config) {
   return(invisible(NULL))
 
 }
+
+plot_compared_results <- function(
+		data, 
+		metric, 
+		.retrain_window,
+		# format = "numeric",
+		# metric_label = "", 
+		title = ""
+) {
+	
+	cat("Creating plot...\n")
+	
+	colors_lbls <- c(
+		"LR" = "#003366", "RF" = "#17BECF", "XGBoost" = "#B3E5FC", "LGBM" = "#2CA02C", "CatBoost" = "#B2DF8A",   
+		"MLP" = "#FEE08B", "LSTM" = "#FFD700", "TCN" = "#FFA500", "NBEATSx" = "#FF6961", "NHITS" = "#E31A1C",  
+		"Ens2A" = "#003366", "Ens3A" = "#17BECF", "Ens4A" = "#2CA02C", "Ens5A" = "#B2DF8A",   
+		"Ens2T" = "#FFD700", "Ens3T" = "#FFA500",	"Ens4T" = "#FF6961", "Ens5T" = "#E31A1C"
+	)
+	colors_lbls_2 <- c("ML" = "#003366", "DL" = "#2CA02C", "ENSACC" = "#FFD700", "ENSTIME" = "#FF6961")
+	
+	params <- get_table_plot_params(metric)
+	
+	if (params$format == 'dollar') {
+		scaling_fun <- function(x) { scales::dollar(x, big.mark = ",", decimal.mark = '.', accuracy = 1) }
+	} else if (params$format == 'percent') {
+		scaling_fun <- function(x) { scales::percent(x, scale = 1, accuracy = 1) }
+	} else {
+		scaling_fun <- function(x) { scales::number(x, accuracy = 0.001) }
+	}
+	
+	data_plot <- data |> 
+		dplyr::filter(retrain_window == .retrain_window) |> 
+		dplyr::select(dplyr::all_of(c('type', 'method', metric)))
+	
+	g <- data_plot |> 
+		ggplot2::ggplot(
+			ggplot2::aes(
+				x = .data[['method']], 
+				y = .data[[metric]], 
+				fill = .data[['type']]
+			)
+		)
+	
+	g <- g + ggplot2::geom_bar(stat = "identity", position = "dodge")
+	
+	g <- g +
+		ggplot2::geom_text(
+			ggplot2::aes(label = scaling_fun(.data[[metric]])), 
+			position = ggplot2::position_dodge(width = 0.9), 
+			vjust = -0.25
+		) + 
+		ggplot2::scale_y_continuous(labels = scaling_fun) +
+		ggplot2::scale_fill_manual(values = colors_lbls_2) +
+		ggplot2::labs(
+			title = title, 
+			x = '', y = params$label, fill = 'Method Type'
+		) + 
+		ggplot2::theme_minimal() +
+		ggplot2::theme(
+			plot.title = ggplot2::element_text(hjust = 0.5),
+			legend.position = "bottom",
+			axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)
+		)
+	
+	return(g)
+	
+}
