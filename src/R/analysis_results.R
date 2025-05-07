@@ -30,29 +30,7 @@ dataset_name1 <- 'm5_daily'
 dataset_name2 <- 'vn1_weekly'
 
 models_type <- 'ML_DL'
-models <- c(
-	'LR',
-	'RF',
-	'XGBoost',
-	'LGBM',
-	'CatBoost',
-	'MLP',
-	'LSTM',
-	'TCN',
-	'NBEATSx'
-)
-
 models_type <- 'ENSACC_ENSTIME'
-models <- c(
-	'Ens2A',
-	'Ens2T',
-	'Ens3A',
-	'Ens3T',
-	'Ens4A',
-	'Ens4T',
-	'Ens5A',
-	'Ens5T'
-)
 
 
 
