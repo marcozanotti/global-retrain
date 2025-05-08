@@ -11,6 +11,7 @@ source('src/R/utils.R')
 # plot andamenti 1120x525
 # plot test 730x635
 # plot test doppio 1120x525
+# plot overall 800x800 or 900x800
 
 
 # Load & prepare data -----------------------------------------------------
@@ -42,7 +43,7 @@ models_type <- 'ENSACC_ENSTIME'
 
 eval_res1 <- res[[dataset_name1]][['evaluation']][['results']][[models_type]]
 eval_res2 <- res[[dataset_name2]][['evaluation']][['results']][[models_type]]
-eval_metrics <- c('bias', 'rmsse', 'mqloss')
+eval_metrics <- c('rmsse', 'mqloss')
 
 # ** Tables ---------------------------------------------------------------
 
@@ -411,7 +412,7 @@ for (m in eval_metrics) {
 		metric = m, .retrain_window = 1, title = "VN1"
 	)
 	g3 <- g1 / g2 + 
-		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
+		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "right")
 	print(g3)
 }
 
@@ -465,7 +466,7 @@ for (m in time_metrics) {
 		metric = m, .retrain_window = 1, title = "VN1"
 	)
 	g3 <- g1 / g2 + 
-		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
+		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "right")
 	print(g3)
 }
 
@@ -518,7 +519,7 @@ for (m in stab_metrics) {
 		metric = m, .retrain_window = 1, title = "VN1"
 	)
 	g3 <- g1 / g2 + 
-		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
+		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "right")
 	print(g3)
 }
 
@@ -634,7 +635,7 @@ for (m in stab_metrics) {
 
 cost_res1 <- res[[dataset_name1]][['cost']][['results']]
 cost_res2 <- res[[dataset_name2]][['cost']][['results']]
-cost_metrics <- c('cost', 'savings_perc')
+cost_metrics <- c('cost', 'savings', 'savings_perc')
 
 for (m in cost_metrics) {
 	print(
