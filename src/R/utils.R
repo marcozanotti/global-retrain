@@ -285,7 +285,7 @@ table_retrain_results <- function(data, metric, title = "", digits = 2, format =
 plot_retrain_results <- function(
 		data, 
 		metric, 
-		format = 'numeric',
+		scaling_fun = function(x) { scales::number(x, accuracy = 0.001) },
 		metric_label = "", 
 		title = "", 
 		smooth = FALSE, 
@@ -298,21 +298,19 @@ plot_retrain_results <- function(
 		'LR', 'RF', 'XGBoost', 'LGBM', 'CatBoost', 'MLP',	'LSTM', 'TCN', 'NBEATSx', 'NHITS',
 		'Ens2A', 'Ens3A', 'Ens4A', 'Ens5A',	'Ens2T', 'Ens3T',	'Ens4T', 'Ens5T'
 	)
+	# colors_lbls <- c(
+	# 	"LR" = "#003366", "RF" = "#17BECF", "XGBoost" = "#B3E5FC", "LGBM" = "#2CA02C", "CatBoost" = "#B2DF8A",   
+	# 	"MLP" = "#FEE08B", "LSTM" = "#FFD700", "TCN" = "#FFA500", "NBEATSx" = "#FF6961", "NHITS" = "#E31A1C",  
+	# 	"Ens2A" = "#003366", "Ens3A" = "#17BECF", "Ens4A" = "#2CA02C", "Ens5A" = "#B2DF8A",   
+	# 	"Ens2T" = "#FFD700", "Ens3T" = "#FFA500",	"Ens4T" = "#FF6961", "Ens5T" = "#E31A1C"
+	# )
 	colors_lbls <- c(
 		"LR" = "#003366", "RF" = "#17BECF", "XGBoost" = "#B3E5FC", "LGBM" = "#2CA02C", "CatBoost" = "#B2DF8A",   
 		"MLP" = "#FEE08B", "LSTM" = "#FFD700", "TCN" = "#FFA500", "NBEATSx" = "#FF6961", "NHITS" = "#E31A1C",  
-		"Ens2A" = "#003366", "Ens3A" = "#17BECF", "Ens4A" = "#2CA02C", "Ens5A" = "#B2DF8A",   
-		"Ens2T" = "#FFD700", "Ens3T" = "#FFA500",	"Ens4T" = "#FF6961", "Ens5T" = "#E31A1C"
+		"Ens2A" = "#FFB6C1", "Ens3A" = "#E754B1", "Ens4A" = "#9467BD", "Ens5A" = "#6A0DAD",
+		"Ens2T" = "#F3D2B3", "Ens3T" = "#E6AB8D",	"Ens4T" = "#C97B63", "Ens5T" = "#8C564B"
 	)
 
-	if (format == 'dollar') {
-		scaling_fun <- function(x) { scales::dollar(x, big.mark = ",", decimal.mark = '.') }
-	} else if (format == 'percent') {
-		scaling_fun <- function(x) { scales::percent(x, scale = 1) }
-	} else {
-		scaling_fun <- function(x) { scales::number(x) }
-	}
-	
   data_plot <- data |> 
     dplyr::mutate(retrain_window = factor(retrain_window, ordered = TRUE))
   
@@ -786,40 +784,49 @@ create_results_list <- function(dataset_names, analysis_types, data_types, model
 
 }
 
-get_table_plot_params <- function(analysis_metric) {
+get_table_plot_params <- function(analysis_metric, analysis_method) {
 
 	# default values
 	digits <- 3
 	format <- 'numeric'
 	label <- toupper(analysis_metric)
 	add_average <- FALSE
+	scaling_fun <- function(x) { scales::number(x, accuracy = 0.001) }
 
   if (analysis_metric == 'total_sample_time') {
     label <- 'Computing Time'
+    if (analysis_method == 'absolute') {
+    	digits <- 0
+    	scaling_fun <- function(x) { scales::number(x, accuracy = 1) }
+    }
   } else if (analysis_metric == 'cost') {
   	digits <- 0
   	format <- 'dollar'
     label <- 'Cost ($)'
     add_average <- TRUE
+    scaling_fun <- function(x) { scales::dollar(x, big.mark = ",", decimal.mark = '.', accuracy = 1) }
   } else if (analysis_metric == 'savings') {
   	digits <- 0
   	format <- 'dollar'
     label <- 'Savings ($)'
     add_average <- TRUE
+    scaling_fun <- function(x) { scales::dollar(x, big.mark = ",", decimal.mark = '.', accuracy = 1) }
   } else if (analysis_metric == 'savings_perc') {
   	digits <- 0
   	format <- 'percent'
     label <- 'Savings (%)'
     add_average <- TRUE
+    scaling_fun <- function(x) { scales::percent(x, scale = 1, accuracy = 1) }
   } else {
   	x <- 'Keep default'
   }
-
+	
   res <- list(
     'digits' = digits,
     'format' = format,
     'label' = label,
-    'add_average' = add_average
+    'add_average' = add_average,
+    'scaling_fun' = scaling_fun
   )
   return(res)
 
@@ -1012,7 +1019,7 @@ analyse_results <- function(config) {
         for (am in anal_metrics) {
 
           cat(paste0("Creating evaluation table, plot and tests for ", toupper(am), "...\n"))
-          tp_par <- get_table_plot_params(am)
+          tp_par <- get_table_plot_params(am, analysis_method)
 
           anal_tab[[am]] <- table_retrain_results(
             anal_df_agg_mt_tmp, 
@@ -1025,7 +1032,7 @@ analyse_results <- function(config) {
           anal_plot[[am]] <- plot_retrain_results(
             anal_df_agg_mt_tmp, 
             metric = am, 
-            format = tp_par$format,
+            scaling_fun = tp_par$scaling_fun,
             metric_label = tp_par$label,
             title = toupper(dataset_name_tmp),
             add_average = tp_par$add_average
@@ -1102,6 +1109,7 @@ plot_compared_results <- function(
 		data, 
 		metric, 
 		.retrain_window,
+		analysis_method = 'absolute',
 		# format = "numeric",
 		# metric_label = "", 
 		title = ""
@@ -1109,23 +1117,9 @@ plot_compared_results <- function(
 	
 	cat("Creating plot...\n")
 	
-	colors_lbls <- c(
-		"LR" = "#003366", "RF" = "#17BECF", "XGBoost" = "#B3E5FC", "LGBM" = "#2CA02C", "CatBoost" = "#B2DF8A",   
-		"MLP" = "#FEE08B", "LSTM" = "#FFD700", "TCN" = "#FFA500", "NBEATSx" = "#FF6961", "NHITS" = "#E31A1C",  
-		"Ens2A" = "#003366", "Ens3A" = "#17BECF", "Ens4A" = "#2CA02C", "Ens5A" = "#B2DF8A",   
-		"Ens2T" = "#FFD700", "Ens3T" = "#FFA500",	"Ens4T" = "#FF6961", "Ens5T" = "#E31A1C"
-	)
-	colors_lbls_2 <- c("ML" = "#003366", "DL" = "#2CA02C", "ENSACC" = "#FFD700", "ENSTIME" = "#FF6961")
+	colors_lbls_2 <- c("ML" = "#17BECF", "DL" = "#FFA500", "ENSACC" = "#E754B1", "ENSTIME" = "#C97B63")
 	
-	params <- get_table_plot_params(metric)
-	
-	if (params$format == 'dollar') {
-		scaling_fun <- function(x) { scales::dollar(x, big.mark = ",", decimal.mark = '.', accuracy = 1) }
-	} else if (params$format == 'percent') {
-		scaling_fun <- function(x) { scales::percent(x, scale = 1, accuracy = 1) }
-	} else {
-		scaling_fun <- function(x) { scales::number(x, accuracy = 0.001) }
-	}
+	params <- get_table_plot_params(metric, analysis_method)
 	
 	data_plot <- data |> 
 		dplyr::filter(retrain_window == .retrain_window) |> 
@@ -1144,11 +1138,11 @@ plot_compared_results <- function(
 	
 	g <- g +
 		ggplot2::geom_text(
-			ggplot2::aes(label = scaling_fun(.data[[metric]])), 
+			ggplot2::aes(label = params$scaling_fun(.data[[metric]])), 
 			position = ggplot2::position_dodge(width = 0.9), 
 			vjust = -0.25
 		) + 
-		ggplot2::scale_y_continuous(labels = scaling_fun) +
+		ggplot2::scale_y_continuous(labels = params$scaling_fun) +
 		ggplot2::scale_fill_manual(values = colors_lbls_2) +
 		ggplot2::labs(
 			title = title, 

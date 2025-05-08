@@ -15,8 +15,8 @@ source('src/R/utils.R')
 
 # Load & prepare data -----------------------------------------------------
 
-analysis_file_name <- 'results/analysis/absolute_evaltimestabcost_overlap_20250507_104930.RData'
-analysis_file_name <- 'results/analysis/relative_evaltimestabcost_overlap_20250507_104555.RData'
+analysis_file_name <- 'results/analysis/absolute_evaltimestabcost_overlap_20250508_114025.RData'
+analysis_file_name <- 'results/analysis/relative_evaltimestabcost_overlap_20250508_111549.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results
@@ -367,31 +367,28 @@ models_types <- c('ML_DL', 'ENSACC_ENSTIME')
 
 eval_res1 <- res[[dataset_name1]][['evaluation']][['results']]
 eval_res2 <- res[[dataset_name2]][['evaluation']][['results']]
-eval_metrics <- c('bias', 'rmsse', 'mqloss')
+eval_metrics <- c('rmsse', 'mqloss')
 
 # ** Tables ---------------------------------------------------------------
 for (m in eval_metrics) {
-	cat(paste(dataset_name1, m, "\n\n"))
-	print(
-		xtable::xtable(
-			dplyr::bind_rows(
-				eval_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
-				eval_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
-			), 
-			digits = 3
-		),
-		include.rownames = FALSE
-	)
-	cat("\n\n")
-	cat(paste(dataset_name2, m, "\n\n"))
+	cat(paste(m, "\n\n"))
 	print(
 		xtable::xtable(
 			dplyr::bind_rows(
 				eval_res2[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
 				eval_res2[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
-			), 
+			) |>
+				dplyr::left_join(
+					dplyr::bind_rows(
+						eval_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
+						eval_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
+					),
+					by = 'Method'
+				) |> 
+				dplyr::rename('M5' = `7`, 'VN1' = `1`) |>
+				dplyr::relocate("M5", .after = "Method"),	
 			digits = 3
-		),
+		), 
 		include.rownames = FALSE
 	)
 	cat("\n\n")
@@ -406,7 +403,6 @@ for (m in eval_metrics) {
 		), 
 		metric = m, .retrain_window = 7, title = "M5"
 	)
-	print(g1)
 	g2 <- plot_compared_results(
 		dplyr::bind_rows(
 			eval_res2[[models_types[[1]]]]$plots[[m]]$data,
@@ -414,7 +410,9 @@ for (m in eval_metrics) {
 		), 
 		metric = m, .retrain_window = 1, title = "VN1"
 	)
-	print(g2)
+	g3 <- g1 / g2 + 
+		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
+	print(g3)
 }
 
 # ** Tests ----------------------------------------------------------------
@@ -427,27 +425,24 @@ time_metrics <- c('total_sample_time')
 
 # ** Tables ---------------------------------------------------------------
 for (m in time_metrics) {
-	cat(paste(dataset_name1, m, "\n\n"))
-	print(
-		xtable::xtable(
-			dplyr::bind_rows(
-				time_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
-				time_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
-			), 
-			digits = 3
-		),
-		include.rownames = FALSE
-	)
-	cat("\n\n")
-	cat(paste(dataset_name2, m, "\n\n"))
+	cat(paste(m, "\n\n"))
 	print(
 		xtable::xtable(
 			dplyr::bind_rows(
 				time_res2[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
 				time_res2[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
-			), 
-			digits = 3
-		),
+			) |>
+				dplyr::left_join(
+					dplyr::bind_rows(
+						time_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
+						time_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
+					),
+					by = 'Method'
+				) |> 
+				dplyr::rename('M5' = `7`, 'VN1' = `1`) |>
+				dplyr::relocate("M5", .after = "Method"),	
+			digits = 0
+		), 
 		include.rownames = FALSE
 	)
 	cat("\n\n")
@@ -462,7 +457,6 @@ for (m in time_metrics) {
 		), 
 		metric = m, .retrain_window = 7, title = "M5"
 	)
-	print(g1)
 	g2 <- plot_compared_results(
 		dplyr::bind_rows(
 			time_res2[[models_types[[1]]]]$plots[[m]]$data,
@@ -470,7 +464,9 @@ for (m in time_metrics) {
 		), 
 		metric = m, .retrain_window = 1, title = "VN1"
 	)
-	print(g2)
+	g3 <- g1 / g2 + 
+		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
+	print(g3)
 }
 
 
@@ -482,27 +478,24 @@ stab_metrics <- c('smapc', 'mqlossc')
 
 # ** Tables ---------------------------------------------------------------
 for (m in stab_metrics) {
-	cat(paste(dataset_name1, m, "\n\n"))
-	print(
-		xtable::xtable(
-			dplyr::bind_rows(
-				stab_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
-				stab_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
-			), 
-			digits = 3
-		),
-		include.rownames = FALSE
-	)
-	cat("\n\n")
-	cat(paste(dataset_name2, m, "\n\n"))
+	cat(paste(m, "\n\n"))
 	print(
 		xtable::xtable(
 			dplyr::bind_rows(
 				stab_res2[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
 				stab_res2[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
-			), 
+			) |>
+				dplyr::left_join(
+					dplyr::bind_rows(
+						stab_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
+						stab_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
+					),
+					by = 'Method'
+				) |> 
+				dplyr::rename('M5' = `7`, 'VN1' = `1`) |>
+				dplyr::relocate("M5", .after = "Method"),	
 			digits = 3
-		),
+		), 
 		include.rownames = FALSE
 	)
 	cat("\n\n")
@@ -517,7 +510,6 @@ for (m in stab_metrics) {
 		), 
 		metric = m, .retrain_window = 7, title = "M5"
 	)
-	print(g1)
 	g2 <- plot_compared_results(
 		dplyr::bind_rows(
 			stab_res2[[models_types[[1]]]]$plots[[m]]$data,
@@ -525,7 +517,9 @@ for (m in stab_metrics) {
 		), 
 		metric = m, .retrain_window = 1, title = "VN1"
 	)
-	print(g2)
+	g3 <- g1 / g2 + 
+		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
+	print(g3)
 }
 
 
@@ -537,27 +531,24 @@ cost_metrics <- c('cost')
 
 # ** Tables ---------------------------------------------------------------
 for (m in cost_metrics) {
-	cat(paste(dataset_name1, m, "\n\n"))
-	print(
-		xtable::xtable(
-			dplyr::bind_rows(
-				cost_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
-				cost_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
-			), 
-			digits = 3
-		),
-		include.rownames = FALSE
-	)
-	cat("\n\n")
-	cat(paste(dataset_name2, m, "\n\n"))
+	cat(paste(m, "\n\n"))
 	print(
 		xtable::xtable(
 			dplyr::bind_rows(
 				cost_res2[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
 				cost_res2[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
-			), 
-			digits = 3
-		),
+			) |>
+				dplyr::left_join(
+					dplyr::bind_rows(
+						cost_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
+						cost_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
+					),
+					by = 'Method'
+				) |> 
+				dplyr::rename('M5' = `7`, 'VN1' = `1`) |>
+				dplyr::relocate("M5", .after = "Method"),	
+			digits = 0
+		), 
 		include.rownames = FALSE
 	)
 	cat("\n\n")
@@ -572,7 +563,6 @@ for (m in cost_metrics) {
 		), 
 		metric = m, .retrain_window = 7, title = "M5"
 	)
-	print(g1)
 	g2 <- plot_compared_results(
 		dplyr::bind_rows(
 			cost_res2[[models_types[[1]]]]$plots[[m]]$data,
@@ -580,7 +570,9 @@ for (m in cost_metrics) {
 		), 
 		metric = m, .retrain_window = 1, title = "VN1"
 	)
-	print(g2)
+	g3 <- g1 / g2 + 
+		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
+	print(g3)
 }
 
 
@@ -591,7 +583,7 @@ for (m in cost_metrics) {
 
 eval_res1 <- res[[dataset_name1]][['evaluation']][['results']]
 eval_res2 <- res[[dataset_name2]][['evaluation']][['results']]
-eval_metrics <- c('bias', 'rmsse', 'mqloss')
+eval_metrics <- c('rmsse', 'mqloss')
 
 for (m in eval_metrics) {
 	print(
@@ -642,7 +634,7 @@ for (m in stab_metrics) {
 
 cost_res1 <- res[[dataset_name1]][['cost']][['results']]
 cost_res2 <- res[[dataset_name2]][['cost']][['results']]
-cost_metrics <- c('cost', 'savings', 'savings_perc')
+cost_metrics <- c('cost', 'savings_perc')
 
 for (m in cost_metrics) {
 	print(
