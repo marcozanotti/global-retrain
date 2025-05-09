@@ -40,23 +40,21 @@ env.bak/
 venv.bak/
 
 # Data
-data/
 data.loc/
 data.net/
-data
 data.loc
 data.net
-
-results/m5
-results/plots
-results/vn1
+data/
+data
 
 results.loc/
 results.net/
 results.old/
 results.loc
 results.net
-logs/
+
+results/m5
+results/vn1
 
 
 # ML Results
