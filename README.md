@@ -6,8 +6,10 @@ The repository contains the code used for the following research projects:
 
 2. On the stability of global forecasting models.
 
-3. The cost of ensembling: is it always worthwhile to combine? 
+3. The cost of ensembling: is it always worth to combine? 
 
+
+### Repositoty Structure
 
 The `src` folder contains:
 
@@ -18,11 +20,5 @@ The `src` folder contains:
 The `config` folder contains the configuration files with the specification of the parameters' 
 values used in the different analysis.  
 
-The `data` folder contains the M5 and the VN1 datasets.   
-
-The `results` folder contains the aggregated results in .parquet, the analysis files in .RData
-and the different plots used for the articles.  
-
-
-
-
+The `datasets` and the `aggregated results` of the projects can be accessed through 
+[google drive](https://drive.google.com/drive/folders/1Ff2hSvYhSMO2PZL_TX_OyKzkYjkpHID3?usp=sharing).   
