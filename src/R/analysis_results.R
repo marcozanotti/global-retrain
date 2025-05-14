@@ -576,6 +576,89 @@ for (m in cost_metrics) {
 	print(g3)
 }
 
+# ** Tests ----------------------------------------------------------------
+
+
+# * Evaluation - Stability ------------------------------------------------
+
+metrics <- list(c('rmsse', 'smapc'), c('mqloss', 'mqlossc'))
+for (m in metrics) {
+	g1 <- dplyr::bind_rows(
+		eval_res1[[models_types[[1]]]]$plots[[m[1]]]$data,
+		eval_res1[[models_types[[2]]]]$plots[[m[1]]]$data |> dplyr::filter(!type %in% c('ENSTIME')),
+	) |> 
+		dplyr::left_join(
+			dplyr::bind_rows(
+				stab_res1[[models_types[[1]]]]$plots[[m[2]]]$data,
+				stab_res1[[models_types[[2]]]]$plots[[m[2]]]$data,
+			),
+			by = c('type', 'method', 'retrain_window')
+		) |> 
+		plot_scatter_results(
+			metrics = m, .retrain_window = 7, title = "M5",
+		)
+	g2 <- dplyr::bind_rows(
+		eval_res2[[models_types[[1]]]]$plots[[m[1]]]$data,
+		eval_res2[[models_types[[2]]]]$plots[[m[1]]]$data |> dplyr::filter(!type %in% c('ENSTIME')),
+	) |> 
+		dplyr::left_join(
+			dplyr::bind_rows(
+				stab_res2[[models_types[[1]]]]$plots[[m[2]]]$data,
+				stab_res2[[models_types[[2]]]]$plots[[m[2]]]$data,
+			),
+			by = c('type', 'method', 'retrain_window')
+		) |> 
+		plot_scatter_results(
+			metrics = m, .retrain_window = 1, title = "VN1",
+		)
+	g3 <- g1 + g2 + 
+		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
+	print(g3)
+}
+
+
+metrics <- list(c('rmsse', 'mqloss'))
+for (m in metrics) {
+	g1 <- dplyr::bind_rows(
+		eval_res1[[models_types[[1]]]]$plots[[m[1]]]$data,
+		# eval_res1[[models_types[[2]]]]$plots[[m[1]]]$data,
+	) |> 
+		plot_scatter_results(
+			metrics = m, .retrain_window = 7, title = "M5",
+		)
+	g2 <- dplyr::bind_rows(
+		eval_res2[[models_types[[1]]]]$plots[[m[1]]]$data,
+		# eval_res2[[models_types[[2]]]]$plots[[m[1]]]$data,
+	) |> 
+		plot_scatter_results(
+			metrics = m, .retrain_window = 1, title = "VN1",
+		)
+	g3 <- g1 + g2 + 
+		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
+	print(g3)
+}
+
+metrics <- list(c('smapc', 'mqlossc'))
+for (m in metrics) {
+	g1 <- dplyr::bind_rows(
+		stab_res1[[models_types[[1]]]]$plots[[m[1]]]$data,
+		stab_res1[[models_types[[2]]]]$plots[[m[1]]]$data,
+	) |> 
+		plot_scatter_results(
+			metrics = m, .retrain_window = 7, title = "M5",
+		)
+	g2 <- dplyr::bind_rows(
+		stab_res2[[models_types[[1]]]]$plots[[m[1]]]$data,
+		stab_res2[[models_types[[2]]]]$plots[[m[1]]]$data,
+	) |> 
+		plot_scatter_results(
+			metrics = m, .retrain_window = 1, title = "VN1",
+		)
+	g3 <- g1 + g2 + 
+		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
+	print(g3)
+}
+
 
 
 # Retraining Results ------------------------------------------------------

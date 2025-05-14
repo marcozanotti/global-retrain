@@ -1158,3 +1158,56 @@ plot_compared_results <- function(
 	return(g)
 	
 }
+
+plot_scatter_results <- function(
+		data, 
+		metrics, 
+		.retrain_window,
+		analysis_method = 'absolute',
+		title = ""
+) {
+	
+	cat("Creating plot...\n")
+	
+	colors_lbls_2 <- c("ML" = "#17BECF", "DL" = "#FFA500", "ENSACC" = "#E754B1", "ENSTIME" = "#C97B63")
+	
+	params <- purrr::map(metrics, ~ get_table_plot_params(.x, analysis_method))
+	names(params) <- c('x', 'y')
+	
+	data_plot <- data |> 
+		dplyr::filter(retrain_window == .retrain_window) |> 
+		dplyr::select(dplyr::all_of(c('type', 'method', metrics)))
+	
+	g <- data_plot |> 
+		ggplot2::ggplot(
+			ggplot2::aes(
+				x = .data[[metrics[1]]], 
+				y = .data[[metrics[2]]], 
+				col = .data[['type']]
+			)
+		)
+	
+	g <- g + ggplot2::geom_point()
+	
+	g <- g +
+		ggrepel::geom_text_repel(
+			ggplot2::aes(label = .data[['method']]), 
+			col = 'black', vjust = -0.25
+		) + 
+		ggplot2::scale_x_continuous(labels = params$x$scaling_fun) +
+		ggplot2::scale_y_continuous(labels = params$y$scaling_fun) +
+		ggplot2::scale_color_manual(values = colors_lbls_2) +
+		ggplot2::labs(
+			title = title, 
+			x = params$x$label, y = params$y$label, col = 'Method Type'
+		) + 
+		ggplot2::theme_minimal() +
+		ggplot2::theme(
+			plot.title = ggplot2::element_text(hjust = 0.5),
+			legend.position = "bottom",
+			axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)
+		)
+	
+	return(g)
+	
+}
