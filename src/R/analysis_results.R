@@ -296,6 +296,15 @@ for (m in cost_metrics) {
 	cat("\n\n")
 }
 
+res[[dataset_name2]][['cost']]$data |> 
+	filter(type %in% c('ENSACC', 'ENSTIME')) |> 
+	group_by(retrain_window) |> 
+	summarize(cost = mean(cost)) |> 
+	mutate(method = 'Average') |> 
+	pivot_wider(names_from = retrain_window, values_from = cost) |>  
+	xtable::xtable(digits = 3) |> 
+	print(include.rownames = FALSE)
+
 # ** Plots -----------------------------------------------------------------
 
 # for (m in cost_metrics) {
@@ -616,7 +625,6 @@ for (m in metrics) {
 	print(g3)
 }
 
-
 metrics <- list(c('rmsse', 'mqloss'))
 for (m in metrics) {
 	g1 <- dplyr::bind_rows(
@@ -659,6 +667,81 @@ for (m in metrics) {
 	print(g3)
 }
 
+
+# * Evaluation - Computing Time -------------------------------------------
+
+metrics <- list(c('rmsse', 'total_sample_time'), c('mqloss', 'total_sample_time'))
+for (m in metrics) {
+	g1 <- dplyr::bind_rows(
+		eval_res1[[models_types[[1]]]]$plots[[m[1]]]$data,
+		eval_res1[[models_types[[2]]]]$plots[[m[1]]]$data,
+	) |> 
+		dplyr::left_join(
+			dplyr::bind_rows(
+				time_res1[[models_types[[1]]]]$plots[[m[2]]]$data,
+				time_res1[[models_types[[2]]]]$plots[[m[2]]]$data,
+			),
+			by = c('type', 'method', 'retrain_window')
+		) |> 
+		plot_scatter_results(
+			metrics = m, .retrain_window = 7, title = "M5",
+		)
+	g2 <- dplyr::bind_rows(
+		eval_res2[[models_types[[1]]]]$plots[[m[1]]]$data,
+		eval_res2[[models_types[[2]]]]$plots[[m[1]]]$data,
+	) |> 
+		dplyr::left_join(
+			dplyr::bind_rows(
+				time_res2[[models_types[[1]]]]$plots[[m[2]]]$data,
+				time_res2[[models_types[[2]]]]$plots[[m[2]]]$data,
+			),
+			by = c('type', 'method', 'retrain_window')
+		) |> 
+		plot_scatter_results(
+			metrics = m, .retrain_window = 1, title = "VN1",
+		)
+	g3 <- g1 + g2 + 
+		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
+	print(g3)
+}
+
+
+# * Evaluation - Cost -----------------------------------------------------
+
+metrics <- list(c('rmsse', 'cost'), c('mqloss', 'cost'))
+for (m in metrics) {
+	g1 <- dplyr::bind_rows(
+		eval_res1[[models_types[[1]]]]$plots[[m[1]]]$data,
+		eval_res1[[models_types[[2]]]]$plots[[m[1]]]$data,
+	) |> 
+		dplyr::left_join(
+			dplyr::bind_rows(
+				cost_res1[[models_types[[1]]]]$plots[[m[2]]]$data,
+				cost_res1[[models_types[[2]]]]$plots[[m[2]]]$data,
+			),
+			by = c('type', 'method', 'retrain_window')
+		) |> 
+		plot_scatter_results(
+			metrics = m, .retrain_window = 7, title = "M5",
+		)
+	g2 <- dplyr::bind_rows(
+		eval_res2[[models_types[[1]]]]$plots[[m[1]]]$data,
+		eval_res2[[models_types[[2]]]]$plots[[m[1]]]$data,
+	) |> 
+		dplyr::left_join(
+			dplyr::bind_rows(
+				cost_res2[[models_types[[1]]]]$plots[[m[2]]]$data,
+				cost_res2[[models_types[[2]]]]$plots[[m[2]]]$data,
+			),
+			by = c('type', 'method', 'retrain_window')
+		) |> 
+		plot_scatter_results(
+			metrics = m, .retrain_window = 1, title = "VN1",
+		)
+	g3 <- g1 + g2 + 
+		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
+	print(g3)
+}
 
 
 # Retraining Results ------------------------------------------------------
