@@ -33,9 +33,9 @@ fitting: {
 }
 
 model_names: [
-    # 'LinearRegression', 
-    # 'RandomForestRegressor', 
-    # 'XGBRegressor', 
+    'LinearRegression', 
+    'RandomForestRegressor', 
+    'XGBRegressor', 
     'LGBMRegressor', 
     'CatBoostRegressor'
 ]
@@ -64,7 +64,7 @@ model_params: {
         'device': 'cuda'
     },
     'LGBMRegressor': {
-        'objective': 'regression', # tweedie
+        'objective': 'tweedie', # regression
         'boosting_type': 'gbdt',
         'n_estimators': 500,
         'learning_rate': 0.03,
