@@ -1,10 +1,3 @@
-
-GLOBAL ENSEMBLING
-TODO:
-- studiare l'effetto di ensembling su accuracy / cost / stability al variare della
-  retraining frequency
-
-
 NOTE:
 - valutare l'aggiunta di datasets (Rossmann, Favorita, M4, Wikipedia)
 - valutare l'aggiunta di un parametro skip per saltare di k le iterazioni 

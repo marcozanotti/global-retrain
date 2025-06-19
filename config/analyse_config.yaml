@@ -80,7 +80,8 @@ evaluation_params: {
         # 'mase', 
         # 'msse', 
         'rmsse', 
-        'mqloss', 
+        # 'mqloss', 
+        'scaled_mqloss',
         # 'scaled_crps',
         # 'coverage_level50',
         # 'coverage_level60',
@@ -90,7 +91,7 @@ evaluation_params: {
         # 'coverage_level95',
         # 'coverage_level99'
     ],
-    'outlier_cleaning_metrics': ['rmsse', 'mqloss'],
+    'outlier_cleaning_metrics': ['rmsse', 'scaled_mqloss'],
     'outlier_cleaning_quantiles': [0.000, 0.995]
 }
 

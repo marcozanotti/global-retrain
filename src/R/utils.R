@@ -209,6 +209,15 @@ compute_relative_metrics <- function(data, type) {
       dplyr::left_join(reference_data, by = c("method" = "method_ref")) |>
       dplyr::mutate(
         bias = abs(bias) / abs(bias_ref),
+        mae = mae / mae_ref,
+        mase = mase / mase_ref,
+        mse = mse / mse_ref,
+        msse = msse / msse_ref,
+        rmse = rmse / rmse_ref,
+        rmsse = rmsse / rmsse_ref,
+        mqloss = mqloss / mqloss_ref,
+        scaled_mqloss = scaled_mqloss / scaled_mqloss_ref,
+        scaled_crps = scaled_crps / scaled_crps_ref
         # coverage_level50 = coverage_level50 / coverage_level50_ref,
         # coverage_level60 = coverage_level60 / coverage_level60_ref,
         # coverage_level70 = coverage_level70 / coverage_level70_ref,
@@ -216,14 +225,6 @@ compute_relative_metrics <- function(data, type) {
         # coverage_level90 = coverage_level90 / coverage_level90_ref,
         # coverage_level95 = coverage_level95 / coverage_level95_ref,
         # coverage_level99 = coverage_level99 / coverage_level99_ref,
-        mae = mae / mae_ref,
-        mase = mase / mase_ref,
-        mqloss = mqloss / mqloss_ref,
-        mse = mse / mse_ref,
-        msse = msse / msse_ref,
-        rmse = rmse / rmse_ref,
-        rmsse = rmsse / rmsse_ref,
-        scaled_crps = scaled_crps / scaled_crps_ref
       ) |> 
       dplyr::select(-dplyr::ends_with("_ref"))
 
@@ -373,7 +374,7 @@ plot_retrain_results <- function(
   	ggplot2::scale_color_manual(values = colors_lbls) +
   	ggplot2::labs(
   		title = title, 
-  		x = 'Retrain Scenario', y = metric_label,
+  		x = 'Retrain Scenario (r)', y = metric_label,
   		color = 'Method', linetype = 'Method Type', group = 'Method'
   	) + 
   	ggplot2::theme_minimal() +
@@ -515,7 +516,7 @@ plot_test_results <- function(
       ggplot2::geom_point(data = data_min, size = 2, col = 'red') +
       ggplot2::geom_hline(yintercept = data_min$lower, col = 'gray', linetype = 2) +
       ggplot2::geom_hline(yintercept = data_min$upper, col = 'gray', linetype = 2) +
-      ggplot2::labs(title = title, x = 'Retrain Scenario', y = metric_label) + 
+      ggplot2::labs(title = title, x = 'Retrain Scenario (r)', y = 'Rank') + 
       ggplot2::theme_minimal() +
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
 
@@ -539,7 +540,7 @@ plot_test_results <- function(
       ggplot2::geom_point(data = data_min, size = 2, col = 'red') +
       ggplot2::geom_hline(yintercept = data_min$lower, col = 'gray', linetype = 2) +
       ggplot2::geom_hline(yintercept = data_min$upper, col = 'gray', linetype = 2) +
-      ggplot2::labs(title = title, x = '', y = metric_label) + 
+      ggplot2::labs(title = title, x = '', y = 'Rank') + 
       ggplot2::theme_minimal() +
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
 
@@ -588,7 +589,7 @@ plot_test_results_facet <- function(
       ggplot2::geom_point(data = data_min, size = 1, col = 'red') +
       ggplot2::geom_hline(data = data_min, mapping = ggplot2::aes(yintercept = lower), col = 'gray', linetype = 2) +
       ggplot2::geom_hline(data = data_min, mapping = ggplot2::aes(yintercept = upper), col = 'gray', linetype = 2) +
-      ggplot2::labs(title = title, x = 'Retrain Scenario', y = metric_label) + 
+      ggplot2::labs(title = title, x = 'Retrain Scenario (r)', y = 'Rank') + 
       ggplot2::facet_wrap(~ method, ncol = 2, scales = 'free_y') +
       ggplot2::theme_bw() +
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
@@ -615,7 +616,7 @@ plot_test_results_facet <- function(
       ggplot2::geom_point(data = data_min, size = 1, col = 'red') +
       ggplot2::geom_hline(data = data_min, mapping = ggplot2::aes(yintercept = lower), col = 'gray', linetype = 2) +
       ggplot2::geom_hline(data = data_min, mapping = ggplot2::aes(yintercept = upper), col = 'gray', linetype = 2) +
-      ggplot2::labs(title = title, x = 'Method', y = metric_label) + 
+      ggplot2::labs(title = title, x = 'Method', y = 'Rank') + 
       ggplot2::facet_wrap(~ retrain_window, ncol = 2, scales = 'free_y') +
       ggplot2::theme_bw() +
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
@@ -646,7 +647,7 @@ plot_distribution_results <- function(data, metric, metric_label = "", title = "
 		# ggplot2::scale_x_continuous(breaks = retrain_scenario) +
 		ggplot2::labs(
 			title = title, 
-			x = 'Retrain Scenario', y = metric_label,
+			x = 'Retrain Scenario (r)', y = metric_label,
 			color = 'Retrain Scenarios'
 		) + 
 		# ggplot2::theme_minimal() +
@@ -793,7 +794,9 @@ get_table_plot_params <- function(analysis_metric, analysis_method) {
 	add_average <- FALSE
 	scaling_fun <- function(x) { scales::number(x, accuracy = 0.001) }
 
-  if (analysis_metric == 'total_sample_time') {
+  if (analysis_metric == 'scaled_mqloss') {
+    label <- 'SMQL'
+  } else if (analysis_metric == 'total_sample_time') {
     label <- 'Computing Time'
     if (analysis_method == 'absolute') {
     	digits <- 0
