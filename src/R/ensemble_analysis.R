@@ -1,7 +1,7 @@
 # Ensemble analysis
 
 source('src/R/utils.R')
-analysis_file_name <- 'results/analysis/absolute_overlap_results_20250324_112601.RData'
+analysis_file_name <- 'results/analysis/absolute_evaltimestabcost_overlap_20250508_114025.RData'
 res <- load(analysis_file_name)
 res <- analysis_results
 rm(analysis_results)
@@ -19,7 +19,8 @@ top_n = 5
 res_top_acc <- vector('list', length(dataset_names))
 for (i in seq_along(dataset_names)) {
 	
-	res_top_acc[[i]] <- res[[dataset_names[i]]][['eval_df_agg']] |> 
+	res_top_acc[[i]] <- res[[dataset_names[i]]][['evaluation']]$data |>
+		dplyr::filter(type %in% c('ML', 'DL')) |> 
 		dplyr::slice_min(retrain_window) |> 
 		dplyr::arrange(rmsse) |> 
 		dplyr::slice_head(n = top_n) |> 
@@ -40,7 +41,8 @@ res_top_acc <- res_top_acc |>
 res_top_time <- vector('list', length(dataset_names))
 for (i in seq_along(dataset_names)) {
 	
-	res_top_time[[i]] <- res[[dataset_names[i]]][['time_df_agg']] |> 
+	res_top_time[[i]] <- res[[dataset_names[i]]][['time']]$data |> 
+		dplyr::filter(type %in% c('ML', 'DL')) |> 
 		dplyr::slice_min(retrain_window) |> 
 		dplyr::arrange(total_sample_time) |> 
 		dplyr::slice_head(n = top_n) |> 
