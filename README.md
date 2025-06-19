@@ -2,11 +2,11 @@
 
 The repository contains the code used for the following research projects:
 
-1. Do global forecasting models require frequent retraining?
+1. [Do global forecasting models require frequent retraining?](https://arxiv.org/abs/2505.00356)
 
-2. On the stability of global forecasting models.
+2. [On the stability of global forecasting models.](https://arxiv.org/abs/2506.05776)
 
-3. The cost of ensembling: is it always worth to combine? 
+3. [The cost of ensembling: is it always worth to combine?](https://arxiv.org/abs/2506.04677) 
 
 
 ### Repositoty Structure
