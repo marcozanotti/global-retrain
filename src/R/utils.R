@@ -662,13 +662,13 @@ clean_outliers <- function(data, .metric, q = c(0.003, 0.997)) {
 	cat("Removing outliers...\n")
 	
 	q_funs <- list(
-		'qlow' = function(x) { round(quantile(x, q[1]), 3) },
-		'qhigh' = function(x) { round(quantile(x, q[2]), 3) }
+		'_qlow' = function(x) { round(quantile(x, q[1], na.rm = TRUE), 3) },
+		'_qhigh' = function(x) { round(quantile(x, q[2], na.rm = TRUE), 3) }
 	)
 	qs_df <- data |> 
 		dplyr::summarise(dplyr::across(.metric, .fns = q_funs)) |> 
 		tidyr::pivot_longer(cols = dplyr::everything()) |>
-		tidyr::separate(name, into = c('metric', 'q'), sep = "_") |>
+		tidyr::separate(name, into = c('metric', 'q'), sep = "__") |>
 		tidyr::pivot_wider(names_from = q, values_from = value)
 	
 	data_cln <- data
@@ -794,7 +794,9 @@ get_table_plot_params <- function(analysis_metric, analysis_method) {
 	add_average <- FALSE
 	scaling_fun <- function(x) { scales::number(x, accuracy = 0.001) }
 
-  if (analysis_metric == 'scaled_mqloss') {
+  if (analysis_metric == 'mqloss') {
+    label <- 'MQL'
+  } else if (analysis_metric == 'scaled_mqloss') {
     label <- 'SMQL'
   } else if (analysis_metric == 'total_sample_time') {
     label <- 'Computing Time'
@@ -1101,7 +1103,7 @@ analyse_results <- function(config) {
       stringr::str_replace_all(" ", "_"),
     ".RData"
   )
-  save(analysis_results, file = paste0('results/analysis/', file_name))
+  save(analysis_results, file = paste0('docs/analysis/', file_name))
   cat("Done!\n")
 
   return(invisible(NULL))
