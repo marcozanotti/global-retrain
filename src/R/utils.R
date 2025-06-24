@@ -1103,7 +1103,7 @@ analyse_results <- function(config) {
       stringr::str_replace_all(" ", "_"),
     ".RData"
   )
-  save(analysis_results, file = paste0('docs/analysis/', file_name))
+  save(analysis_results, file = paste0('docs/', file_name))
   cat("Done!\n")
 
   return(invisible(NULL))

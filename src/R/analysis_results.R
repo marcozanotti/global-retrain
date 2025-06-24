@@ -16,8 +16,8 @@ source('src/R/utils.R')
 
 # Load & prepare data -----------------------------------------------------
 
-analysis_file_name <- 'results/analysis/absolute_evaltimestabcost_overlap_20250508_114025.RData'
-analysis_file_name <- 'results/analysis/relative_evaltimestabcost_overlap_20250508_111549.RData'
+analysis_file_name <- 'docs/global_retrain/absolute_evaltimecost_overlap_20250624_161717.RData'
+analysis_file_name <- 'docs/global_retrain/relative_evaltimecost_overlap_20250624_161819.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results
@@ -43,7 +43,7 @@ models_type <- 'ENSACC_ENSTIME'
 
 eval_res1 <- res[[dataset_name1]][['evaluation']][['results']][[models_type]]
 eval_res2 <- res[[dataset_name2]][['evaluation']][['results']][[models_type]]
-eval_metrics <- c('rmsse', 'mqloss')
+eval_metrics <- c('rmsse', 'scaled_mqloss')
 
 # ** Tables ---------------------------------------------------------------
 

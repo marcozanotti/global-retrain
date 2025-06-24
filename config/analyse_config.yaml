@@ -3,7 +3,7 @@ analysis: {
         'evaluation', 
         'time', 
         # 'stability',
-        # 'cost'
+        'cost'
     ],
     'method': 'relative', # absolute / relative
     'sample_type': 'overlap' # overlap / nooverlap
