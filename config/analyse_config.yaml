@@ -2,10 +2,10 @@ analysis: {
     'types': [
         'evaluation', 
         'time', 
-        'stability',
-        'cost'
+        # 'stability',
+        # 'cost'
     ],
-    'method': 'absolute', # absolute / relative
+    'method': 'relative', # absolute / relative
     'sample_type': 'overlap' # overlap / nooverlap
 }
 
@@ -28,7 +28,10 @@ dataset: {
 }
 
 models: {
-    'types': [['ML', 'DL'], ['ENSACC', 'ENSTIME']], # ML and DL together, ENS alone
+    'types': [
+        ['ML', 'DL'], 
+        # ['ENSACC', 'ENSTIME']
+    ], # ML and DL together, ENS alone
     'model_names': [
         'LinearRegression', 
         'RandomForestRegressor', 
@@ -40,14 +43,14 @@ models: {
         'TCN',
         'NBEATSx',
         'NHITS',
-        'EnsembleMean2A',
-        'EnsembleMean3A',
-        'EnsembleMean4A',
-        'EnsembleMean5A',
-        'EnsembleMean2T',
-        'EnsembleMean3T',
-        'EnsembleMean4T',
-        'EnsembleMean5T'
+        # 'EnsembleMean2A',
+        # 'EnsembleMean3A',
+        # 'EnsembleMean4A',
+        # 'EnsembleMean5A',
+        # 'EnsembleMean2T',
+        # 'EnsembleMean3T',
+        # 'EnsembleMean4T',
+        # 'EnsembleMean5T'
     ],
     'model_names_abbr': [
         'LR', 
@@ -60,20 +63,20 @@ models: {
         'TCN',
         'NBEATSx',
         'NHITS',
-        'Ens2A',
-        'Ens3A',
-        'Ens4A',
-        'Ens5A',
-        'Ens2T',
-        'Ens3T',
-        'Ens4T',
-        'Ens5T'
+        # 'Ens2A',
+        # 'Ens3A',
+        # 'Ens4A',
+        # 'Ens5A',
+        # 'Ens2T',
+        # 'Ens3T',
+        # 'Ens4T',
+        # 'Ens5T'
     ]
 }
 
 evaluation_params: {
     'metrics': [
-        'bias', 
+        # 'bias', 
         # 'mae', 
         # 'mse', 
         # 'rmse',
