@@ -11,17 +11,11 @@ analysis: {
 
 dataset: {
     'dataset_names': [
-        # 'm5', 
-        # 'm5', 
         'm5',
-        # 'vn1', 
         'vn1'
     ],
     'frequencies': [
-        # 'monthly', 
-        # 'weekly',
         'daily', 
-        # 'monthly', 
         'weekly'
     ],
     'ext': '.parquet'
@@ -30,7 +24,7 @@ dataset: {
 models: {
     'types': [
         ['ML', 'DL'], 
-        # ['ENSACC', 'ENSTIME']
+        ['ENSACC', 'ENSTIME']
     ], # ML and DL together, ENS alone
     'model_names': [
         'LinearRegression', 

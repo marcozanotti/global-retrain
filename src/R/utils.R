@@ -767,14 +767,14 @@ create_results_list <- function(dataset_names, analysis_types, data_types, model
   }
   for (i in seq_along(res_list)) {
     for (j in seq_along(res_list[[i]])) {
-      res_list[[i]][[j]][[2]] <- vector("list", length(model_types)) |> 
+      res_list[[i]][[j]][['results']] <- vector("list", length(model_types)) |> 
         purrr::set_names(model_types)
     }
   }
   for (i in seq_along(res_list)) {
     for (j in seq_along(res_list[[i]])) {
-      for (k in seq_along(res_list[[i]][[j]])) {
-        res_list[[i]][[j]][[2]][[k]] <- vector("list", length(final_analyses)) |> 
+      for (k in seq_along(res_list[[i]][[j]][['results']])) {
+        res_list[[i]][[j]][['results']][[k]] <- vector("list", length(final_analyses)) |> 
           purrr::set_names(final_analyses)
       }
     }
@@ -837,9 +837,10 @@ get_table_plot_params <- function(analysis_metric, analysis_method) {
 
 }
 
-analyse_results <- function(config) {
+analyze_results <- function(config) {
 
   # analysis config
+  analysis_name <- config$analysis$name
   analysis_types <- config$analysis$types
   analysis_method <- config$analysis$method
   analysis_sample_type <- config$analysis$sample_type
@@ -1103,7 +1104,7 @@ analyse_results <- function(config) {
       stringr::str_replace_all(" ", "_"),
     ".RData"
   )
-  save(analysis_results, file = paste0('docs/', file_name))
+  save(analysis_results, file = paste0('docs/', analysis_name, '/', file_name))
   cat("Done!\n")
 
   return(invisible(NULL))
@@ -1217,6 +1218,226 @@ plot_scatter_results <- function(
 			legend.position = "bottom",
 			axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)
 		)
+	
+	return(g)
+	
+}
+
+analyze_optimal_frequency <- function(config, adjust = 1) {
+	
+	# analysis config
+	analysis_name <- config$analysis$name
+	analysis_types <- config$analysis$types 
+	analysis_method <- config$analysis$method
+	analysis_sample_type <- config$analysis$sample_type
+	# dataset config
+	dataset_names <- config$dataset$dataset_names
+	frequencies <- config$dataset$frequencies
+	dataset_names_full <- paste(dataset_names, frequencies, sep = "_")
+	retrain_scenarios <- purrr::map(frequencies, get_retrain_scenarios) |> 
+		purrr::set_names(dataset_names_full)
+	ext <- config$dataset$ext
+	# model config
+	model_types <- config$models$types
+	model_names <- config$models$model_names
+	model_names_abbr <- config$models$model_names_abbr
+	model_type_levels <- unlist(model_types) # c('SF', 'ML', 'DL', 'ENSACC', 'ENSTIME')
+	# evaluation, and stability config
+	eval_metrics <- config$evaluation_params$metrics
+	eval_outlier_cleaning_metrics <- config$evaluation_params$outlier_cleaning_metrics
+	eval_outlier_cleaning_quantiles <- config$evaluation_params$outlier_cleaning_quantiles
+	stab_metrics <- config$stability_params$metrics
+	stab_outlier_cleaning_metrics <- config$stability_params$outlier_cleaning_metrics
+	stab_outlier_cleaning_quantiles <- config$stability_params$outlier_cleaning_quantiles
+	
+	# final analysis names
+	data_types <- c('results')
+	final_analyses <- c('plots')  
+	analysis_results <- create_results_list(
+		dataset_names_full, analysis_types, data_types, model_types, final_analyses
+	)
+	
+	for (dn in dataset_names_full) {
+		
+		cat(paste0("*************** Analysing ", dn, " ***************\n"))
+		dataset_name_tmp <- unlist(strsplit(dn, "_"))[1]
+		freq_tmp <- unlist(strsplit(dn, "_"))[2]
+		retrain_scn_tmp <- retrain_scenarios[[dn]]
+		
+		for (at in analysis_types) {
+			
+			cat(paste0("--- [ Analysis: ", at, " ] ---\n"))
+			
+			if (at == "evaluation") {
+				
+				cat("Loading and preparing the evaluation data...\n")
+				anal_df_tmp = load_data(
+					path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
+					name_list = c(dataset_name_tmp, freq_tmp, 'eval', analysis_sample_type),
+					ext = ext
+				) |> 
+					tibble::as_tibble() |> 
+					dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
+					dplyr::filter(method %in% model_names) |> 
+					recode_data(model_type_levels, model_names_abbr) |> 
+					clean_outliers(.metric = eval_outlier_cleaning_metrics, q = eval_outlier_cleaning_quantiles)
+				# set the metrics to be used
+				anal_metrics <- eval_metrics
+				
+			} else if (at == "stability") {
+				
+				cat("Loading and preparing the stability data...\n")
+				anal_df_tmp = load_data(
+					path_list = c('results', dataset_name_tmp, freq_tmp, 'stability'),
+					name_list = c(dataset_name_tmp, freq_tmp, 'stab'),
+					ext = ext
+				) |> 
+					tibble::as_tibble() |> 
+					dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
+					dplyr::filter(method %in% model_names) |> 
+					recode_data(model_type_levels, model_names_abbr) |> 
+					clean_outliers(.metric = stab_outlier_cleaning_metrics, q = stab_outlier_cleaning_quantiles) |> 
+					dplyr::filter(type != 'ENSTIME') # remove ensemble time from stability analysis
+				# set the metrics to be used
+				anal_metrics <- stab_metrics
+				
+			} else if (at == "time" | at == "cost") {
+				next
+			}	else {
+				stop(paste0("Unknown analysis type: ", at))
+			}
+			
+			for (mt in model_types) {
+				
+				cat(paste0("--- [ Model Types: ", paste0(mt, collapse = ", "), " ] ---\n"))
+				# filter datasets
+				anal_df_mt_tmp <- anal_df_tmp |> dplyr::filter(type %in% mt)
+				model_names_abbr_mt_tmp <- unique(as.character(anal_df_mt_tmp$method))
+				
+				# analysis tables, plots and tests
+				anal_plot <- vector("list", length(anal_metrics)) |> 
+					purrr::set_names(anal_metrics)
+				
+				for (am in anal_metrics) {
+					
+					cat(paste0("Creating evaluation table, plot and tests for ", toupper(am), "...\n"))
+					tp_par <- get_table_plot_params(am, analysis_method)
+					
+					anal_df_mt_optimal_tmp <- anal_df_mt_tmp |> 
+						dplyr::select(dplyr::all_of(c('type', 'method', 'retrain_window', 'unique_id', am))) |> 
+						dplyr::group_by(type, method, unique_id) |> 
+						dplyr::arrange(type, method, unique_id, .data[[am]]) |> 
+						dplyr::slice_head(n = 1) |> 
+						dplyr::ungroup()
+					
+					anal_plot[[am]] <- list(
+						"overall" = plot_optimal_retrain_results(
+							anal_df_mt_optimal_tmp, 
+							metric = am, 
+							title = toupper(dataset_name_tmp),
+							overall_only = TRUE,
+							adjust = adjust
+						),
+						"bymethod" = plot_optimal_retrain_results(
+							anal_df_mt_optimal_tmp, 
+							metric = am, 
+							title = toupper(dataset_name_tmp),
+							overall_only = FALSE,
+							adjust = adjust
+						)
+					)
+					
+				}
+				
+				# store results
+				mt_name <- paste0(mt, collapse = "_")
+				analysis_results[[dn]][[at]][['results']][[mt_name]][['plots']] <- anal_plot 
+				
+			}
+			
+		}
+		
+	}
+	
+	cat("Done!\n")
+	return(invisible(analysis_results))
+	
+}
+
+plot_optimal_retrain_results <- function(
+		data, 
+		metric, 
+		title = "", 
+		overall_only = TRUE,
+		adjust = 1
+) {
+	
+	cat("Creating plot...\n")
+	
+	method_lvls <- c(
+		'LR', 'RF', 'XGBoost', 'LGBM', 'CatBoost', 'MLP',	'LSTM', 'TCN', 'NBEATSx', 'NHITS',
+		'Ens2A', 'Ens3A', 'Ens4A', 'Ens5A',	'Ens2T', 'Ens3T',	'Ens4T', 'Ens5T'
+	)
+	colors_lbls <- c(
+		"LR" = "#003366", "RF" = "#17BECF", "XGBoost" = "#B3E5FC", "LGBM" = "#2CA02C", "CatBoost" = "#B2DF8A",   
+		"MLP" = "#FEE08B", "LSTM" = "#FFD700", "TCN" = "#FFA500", "NBEATSx" = "#FF6961", "NHITS" = "#E31A1C",  
+		"Ens2A" = "#FFB6C1", "Ens3A" = "#E754B1", "Ens4A" = "#9467BD", "Ens5A" = "#6A0DAD",
+		"Ens2T" = "#F3D2B3", "Ens3T" = "#E6AB8D",	"Ens4T" = "#C97B63", "Ens5T" = "#8C564B"
+	)
+	
+	data_plot <- data |> 
+		dplyr::mutate(method = factor(method, levels = method_lvls, ordered = FALSE))
+	
+	if (min(data$retrain_window) == 7) {
+		brks <- c(7, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360)
+		lim <- c(1, 365)
+	} else {
+		brks <- c(1, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52)
+		lim <- c(1, 53)
+	}
+	
+	if (overall_only) {
+		data_plot <- data_plot |> 
+			dplyr::mutate(type = 'Overall', method = 'Overall')
+		g <- data_plot |>
+			ggplot2::ggplot(
+				ggplot2::aes(
+					x = .data[['retrain_window']],
+					y = ggplot2::after_stat(scaled)
+				)
+			)
+		g <- g + ggplot2::geom_density(adjust = adjust)
+	} else {
+		g <- data_plot |> 
+			ggplot2::ggplot(
+				ggplot2::aes(
+					x = .data[['retrain_window']],
+					y = ggplot2::after_stat(scaled), 
+					color = .data[['method']],
+					linetype = .data[['type']],
+					group = .data[['method']],
+					key_glyph = "line"
+				)
+			)
+		g <- g + 
+			ggplot2::geom_density(adjust = adjust, show.legend = FALSE)	+
+			ggplot2::stat_density(geom = "line", position = "identity", adjust = adjust)
+	}
+	
+	g <- g +
+		ggplot2::scale_x_continuous(breaks = brks, limits = lim) +
+		ggplot2::scale_color_manual(values = colors_lbls) +
+		ggplot2::labs(
+			title = title, 
+			x = 'Retrain Scenario (r)', y = 'Density',
+			color = 'Method', linetype = 'Method Type', group = 'Method'
+		) + 
+		ggplot2::theme_minimal() +
+		ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+	
+	if (!overall_only) {
+		g <- g + ggplot2::facet_wrap(. ~ method, scales = 'free_x', ncol = 2)
+	}
 	
 	return(g)
 	
