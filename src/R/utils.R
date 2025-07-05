@@ -1167,7 +1167,7 @@ plot_compared_results <- function(
 plot_scatter_results <- function(
 		data, 
 		metrics, 
-		.retrain_window,
+		.retrain_window = NULL,
 		analysis_method = 'absolute',
 		title = ""
 ) {
@@ -1179,10 +1179,15 @@ plot_scatter_results <- function(
 	params <- purrr::map(metrics, ~ get_table_plot_params(.x, analysis_method))
 	names(params) <- c('x', 'y')
 	
-	data_plot <- data |> 
-		dplyr::filter(retrain_window == .retrain_window) |> 
-		dplyr::select(dplyr::all_of(c('type', 'method', metrics)))
-	
+	if (is.null(.retrain_window)) {
+		data_plot <- data |> 
+			dplyr::select(dplyr::all_of(c('type', 'method', metrics)))
+	} else {
+		data_plot <- data |> 
+			dplyr::filter(retrain_window == .retrain_window) |> 
+			dplyr::select(dplyr::all_of(c('type', 'method', metrics)))
+	}
+
 	g <- data_plot |> 
 		ggplot2::ggplot(
 			ggplot2::aes(

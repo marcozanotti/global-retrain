@@ -369,7 +369,7 @@ for (m in 'cost') {
 # =========================================================================
 
 models_types <- c('ML_DL', 'ENSACC_ENSTIME')
-
+# models_types <- c('ML_DL')
 
 # Overall Results ---------------------------------------------------------
 
@@ -708,7 +708,30 @@ for (m in metrics) {
 
 # * Evaluation - Cost -----------------------------------------------------
 
-metrics <- list(c('rmsse', 'cost'), c('mqloss', 'cost'))
+metrics <- list(c('rmsse', 'cost'), c('scaled_mqloss', 'cost'))
+for (m in metrics) {
+	g1 <- eval_res1[[models_types[[1]]]]$plots[[m[1]]]$data |> 
+		dplyr::left_join(
+			cost_res1[[models_types[[1]]]]$plots[[m[2]]]$data,
+			by = c('type', 'method', 'retrain_window')
+		) |> 
+		plot_scatter_results(
+			metrics = m, .retrain_window = NULL, title = "M5",
+		)
+	g2 <- eval_res2[[models_types[[1]]]]$plots[[m[1]]]$data |> 
+		dplyr::left_join(
+			cost_res2[[models_types[[1]]]]$plots[[m[2]]]$data,
+			by = c('type', 'method', 'retrain_window')
+		) |> 
+		plot_scatter_results(
+			metrics = m, .retrain_window = NULL, title = "VN1",
+		)
+	g3 <- g1 + g2 + 
+		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
+	print(g3)
+}
+
+metrics <- list(c('rmsse', 'cost'), c('scaled_mqloss', 'cost'))
 for (m in metrics) {
 	g1 <- dplyr::bind_rows(
 		eval_res1[[models_types[[1]]]]$plots[[m[1]]]$data,
@@ -750,7 +773,7 @@ for (m in metrics) {
 
 eval_res1 <- res[[dataset_name1]][['evaluation']][['results']]
 eval_res2 <- res[[dataset_name2]][['evaluation']][['results']]
-eval_metrics <- c('rmsse', 'mqloss')
+eval_metrics <- c('rmsse', 'scaled_mqloss')
 
 for (m in eval_metrics) {
 	print(
