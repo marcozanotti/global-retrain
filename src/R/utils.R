@@ -1436,7 +1436,9 @@ plot_optimal_retrain_results <- function(
 		ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
 	
 	if (!overall_only) {
-		g <- g + ggplot2::facet_wrap(. ~ method, scales = 'free_x', ncol = 2)
+		g <- g + 
+			ggplot2::facet_wrap(. ~ method, scales = 'free_x', ncol = 2) +
+			ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45))
 	}
 	
 	return(g)

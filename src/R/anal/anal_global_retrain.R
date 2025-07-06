@@ -123,7 +123,7 @@ for (m in time_metrics) {
 
 cost_res1 <- res[[dataset_name1]][['cost']][['results']][[models_type]]
 cost_res2 <- res[[dataset_name2]][['cost']][['results']][[models_type]]
-cost_metrics <- c('cost', 'savings', 'savings_perc')
+cost_metrics <- c('cost', 'savings_perc')
 
 # ** Tables ---------------------------------------------------------------
 
@@ -153,10 +153,14 @@ cost_res2$plots[['cost']] + cost_res2$plots[['savings_perc']] +
 config = get_config('config/anal/anal_global_retrain_config.yaml')
 opt_freq <- analyze_optimal_frequency(config, adjust = 2)
 
-opt_freq$m5_daily$evaluation$results$ML_DL$plots$rmsse
-opt_freq$m5_daily$evaluation$results$ML_DL$plots$scaled_mqloss
-opt_freq$vn1_weekly$evaluation$results$ML_DL$plots$rmsse
-opt_freq$vn1_weekly$evaluation$results$ML_DL$plots$scaled_mqloss
-
 opt_freq$m5_daily$evaluation$results$ML_DL$plots$rmsse$overall +
 	opt_freq$vn1_weekly$evaluation$results$ML_DL$plots$rmsse$overall
+
+opt_freq$m5_daily$evaluation$results$ML_DL$plots$scaled_mqloss$overall +
+	opt_freq$vn1_weekly$evaluation$results$ML_DL$plots$scaled_mqloss$overall
+
+opt_freq$m5_daily$evaluation$results$ML_DL$plots$rmsse$bymethod
+opt_freq$m5_daily$evaluation$results$ML_DL$plots$scaled_mqloss$bymethod
+
+opt_freq$vn1_weekly$evaluation$results$ML_DL$plots$rmsse$bymethod
+opt_freq$vn1_weekly$evaluation$results$ML_DL$plots$scaled_mqloss$bymethod
