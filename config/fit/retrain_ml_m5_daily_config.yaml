@@ -3,6 +3,7 @@ dataset: {
     'dataset_name': 'm5',
     'frequency': 'daily',
     'min_series_length': 730, 
+    'max_series_length': null,
     'samples': null,
     'ext': '.parquet',
     'seed': 1992
