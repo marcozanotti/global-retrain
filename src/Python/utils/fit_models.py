@@ -176,10 +176,12 @@ def retrain_ml_model(
         train_df_tmp = combine_train_test(train_df, test_df.groupby('unique_id').head(i))
 
         # define the testing data
-        test_df_tmp = test_df.groupby('unique_id').head(i + horizon)
+        # test_df_tmp = test_df.groupby('unique_id').head(i + horizon)
+        # test_df_tmp.reset_index(drop = True, inplace = True)
+        # ds_to_remove = train_df_tmp["ds"].unique()
+        # test_df_tmp = test_df_tmp.loc[~test_df_tmp['ds'].isin(ds_to_remove)]
+        test_df_tmp = test_df.groupby('unique_id').head(i + horizon).groupby('unique_id').tail(horizon)
         test_df_tmp.reset_index(drop = True, inplace = True)
-        ds_to_remove = train_df_tmp["ds"].unique()
-        test_df_tmp = test_df_tmp.loc[~test_df_tmp['ds'].isin(ds_to_remove)]
         # remove static features because they are used in fitting only
         test_df_tmp.drop(columns = static_features, axis = 1, inplace = True)
         
@@ -282,7 +284,7 @@ def retrain_ml_model(
         })
         time_df = pd.concat([time_df, time_df_tmp], axis = 0)
 
-        del train_df_tmp, ds_to_remove, test_df_tmp, out_sample_df_tmp, time_df_tmp
+        del train_df_tmp, test_df_tmp, out_sample_df_tmp, time_df_tmp # ds_to_remove 
         if (i % 10) == 0:
             gc.collect() # call gc once every 10 iterations to avoid overhead
 
@@ -384,10 +386,12 @@ def retrain_dl_model(
         train_df_tmp = combine_train_test(train_df, test_df.groupby('unique_id').head(i))
 
         # define the testing data
-        test_df_tmp = test_df.groupby('unique_id').head(i + horizon)
+        # test_df_tmp = test_df.groupby('unique_id').head(i + horizon)
+        # test_df_tmp.reset_index(drop = True, inplace = True)
+        # ds_to_remove = train_df_tmp["ds"].unique()
+        # test_df_tmp = test_df_tmp.loc[~test_df_tmp['ds'].isin(ds_to_remove)]
+        test_df_tmp = test_df.groupby('unique_id').head(i + horizon).groupby('unique_id').tail(horizon)
         test_df_tmp.reset_index(drop = True, inplace = True)
-        ds_to_remove = train_df_tmp["ds"].unique()
-        test_df_tmp = test_df_tmp.loc[~test_df_tmp['ds'].isin(ds_to_remove)]
         
         if i in fitting_ids:
 
@@ -484,7 +488,7 @@ def retrain_dl_model(
         })
         time_df = pd.concat([time_df, time_df_tmp], axis = 0)
 
-        del train_df_tmp, ds_to_remove, test_df_tmp, out_sample_df_tmp, time_df_tmp
+        del train_df_tmp, test_df_tmp, out_sample_df_tmp, time_df_tmp # ds_to_remove
         if (i % 10) == 0:
             gc.collect() # call gc once every 10 iterations to avoid overhead
 
