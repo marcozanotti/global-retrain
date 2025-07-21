@@ -3,6 +3,7 @@ import sys
 sys.path.insert(0, 'src/Python/utils')
 import os
 import pandas_flavor as pf
+from pandas.api.types import is_numeric_dtype
 from mlforecast import MLForecast
 from neuralforecast import NeuralForecast
 from sklearn.linear_model import LinearRegression, Lasso, Ridge
@@ -348,7 +349,6 @@ def set_engine(model_name, frequency, features, target_transforms = None, model_
 
     Args:
         model_name (str): name of the model.
-        dataset_name (str): name of the dataset.
         frequency (str): frequency of the dataset.
         features (dict): features of the dataset.
         target_transforms (list, optional): target transformations. Defaults to None.
@@ -362,7 +362,8 @@ def set_engine(model_name, frequency, features, target_transforms = None, model_
     module_logger.info('Setting the engine...')
     model_type = get_model_type(model_name)
     model = set_model(model_name, model_params)
-    freq = get_frequency(frequency)
+
+    freq = get_frequency(frequency)[0]
     target_transforms = get_target_transforms(target_transforms = target_transforms)
     lags = get_lags(feature_list = features['lags'])
     lag_transforms = get_lag_transforms(feature_list = features['lag_transforms'])
@@ -376,7 +377,7 @@ def set_engine(model_name, frequency, features, target_transforms = None, model_
 
         engine = MLForecast(
             models = model,
-            freq = freq[0], 
+            freq = freq, 
             num_threads = os.cpu_count(),
             target_transforms = target_transforms,
             lags = lags,
@@ -388,7 +389,7 @@ def set_engine(model_name, frequency, features, target_transforms = None, model_
 
         engine = NeuralForecast(
             models = model, 
-            freq = freq[0],
+            freq = freq,
             local_scaler_type = target_transforms
         )
         
@@ -400,12 +401,13 @@ def set_engine(model_name, frequency, features, target_transforms = None, model_
 @pf.register_dataframe_method
 def add_data_features(data, frequency, features, remove_static = False):
 
-    """Function to add date features to the data.
+    """Function to add features to the data.
 
     Args:
         data (pd.DataFrame): Input dataframe in Nixtla's format.
         frequency (string): The frequency of the data (e.g., 'daily', 'weekly').
         features (dict): Dictionary containing feature details.
+        forced_frequency (num, optional): value of the frequency to force. Defaults to None. 
     
     Returns:
         pd.DataFrame: dataframe with date features added.
@@ -413,7 +415,7 @@ def add_data_features(data, frequency, features, remove_static = False):
 
     module_logger.info(f'Adding features to the dataset...')
 
-    freq = get_frequency(frequency)
+    freq = get_frequency(frequency)[0]
     lags = get_lags(feature_list = features['lags'])
     lag_transforms = get_lag_transforms(feature_list = features['lag_transforms'])
     date_features = get_date_features(feature_list = features['date'])
@@ -421,7 +423,7 @@ def add_data_features(data, frequency, features, remove_static = False):
 
     data_feat = MLForecast(
         models = [],
-        freq = freq[0], 
+        freq = freq, 
         lags = lags,
         lag_transforms = lag_transforms,
         date_features = date_features

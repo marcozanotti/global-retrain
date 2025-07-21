@@ -5,7 +5,7 @@ import gc
 import time
 import numpy as np
 import pandas as pd
-from utilities import save_data
+from utilities import save_data, get_dataset_frequency
 from collect_data import get_data, combine_train_test
 from set_engine import get_model_type, set_engine, add_data_features
 from mlforecast.utils import PredictionIntervals
@@ -367,8 +367,8 @@ def retrain_dl_model(
 
     # get the static dataframe and remove it from train and test
     static_df = test_df[['unique_id'] + static_features].drop_duplicates().reset_index(drop = True)
-    train_df = add_data_features(data = train_df, frequency = frequency, features = features, remove_static = True)
-    test_df = add_data_features(data = test_df, frequency = frequency, features = features, remove_static = True)
+    train_df = add_data_features(data = train_df, frequency = get_dataset_frequency(dataset_name), features = features, remove_static = True)
+    test_df = add_data_features(data = test_df, frequency = get_dataset_frequency(dataset_name), features = features, remove_static = True)
     
     module_logger.info(f'Train dataset contains: {list(train_df.columns)}...')
     module_logger.info(f'Test dataset contains: {list(test_df.columns)}...')
@@ -526,6 +526,7 @@ def retrain_model(config):
     dataset_name = config['dataset']['dataset_name']
     frequency = config['dataset']['frequency']
     min_series_length = config['dataset']['min_series_length']
+    max_series_length = config['dataset']['max_series_length']
     samples = config['dataset']['samples']
     ext = config['dataset']['ext']
     seed = config['dataset']['seed']
@@ -550,6 +551,7 @@ def retrain_model(config):
         name_list = [dataset_name, frequency, 'prep'],
         ext = '.parquet',
         min_series_length = min_series_length,
+        max_series_length = max_series_length,
         samples = samples
     )
     # split the data into train and test dataframes
@@ -567,9 +569,9 @@ def retrain_model(config):
         module_logger.info(f'[ Model type: {model_type} | Model name: {m} ]')
         
         if model_params is None:
-            engine_tmp = set_engine(m, frequency, features, target_transforms, model_params)
+            engine_tmp = set_engine(m, get_dataset_frequency(dataset_name), features, target_transforms, model_params)
         else:
-            engine_tmp = set_engine(m, frequency, features, target_transforms, model_params[m])
+            engine_tmp = set_engine(m, get_dataset_frequency(dataset_name), features, target_transforms, model_params[m])
 
         for rs in retrain_scenarios:
 

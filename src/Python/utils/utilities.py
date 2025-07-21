@@ -273,18 +273,23 @@ def get_frequency(frequency):
 
     if frequency == None:
         freq = [None, None, None]
-    elif frequency == 'hourly':
-        freq = ['H', 24, 'h']
-    elif frequency == 'daily':
-        freq = ['D', 7, 'D']
-    elif frequency == 'weekly':
-        freq = ['W-MON', 52, 'W-MON']
-    elif frequency == 'monthly':
-        freq = ['ME', 12, 'ME']
-    elif frequency == 'quarterly':
-        freq = ['Q', 4, 'QE']
-    elif frequency == 'yearly':
-        freq = ['Y', 1, 'YE']
+    elif isinstance(frequency, int):
+        freq = [frequency, frequency, frequency]
+    elif isinstance(frequency, str):
+        if frequency == 'hourly':
+            freq = ['H', 24, 'h']
+        elif frequency == 'daily':
+            freq = ['D', 7, 'D']
+        elif frequency == 'weekly':
+            freq = ['W-MON', 52, 'W-MON']
+        elif frequency == 'monthly':
+            freq = ['ME', 12, 'ME']
+        elif frequency == 'quarterly':
+            freq = ['Q', 4, 'QE']
+        elif frequency == 'yearly':
+            freq = ['Y', 1, 'YE']
+        else:
+            raise ValueError(f'Invalid frequency: {frequency}')  
     else:
         raise ValueError(f'Invalid frequency: {frequency}')
 
@@ -307,6 +312,8 @@ def get_dataset_frequency(dataset_name):
         freq = 'daily'
     elif dataset_name == 'vn1':
         freq = 'weekly'
+    elif dataset_name == 'm4':
+        freq = 1
     else:
         raise ValueError(f'Invalid dataset: {dataset_name}')
 
