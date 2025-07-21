@@ -59,7 +59,33 @@ def download_data(dataset_name, save = True, ext = '.parquet'):
             + test_df['Product'].astype(str)
         test_df.drop(columns = ['Client', 'Warehouse', 'Product'], axis = 1, inplace = True)
         test_df = test_df.melt(id_vars = 'unique_id', var_name = 'ds', value_name  = 'y')
-            
+
+    elif dataset_name == 'm4':
+
+        # if other datasets are needed (like Hourly, Weekly, etc), add all here
+        # creating a single train and test df
+        
+        module_logger.info(f'Downloading {dataset_name} train dataset...')      
+        train_df = pd.read_csv('data/m4/Daily-train.csv')
+        train_df.columns = ['unique_id'] + list(range(1, train_df.shape[1]))
+        train_df = pd.melt(train_df, id_vars = ['unique_id'], var_name = 'ds', value_name = 'y')
+        train_df = train_df.dropna()
+        train_df['ds'] = train_df['ds'].astype('int')
+        train_df = train_df.sort_values(['unique_id', 'ds']).reset_index(drop = True)
+
+        module_logger.info(f'Downloading {dataset_name} test dataset...')
+        test_df = pd.read_csv('data/m4/Daily-test.csv')
+        test_df.columns = ['unique_id'] + list(range(1, test_df.shape[1]))
+        test_df = pd.melt(test_df, id_vars = ['unique_id'], var_name = 'ds', value_name = 'y')
+        test_df = test_df.dropna()
+        test_df['ds'] = test_df['ds'].astype('int')
+        len_train = train_df.groupby('unique_id').agg({'ds': 'max'}).reset_index()
+        len_train.columns = ['unique_id', 'len_serie']
+        test_df = test_df.merge(len_train, on = ['unique_id'])
+        test_df['ds'] = test_df['ds'] + test_df['len_serie']
+        test_df.drop('len_serie', axis = 1, inplace = True)
+        test_df = test_df.sort_values(['unique_id', 'ds']).reset_index(drop = True)
+    
     else:
 
         raise(f'Unknown dataset {dataset_name}')
@@ -76,7 +102,7 @@ def download_data(dataset_name, save = True, ext = '.parquet'):
             path_list = ['data', dataset_name], 
             name_list = [dataset_name, 'test'],
             ext = ext
-        )
+        ) 
 
     return train_df, test_df
 
@@ -161,23 +187,53 @@ def remove_series(data, min_series_length):
 
     Args:
         data (pd.DataFrame): Input dataframe in Nixtla's format.
-        min_series_length (int): Minimum length of series to be kept.
+        min_series_length (int): Minimum length of series to be kept.    
 
     Returns:
         pd.DataFrame: dataframe with series removed.
     """
 
-    module_logger.info(f'Removing series shorter than {min_series_length} observaions...')
     series_length = data.groupby('unique_id')['y'].count()
+
+    module_logger.info(f'Removing series shorter than {min_series_length} observaions...')
     remove_ids = series_length[series_length < min_series_length].index.tolist()
     res_df = data[~data['unique_id'].isin(remove_ids)]
 
-    n_series = len(series_length)
-    n_series_to_remove = len(remove_ids)
+    n_series = len(data['unique_id'].unique())
+    n_series_final = len(res_df['unique_id'].unique())
+    n_series_to_remove = n_series - n_series_final
     p_series_to_remove = n_series_to_remove / n_series * 100
-    tot_series = n_series - n_series_to_remove
     module_logger.info(f'Removed {n_series_to_remove} series out of {n_series} ({p_series_to_remove:.1f}%).')
-    module_logger.info(f'The final dataset contains {tot_series} series.')
+    module_logger.info(f'The final dataset contains {n_series_final} series.')
+
+    return res_df
+
+@pf.register_dataframe_method
+def filter_series(data, max_series_length):
+
+    """Function to remove series from the data based on their length.
+
+    Args:
+        data (pd.DataFrame): Input dataframe in Nixtla's format.
+        max_series_length (int): Maximum length of series to be kept.    
+
+    Returns:
+        pd.DataFrame: dataframe with series removed.
+    """
+
+    module_logger.info(f'Filtering series longer than {max_series_length} observaions...')
+    res_df = data \
+        .sort_values(['unique_id', 'ds']) \
+        .groupby('unique_id') \
+        .tail(n = max_series_length) \
+        .reset_index(drop = True)
+
+    n_obs = len(data)
+    n_obs_final = len(res_df)
+    n_obs_to_remove = n_obs - n_obs_final
+    p_obs_to_remove = n_obs_to_remove / n_obs * 100
+    module_logger.info(f'Removed {n_obs_to_remove} observations out of {n_obs} ({p_obs_to_remove:.1f}%).')
+    module_logger.info(f'The final dataset contains {n_obs_final} observations.')
 
     return res_df
 
@@ -227,6 +283,11 @@ def get_static_features(data, dataset_name):
         static_df['warehouse'] = static_df[1].astype('category').cat.codes
         static_df['product'] = static_df[2].astype('category').cat.codes
         static_df.drop(columns = [0, 1, 2], axis = 1, inplace = True)
+
+    elif dataset_name == 'm4':
+        static_df = pd.read_csv('data/m4/M4-info.csv')[['M4id', 'category']]
+        static_df.columns = ['unique_id', 'category']
+        static_df['category'] = static_df['category'].astype('category').cat.codes
 
     else:
         raise(f'Unknown dataset {dataset_name}')
@@ -305,7 +366,7 @@ def prepare_data(dataset_name, frequency, static_features = True, xregs = True, 
 
     Args:
         dataset_name (string): Name of the dataset (e.g., 'm5', 'm4').
-        frequency (string, optional): The frequency of the data (e.g., 'daily', 'weekly'). 
+        frequency (string, optional): The frequency of the data (e.g., 'daily', 'weekly').
         static_features (bool, optional): Whether to include static features. Defaults to True.
         xregs (bool, optional): Whether to include external regressors. Defaults to True.
         save (bool, optional): Whether to save the processed dataset. Defaults to False.
@@ -320,7 +381,6 @@ def prepare_data(dataset_name, frequency, static_features = True, xregs = True, 
         name_list = [dataset_name, 'train'], 
         ext = ext
     )
-    train_df['ds'] = pd.to_datetime(train_df['ds'])
     train_df['unique_id'] = train_df['unique_id'].astype(str)
 
     test_df = load_data(
@@ -328,13 +388,22 @@ def prepare_data(dataset_name, frequency, static_features = True, xregs = True, 
         name_list = [dataset_name, 'test'],
         ext = ext
     )
-    test_df['ds'] = pd.to_datetime(test_df['ds'])
     test_df['unique_id'] = test_df['unique_id'].astype(str)
+
+    if dataset_name != 'm4':
+        train_df['ds'] = pd.to_datetime(train_df['ds'])
+        test_df['ds'] = pd.to_datetime(test_df['ds'])
+    else:
+        train_df['ds'] = train_df['ds'].astype('int')
+        test_df['ds'] = test_df['ds'].astype('int')
 
     res_df = combine_train_test(train_df, test_df)
     del train_df, test_df
 
-    res_df = aggregate_data_by_frequency(res_df, dataset_name, frequency, drop_firstlast = True)
+    if dataset_name != 'm4':
+        res_df = aggregate_data_by_frequency(res_df, dataset_name, frequency, drop_firstlast = True)
+    else:
+        res_df = res_df[res_df['unique_id'].str.contains(get_frequency(frequency)[0])]
         
     if static_features:
         res_df = get_static_features(res_df, dataset_name)
@@ -359,7 +428,7 @@ def prepare_data(dataset_name, frequency, static_features = True, xregs = True, 
 
     return res_df
 
-def get_data(path_list, name_list, min_series_length = None, samples = None, ext = '.parquet'):
+def get_data(path_list, name_list, min_series_length = None, max_series_length = None, samples = None, ext = '.parquet'):
 
     """Function to get the data.
 
@@ -367,6 +436,8 @@ def get_data(path_list, name_list, min_series_length = None, samples = None, ext
         path_list (list): List of directories to be joined.
         name_list (list): List of names to be used to create the file name.
         min_series_length (int, optional): Minimum length of series to be included. 
+        Defaults to None.
+        max_series_length (int, optional): Maximum length of series to be included. 
         Defaults to None.
         samples (int, optional): Number of samples to be included. Defaults to None.
         ext (string, optional): File extension (default is '.parquet').
@@ -379,6 +450,9 @@ def get_data(path_list, name_list, min_series_length = None, samples = None, ext
 
     if min_series_length is not None:
         res_df = remove_series(res_df, min_series_length)
+
+    if max_series_length is not None:
+        res_df = filter_series(res_df, max_series_length)
 
     if samples is not None:
         res_df = sampling_data(res_df, samples)
