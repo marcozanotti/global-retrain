@@ -17,6 +17,7 @@ source('src/R/utils.R')
 reticulate::source_python('src/Python/utils/utilities.py')
 
 # config = get_config('config/anal/anal_global_retrain_config.yaml')
-config = get_config('config/anal/anal_global_ensemble_config.yaml')
+# config = get_config('config/anal/anal_global_ensemble_config.yaml')
 # config = get_config('config/anal/anal_global_stability_config.yaml')
+config = get_config('config/anal/anal_sis2026_config.yaml')
 analyze_results(config)

@@ -1,0 +1,54 @@
+analysis: {
+    'name': 'sis2026',
+    'types': ['evaluation', 'time', 'stability', 'cost'],
+    'method': 'relative', # absolute / relative # run twice, one for absolute and  one for relative
+    'sample_type': 'overlap' # overlap / nooverlap
+}
+
+dataset: {
+    'dataset_names': ['m4'],
+    'frequencies': ['daily'],
+    'ext': '.parquet'
+}
+
+models: {
+    'types': [['ML', 'DL']], 
+    'model_names': [
+        'LinearRegression', 
+        'LGBMRegressor', 
+        'MLP',
+        'NBEATSx'
+    ],
+    'model_names_abbr': [
+        'LR', 
+        'LGBM', 
+        'MLP',
+        'NBEATSx'
+    ]
+}
+
+evaluation_params: {
+    'metrics': ['rmsse', 'scaled_mqloss'],
+    'outlier_cleaning_metrics': ['rmsse', 'scaled_mqloss'],
+    'outlier_cleaning_quantiles': [0.000, 0.995]
+}
+
+time_params: {
+    'metrics': ['total_sample_time']
+}
+
+stability_params: {
+    'metrics': ['smapc', 'mqlossc'],
+    'outlier_cleaning_metrics': ['smapc', 'mqlossc'],
+    'outlier_cleaning_quantiles': [0.000, 0.995]
+}
+
+cost_params: {
+    'metrics': ['cost', 'savings', 'savings_perc'],
+    'time_var': 'total_sample_time',
+    'n_skus': 1000000000, # 200000 skus * 5000 stores,
+    'cost_datasets_n_skus': [
+        'm4_daily': 2736
+    ],
+    'cost_per_hour': 3.5
+}

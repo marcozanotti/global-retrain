@@ -15,7 +15,7 @@ os.environ['NIXTLA_ID_AS_COL'] = '1'
 # config = get_config('config/fit/retrain_ml_m5_monthly_config.yaml')
 # config = get_config('config/fit/retrain_ml_m5_weekly_config.yaml')
 # config = get_config('config/fit/retrain_ml_m5_daily_config.yaml')
-config = get_config('config/fit/TEST_retrain_ml_m4_daily_config.yaml')
+config = get_config('config/fit/retrain_ml_m4_daily_config.yaml')
 configure_logging(
     config_file = 'config/log_config.yaml', 
     name_list = [

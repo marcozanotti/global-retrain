@@ -3,8 +3,8 @@ dataset: {
     'dataset_name': 'm4',
     'frequency': 'daily',
     'min_series_length': 730,
-    'max_series_length': 1095, 
-    'samples': 100,
+    'max_series_length': 1100, 
+    'samples': 10,
     'ext': '.parquet',
     'seed': 1992
 }
@@ -35,37 +35,13 @@ fitting: {
 
 model_names: [
     'LinearRegression', 
-    # 'RandomForestRegressor', 
-    # 'XGBRegressor', 
-    # 'LGBMRegressor', 
-    # 'CatBoostRegressor'
+    'LGBMRegressor'
 ]
 # model_params: null
 model_params: {
     'LinearRegression': {'n_jobs': -1},
-    # 'RandomForestRegressor': {
-    #     'criterion': 'squared_error',
-    #     'n_estimators': 300,
-    #     'min_samples_leaf': 100,
-    #     'max_features': 0.85,
-    #     'max_depth': 6,
-    #     'n_jobs': -1
-    # },
-    # 'XGBRegressor': {
-    #     'objective': 'reg:tweedie',
-    #     'booster': 'gbtree',
-    #     'n_estimators': 500,
-    #     'learning_rate': 0.03,
-    #     'max_leaves': 128,
-    #     'subsample': 0.85,
-    #     'colsample_bytree': 0.85,
-    #     'eval_metric': 'rmse',
-    #     'tweedie_variance_power': 1.1,
-    #     'n_jobs': -1,
-    #     'device': 'cuda'
-    # },
     'LGBMRegressor': {
-        'objective': 'tweedie', # regression
+        'objective': 'regression',
         'boosting_type': 'gbdt',
         'n_estimators': 100,
         'learning_rate': 0.03,
@@ -75,27 +51,12 @@ model_params: {
         'subsample_freq': 1,
         'colsample_bytree': 0.85,
         'metric': 'rmse',
-        'tweedie_variance_power': 1.1,
         'boost_from_average': False,
         'n_jobs': -1,
         'device': 'cpu',
         'force_row_wise': True,
         'verbosity': -1
-    },
-    # 'CatBoostRegressor': {
-    #     'loss_function': 'Tweedie:variance_power=1.1',
-    #     'boosting_type': 'Plain',
-    #     'n_estimators': 500,
-    #     'learning_rate': 0.03,
-    #     # 'max_leaves': 128, # not working with Tweedie
-    #     'min_child_samples': 100,
-    #     # 'subsample': 0.85,
-    #     'eval_metric': 'RMSE',
-    #     'thread_count': -1,
-    #     'task_type': 'GPU',
-    #     'logging_level': 'Silent',
-    #     'allow_writing_files': False
-    # }
+    }
 }
 target_transforms: null
 features: {

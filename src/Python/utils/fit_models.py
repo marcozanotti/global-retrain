@@ -325,7 +325,7 @@ def retrain_dl_model(
     ext = '.parquet'
 ):
 
-    """Function to retrain the ML model and predict with retrained model.
+    """Function to retrain the DL model and predict with retrained model.
 
     Args:
         train_df (pd.DataFrame): training data in Nixtla's format.
@@ -333,7 +333,7 @@ def retrain_dl_model(
         dataset_name (str): name of the dataset (e.g., 'm5', 'm4').
         frequency (str): frequency of the data (e.g., 'daily', 'weekly').
         model_name (str): name of the model.
-        engine (MLForecast class): ML model engine.
+        engine (NeuralForecast class): DL model engine.
         test_window (int): length of the test window.
         horizon (int): forecasting horizon.
         retrain_window (int, optional): window for retraining.

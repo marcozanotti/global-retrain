@@ -15,7 +15,8 @@ os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 # config = get_config('config/fit/retrain_dl_vn1_weekly_config.yaml')
 # config = get_config('config/fit/retrain_dl_m5_monthly_config.yaml')
 # config = get_config('config/fit/retrain_dl_m5_weekly_config.yaml')
-config = get_config('config/fit/retrain_dl_m5_daily_config.yaml')
+# config = get_config('config/fit/retrain_dl_m5_daily_config.yaml')
+config = get_config('config/fit/retrain_dl_m4_daily_config.yaml')
 configure_logging(
     config_file = 'config/log_config.yaml', 
     name_list = [
