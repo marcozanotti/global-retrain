@@ -2,7 +2,7 @@
 dataset: {
     'dataset_name': 'm4',
     'frequency': 'daily',
-    'min_series_length': 730,
+    'min_series_length': 1100,
     'max_series_length': 1100, 
     'samples': 10,
     'ext': '.parquet',
