@@ -15,22 +15,30 @@ models: {
     'types': [['ML', 'DL']], 
     'model_names': [
         'LinearRegression', 
+        'RandomForestRegressor', 
+        'XGBRegressor',
         'LGBMRegressor', 
         'MLP',
-        'NBEATSx'
+        'TCN',
+        'NBEATSx',
+        'NHITS'
     ],
     'model_names_abbr': [
         'LR', 
+        'RF',
+        'XGBoost',
         'LGBM', 
         'MLP',
-        'NBEATSx'
+        'TCN',
+        'NBEATSx',
+        'NHITS'
     ]
 }
 
 evaluation_params: {
     'metrics': ['rmsse', 'scaled_mqloss'],
     'outlier_cleaning_metrics': ['rmsse', 'scaled_mqloss'],
-    'outlier_cleaning_quantiles': [0.000, 0.995]
+    'outlier_cleaning_quantiles': [0.000, 0.990]
 }
 
 time_params: {
@@ -40,7 +48,7 @@ time_params: {
 stability_params: {
     'metrics': ['smapc', 'mqlossc'],
     'outlier_cleaning_metrics': ['smapc', 'mqlossc'],
-    'outlier_cleaning_quantiles': [0.000, 0.995]
+    'outlier_cleaning_quantiles': [0.000, 0.990]
 }
 
 cost_params: {
@@ -48,7 +56,7 @@ cost_params: {
     'time_var': 'total_sample_time',
     'n_skus': 1000000000, # 200000 skus * 5000 stores,
     'cost_datasets_n_skus': [
-        'm4_daily': 2736
+        'm4_daily': 2557
     ],
     'cost_per_hour': 3.5
 }
