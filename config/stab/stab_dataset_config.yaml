@@ -30,12 +30,12 @@ model_names: [
     'TCN',
     'NBEATSx',
     'NHITS',
-    # 'EnsembleMean2A',
+    'EnsembleMean2A',
     # 'EnsembleMean2T',
-    # 'EnsembleMean3A',
+    'EnsembleMean3A',
     # 'EnsembleMean3T',
-    # 'EnsembleMean4A',
+    'EnsembleMean4A',
     # 'EnsembleMean4T',
-    # 'EnsembleMean5A',
+    'EnsembleMean5A',
     # 'EnsembleMean5T'
 ]

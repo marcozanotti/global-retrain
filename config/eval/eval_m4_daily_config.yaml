@@ -34,7 +34,11 @@ model_names: [
     'MLP',
     'TCN',
     'NBEATSx',
-    'NHITS'
+    'NHITS',
+    'EnsembleMean2A',
+    'EnsembleMean3A',
+    'EnsembleMean4A',
+    'EnsembleMean5A'
 ]
 
 evaluation: {

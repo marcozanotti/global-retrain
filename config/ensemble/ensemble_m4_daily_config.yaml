@@ -1,0 +1,57 @@
+
+dataset: {
+    'dataset_name': 'm4',
+    'frequency': 'daily',
+    'ext': '.parquet'
+}
+
+fitting: {
+    horizon: 28,
+    test_window: 364,
+    retrain_scenarios: [
+        7, 
+        14, 
+        21,
+        30, 
+        60,
+        90,
+        120,
+        150,
+        180,
+        364
+    ]
+}
+
+ensembling: {
+    model_names: [
+        [
+            'LinearRegression', 
+            'NBEATSx'
+        ],
+        [
+            'LinearRegression', 
+            'NBEATSx', 
+            'NHITS'
+        ],        
+        [
+            'LinearRegression', 
+            'NBEATSx', 
+            'NHITS', 
+            'MLP'
+        ],
+        [
+            'LinearRegression', 
+            'NBEATSx', 
+            'NHITS', 
+            'MLP', 
+            'RandomForestRegressor'
+        ]
+    ],
+    methods: ['mean'], # ['mean', 'median']
+    name: [
+        '2A',
+        '3A',
+        '4A',
+        '5A'
+    ]
+}
