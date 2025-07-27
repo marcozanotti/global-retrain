@@ -4,25 +4,25 @@ dataset: {
     'frequency': 'daily',
     'min_series_length': 1100,
     'max_series_length': 1100, 
-    'samples': 10,
+    'samples': null,
     'ext': '.parquet',
     'seed': 1992
 }
 
 fitting: {
     'horizon': 28,
-    'test_window': 56, # 364
+    'test_window': 364, 
     'retrain_scenarios': [
         7, 
-        # 14, 
-        # 21,
-        # 30, 
-        # 60,
-        # 90,
-        # 120,
-        # 150,
-        # 180,
-        # 364
+        14, 
+        21,
+        30, 
+        60,
+        90,
+        120,
+        150,
+        180,
+        364
     ],
     'intervals': {
         'h': 28,
@@ -35,13 +35,15 @@ fitting: {
 
 model_names: [
     'MLP',
-    'NBEATSx'
+    'TCN',
+    'NBEATSx',
+    'NHITS'
 ]
 # model_params: null
 model_params: {
     'MLP': {
         'h': 28,
-        'input_size': 112,
+        'input_size': 90,
         'num_layers': 2,
         'hidden_size': 1024,
         'max_steps': 100,
@@ -54,9 +56,27 @@ model_params: {
         'futr_exog_list': [],
         'random_seed': 1992 
     },
+    'TCN': {
+        'h': 28,
+        'input_size': 90,
+        'max_steps': 100,
+        'loss': RMSE(),
+        'learning_rate': 0.001,
+        'batch_size': 128,
+        'scaler_type': 'robust',
+        'encoder_hidden_size': 256,
+        'context_size': 28,
+        'decoder_layers': 2,
+        'decoder_hidden_size': 256,
+        'kernel_size': 2,
+        'dilations': [1, 2, 4, 8, 16],
+        'stat_exog_list': ['category'],
+        'futr_exog_list': [],
+        'random_seed': 1992 
+    },
     'NBEATSx': {
         'h': 28,
-        'input_size': 112,
+        'input_size': 90,
         'max_steps': 100,
         'loss': RMSE(),
         'learning_rate': 0.001,
@@ -71,7 +91,27 @@ model_params: {
         'stat_exog_list': ['category'],
         'futr_exog_list': [],
         'random_seed': 1992 
-    }
+    },
+    'NHITS': {
+        'h': 28,
+        'input_size': 90,
+        'max_steps': 100,
+        'loss': RMSE(),
+        'learning_rate': 0.001,
+        'batch_size': 128,
+        'windows_batch_size': 1024,
+        'scaler_type': 'robust',
+        'stack_types': ['identity', 'identity', 'identity'],
+        'n_blocks': [5, 5, 5],
+        'mlp_units': [[512, 512], [512, 512], [512, 512]],
+        'n_freq_downsample': [4, 2, 1],
+        'interpolation_mode': 'linear',
+        'n_pool_kernel_size': [2, 2, 1],
+        'pooling_mode': 'MaxPool1d',
+        'stat_exog_list': ['category'],
+        'futr_exog_list': [],
+        'random_seed': 1992 
+    }  
 }
 target_transforms: null
 features: {

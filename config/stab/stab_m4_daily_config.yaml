@@ -8,15 +8,15 @@ dataset: {
 fitting: {
     'retrain_scenarios': [
         7, 
-        # 14, 
-        # 21,
-        # 30, 
-        # 60,
-        # 90,
-        # 120,
-        # 150,
-        # 180,
-        # 364
+        14, 
+        21,
+        30, 
+        60,
+        90,
+        120,
+        150,
+        180,
+        364
     ],
     levels: [50, 60, 70, 80, 90, 95, 99],
     combine_only: False
@@ -24,9 +24,13 @@ fitting: {
 
 model_names: [
     'LinearRegression', 
-    'LGBMRegressor', 
+    'RandomForestRegressor',
+    'XGBRegressor',
+    'LGBMRegressor',
     'MLP',
-    'NBEATSx'
+    'TCN',
+    'NBEATSx',
+    'NHITS'
 ]
 
 evaluation: {
