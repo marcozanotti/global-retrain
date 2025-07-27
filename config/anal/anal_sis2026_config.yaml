@@ -1,7 +1,7 @@
 analysis: {
     'name': 'sis2026',
     'types': ['evaluation', 'time', 'stability', 'cost'],
-    'method': 'relative', # absolute / relative # run twice, one for absolute and  one for relative
+    'method': 'absolute', # absolute / relative # run twice, one for absolute and  one for relative
     'sample_type': 'overlap' # overlap / nooverlap
 }
 
@@ -12,7 +12,7 @@ dataset: {
 }
 
 models: {
-    'types': [['ML', 'DL']], 
+    'types': [['ML', 'DL'], ['ENSACC']], 
     'model_names': [
         'LinearRegression', 
         'RandomForestRegressor', 
@@ -21,7 +21,11 @@ models: {
         'MLP',
         'TCN',
         'NBEATSx',
-        'NHITS'
+        'NHITS',
+        'EnsembleMean2A',
+        'EnsembleMean3A',
+        'EnsembleMean4A',
+        'EnsembleMean5A'
     ],
     'model_names_abbr': [
         'LR', 
@@ -31,7 +35,11 @@ models: {
         'MLP',
         'TCN',
         'NBEATSx',
-        'NHITS'
+        'NHITS',
+        'Ens2A',
+        'Ens3A',
+        'Ens4A',
+        'Ens5A'
     ]
 }
 
