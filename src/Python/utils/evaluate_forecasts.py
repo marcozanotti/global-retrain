@@ -245,6 +245,7 @@ def evaluate_model(config):
     dataset_name = config['dataset']['dataset_name']
     frequency = config['dataset']['frequency']
     min_series_length = config['dataset']['min_series_length']
+    max_series_length = config['dataset']['max_series_length']
     samples = config['dataset']['samples']
     ext = config['dataset']['ext']
     seed = config['dataset']['seed']
@@ -266,7 +267,8 @@ def evaluate_model(config):
         path_list = ['data', dataset_name],
         name_list = [dataset_name, frequency, 'prep'],
         ext = '.parquet',
-        min_series_length = min_series_length,
+        min_series_length = min_series_length, 
+        max_series_length = max_series_length, 
         samples = samples
     )
     train_df = train_df[['unique_id', 'ds', 'y']]

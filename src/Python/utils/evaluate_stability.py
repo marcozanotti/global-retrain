@@ -2,12 +2,14 @@
 import sys
 sys.path.insert(0, 'src/Python/utils')
 import gc
+import numpy as np
 import pandas as pd
 from utilities import (
     create_file_path, create_file_name, get_file_name, 
     save_data, load_data, combine_and_save_files
 )
 from evaluate_forecasts import get_metrics, aggregate_data, evaluate_forecasts
+from collect_data import get_data
 
 import logging
 module_logger = logging.getLogger('evaluate_forecasts')
@@ -41,7 +43,11 @@ def evaluate_model_stability(config):
     # dataset parameters
     dataset_name = config['dataset']['dataset_name']
     frequency = config['dataset']['frequency']
+    min_series_length = config['dataset']['min_series_length']
+    max_series_length = config['dataset']['max_series_length']
+    samples = config['dataset']['samples']
     ext = config['dataset']['ext']
+    seed = config['dataset']['seed']
     # fitting parameters    
     retrain_scenarios = config['fitting']['retrain_scenarios']
     levels = config['fitting']['levels']
@@ -52,6 +58,19 @@ def evaluate_model_stability(config):
     eval_freq = config['evaluation']['evaluation_frequency']
     metrics = get_metrics(config['evaluation']['metrics'], eval_freq)
     skip =  config['evaluation']['skip']
+    
+    # load the dataset
+    if samples is not None:
+        np.random.seed(seed)
+    train_df = get_data(
+        path_list = ['data', dataset_name],
+        name_list = [dataset_name, frequency, 'prep'],
+        ext = '.parquet',
+        min_series_length = min_series_length,
+        max_series_length = max_series_length,
+        samples = samples
+    )
+    train_df = train_df[['unique_id', 'ds', 'y']]
 
     for m in model_names:
 
@@ -97,7 +116,7 @@ def evaluate_model_stability(config):
                     stab_df_tmp = evaluate_forecasts(
                         out_sample_df = stab_df_tmp,
                         metrics = metrics, 
-                        train_df = None,
+                        train_df = train_df,
                         levels = levels
                     )
                     stab_df_tmp.rename(get_stability_metrics(), axis = 1, inplace = True)

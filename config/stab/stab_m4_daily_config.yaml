@@ -2,7 +2,11 @@
 dataset: {
     'dataset_name': 'm4',
     'frequency': 'daily',
-    'ext': '.parquet'
+    'min_series_length': 1100,
+    'max_series_length': 1100, 
+    'samples': null,
+    'ext': '.parquet',
+    'seed': 1992
 }
 
 fitting: {
