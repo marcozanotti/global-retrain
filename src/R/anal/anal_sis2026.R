@@ -27,8 +27,8 @@ reticulate::source_python('src/Python/utils/utilities.py')
 # Load & prepare data -----------------------------------------------------
 
 # run twice, one for absolute and one for relative
-analysis_file_name <- 'docs/sis2026/absolute_evaltimestabcost_overlap_20250727_213312.RData'
-analysis_file_name <- 'docs/sis2026/relative_evaltimestabcost_overlap_20250727_213237.RData'
+analysis_file_name <- 'docs/sis2026/absolute_evaltimestabcost_overlap_20250805_164302.RData'
+analysis_file_name <- 'docs/sis2026/relative_evaltimestabcost_overlap_20250805_164708.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results
@@ -88,7 +88,7 @@ models_types <- c('ML_DL', 'ENSACC')
 eval_res1 <- res[[dataset_name1]][['evaluation']][['results']]
 eval_metrics <- c('rmsse', 'scaled_mqloss')
 stab_res1 <- res[[dataset_name1]][['stability']][['results']]
-stab_metrics <- c('smapc', 'mqlossc')
+stab_metrics <- c('masc', 'rmssc', 'smapc', 'smqc')
 
 
 
@@ -132,7 +132,7 @@ for (m in stab_metrics) {
 
 # * Evaluation - Stability ------------------------------------------------
 
-metrics <- list(c('rmsse', 'smapc'), c('scaled_mqloss', 'mqlossc'))
+metrics <- list(c('rmsse', 'smapc'), c('scaled_mqloss', 'smqc'))
 for (m in metrics) {
 	g1 <- dplyr::bind_rows(
 		eval_res1[[models_types[[1]]]]$plots[[m[1]]]$data,
@@ -163,7 +163,7 @@ for (m in metrics) {
 	print(g1)
 }
 
-metrics <- list(c('smapc', 'mqlossc'))
+metrics <- list(c('smapc', 'smqc'))
 for (m in metrics) {
 	g1 <- dplyr::bind_rows(
 		stab_res1[[models_types[[1]]]]$plots[[m[1]]]$data,
