@@ -163,14 +163,22 @@ def get_metrics(metric_names, frequency = None):
         metrics.append(bias)
     if 'mac' in metric_names:
         metrics.append(mae)
+    if 'masc' in metric_names:
+        metrics.append(partial(mase, seasonality = freq))
     if 'rmsc' in metric_names:
         metrics.append(rmse)
+    if 'rmssc' in metric_names:
+        metrics.append(partial(rmsse, seasonality = freq))
     if 'smapc' in metric_names:
         metrics.append(smape)
-    if 'qlc' in metric_names:
+    if 'qc' in metric_names:
         metrics.append(quantile_loss)
-    if 'mqlc' in metric_names:
+    if 'mqc' in metric_names:
         metrics.append(mqloss)
+    if 'sqc' in metric_names:
+        metrics.append(partial(scaled_quantile_loss, seasonality = freq))
+    if 'smqc' in metric_names:
+        metrics.append(partial(scaled_mqloss, seasonality = freq))
 
     return metrics
 

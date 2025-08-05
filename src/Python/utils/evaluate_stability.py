@@ -17,9 +17,14 @@ def get_stability_metrics():
     stab_met = {
         'bias': 'stability_bias', 
         'mae': 'mac', 
-        'rmse': 'rmsc', 
+        'mase': 'masc',
+        'rmse': 'rmsc',
+        'rmsse': 'rmssc', 
         'smape': 'smapc',
-        'mqloss': 'mqlossc'
+        'quantile_loss': 'qc',
+        'mqloss': 'mqc',
+        'scaled_quantile_loss': 'sqc',
+        'scaled_mqloss': 'smqc'
     }
     return stab_met    
 
@@ -44,7 +49,8 @@ def evaluate_model_stability(config):
     # model parameters
     model_names = config['model_names']
     # evaluation parameters
-    metrics = get_metrics(config['evaluation']['metrics'])
+    eval_freq = config['evaluation']['evaluation_frequency']
+    metrics = get_metrics(config['evaluation']['metrics'], eval_freq)
     skip =  config['evaluation']['skip']
 
     for m in model_names:
