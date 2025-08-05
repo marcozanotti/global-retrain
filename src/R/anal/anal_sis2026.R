@@ -54,117 +54,8 @@ models_type <- 'ENSACC'
 eval_res1 <- res[[dataset_name1]][['evaluation']][['results']][[models_type]]
 eval_metrics <- c('rmsse', 'scaled_mqloss')
 
-# ** Tables ---------------------------------------------------------------
-
-for (m in eval_metrics) {
-	cat(paste(dataset_name1, m, "\n\n"))
-	print(xtable::xtable(eval_res1$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
-}
-
-# ** Plots -----------------------------------------------------------------
-
-for (m in eval_metrics) {
-	print(
-		eval_res1$plots[[m]] +
-			patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
-	)
-}
-
-# ** Tests -----------------------------------------------------------------
-
-for (m in eval_metrics) {
-	g1 <- plot_test_results_facet(
-		data = eval_res1$tests[[m]],
-		.metric = m, 
-		by = "retrain_window", 
-		metric_label = toupper(gsub("_", " ", m)),
-		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name1), "_.*", ""), "- Nemenyi Test"))
-	)
-	print(g1)
-}
-
-# =========================================================================
-# * Time ------------------------------------------------------------------
-# =========================================================================
-
-time_res1 <- res[[dataset_name1]][['time']][['results']][[models_type]]
-time_metrics <- c('total_sample_time')
-
-# ** Tables ---------------------------------------------------------------
-
-for (m in time_metrics) {
-	cat(paste(dataset_name1, m, "\n\n"))
-	print(xtable::xtable(time_res1$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
-}
-
-# ** Plots -----------------------------------------------------------------
-
-for (m in time_metrics) {
-	print(
-		time_res1$plots[[m]] +
-			patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
-	)
-}
-
-# =========================================================================
-# * Stability -------------------------------------------------------------
-# =========================================================================
-
-stab_res1 <- res[[dataset_name1]][['stability']][['results']][[models_type]]
-stab_metrics <- c('smapc', 'mqlossc')
-
-# ** Tables ---------------------------------------------------------------
-
-for (m in stab_metrics) {
-	cat(paste(dataset_name1, m, "\n\n"))
-	print(xtable::xtable(stab_res1$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
-}
-
-# ** Plots -----------------------------------------------------------------
-
-for (m in stab_metrics) {
-	print(
-		stab_res1$plots[[m]] +
-			patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
-	)
-}
-
-# ** Tests -----------------------------------------------------------------
-
-for (m in stab_metrics) {
-	g1 <- plot_test_results_facet(
-		data = stab_res1$tests[[m]],
-		.metric = m, 
-		by = 'retrain_window', 
-		metric_label = toupper(gsub("_", " ", m)),
-		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name1), "_.*", ""), "- Nemenyi Test"))
-	)
-	print(g1)
-}
-
-# =========================================================================
-# * Cost ------------------------------------------------------------------
-# =========================================================================
-
-cost_res1 <- res[[dataset_name1]][['cost']][['results']][[models_type]]
-cost_metrics <- c('cost', 'savings_perc')
-
-# ** Tables ---------------------------------------------------------------
-
-for (m in cost_metrics) {
-	cat(paste(dataset_name1, m, "\n\n"))
-	print(xtable::xtable(cost_res1$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
-}
-
-# ** Plots -----------------------------------------------------------------
-
-cost_res1$plots[['cost']] + cost_res1$plots[['savings_perc']] +
+eval_res1$plots[[eval_metrics[1]]] + eval_res1$plots[[eval_metrics[2]]] +
 	patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
-
 
 
 # =========================================================================
@@ -174,10 +65,11 @@ cost_res1$plots[['cost']] + cost_res1$plots[['savings_perc']] +
 config = get_config('config/anal/anal_sis2026_config.yaml')
 opt_freq <- analyze_optimal_frequency(config, adjust = 2)
 
-opt_freq$m4_daily$evaluation$results$ML_DL$plots$rmsse$overall
-opt_freq$m4_daily$evaluation$results$ML_DL$plots$scaled_mqloss$overall
-
-
+opt_freq$m4_daily$evaluation$results$ML_DL$plots$rmsse$overall +
+	ggplot2::labs(title = "M4 - Point Forecasting") +
+	opt_freq$m4_daily$evaluation$results$ML_DL$plots$scaled_mqloss$overall +
+	ggplot2::labs(title = "M4 - Probabilistic Forecasting") +
+	patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
 
 
 
@@ -195,12 +87,9 @@ models_types <- c('ML_DL', 'ENSACC')
 
 eval_res1 <- res[[dataset_name1]][['evaluation']][['results']]
 eval_metrics <- c('rmsse', 'scaled_mqloss')
-time_res1 <- res[[dataset_name1]][['time']][['results']]
-time_metrics <- c('total_sample_time')
 stab_res1 <- res[[dataset_name1]][['stability']][['results']]
 stab_metrics <- c('smapc', 'mqlossc')
-cost_res1 <- res[[dataset_name1]][['cost']][['results']]
-cost_metrics <- c('cost', 'savings_perc')
+
 
 
 # Overall Results ---------------------------------------------------------
@@ -217,23 +106,6 @@ for (m in eval_metrics) {
 				dplyr::rename('M4' = `7`) |>
 				dplyr::relocate("M4", .after = "Method"),	
 			digits = 3
-		), 
-		include.rownames = FALSE
-	)
-	cat("\n\n")
-}
-
-for (m in time_metrics) {
-	cat(paste(m, "\n\n"))
-	print(
-		xtable::xtable(
-			dplyr::bind_rows(
-				time_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
-				time_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
-			) |> 
-			dplyr::rename('M4' = `7`) |>
-			dplyr::relocate("M4", .after = "Method"),	
-			digits = 0
 		), 
 		include.rownames = FALSE
 	)
@@ -257,22 +129,6 @@ for (m in stab_metrics) {
 	cat("\n\n")
 }
 
-for (m in cost_metrics) {
-	cat(paste(m, "\n\n"))
-	print(
-		xtable::xtable(
-			dplyr::bind_rows(
-				cost_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
-				cost_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
-			) |> 
-				dplyr::rename('M4' = `7`) |>
-				dplyr::relocate("M4", .after = "Method"),	
-			digits = 0
-		), 
-		include.rownames = FALSE
-	)
-	cat("\n\n")
-}
 
 # * Evaluation - Stability ------------------------------------------------
 
@@ -318,37 +174,3 @@ for (m in metrics) {
 		)
 	print(g1)
 }
-
-
-# Retraining Results ------------------------------------------------------
-
-# ** Plots ----------------------------------------------------------------
-
-for (m in eval_metrics) {
-	print(
-		eval_res1[[models_types[1]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom") +
-			eval_res1[[models_types[2]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom")
-	)
-}
-
-for (m in time_metrics) {
-	print(
-		time_res1[[models_types[1]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom") +
-			time_res1[[models_types[2]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom")
-	)
-}
-
-for (m in stab_metrics) {
-	print(
-		stab_res1[[models_types[1]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom") +
-			stab_res1[[models_types[2]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom")
-	)
-}
-
-for (m in cost_metrics) {
-	print(
-		cost_res1[[models_types[1]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom") +
-			cost_res1[[models_types[2]]]$plots[[m]] + ggplot2::theme(legend.position = "bottom")
-	)
-}
-
