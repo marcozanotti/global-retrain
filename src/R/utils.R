@@ -246,9 +246,12 @@ compute_relative_metrics <- function(data, type) {
       dplyr::mutate(
         stability_bias = abs(stability_bias) / abs(stability_bias_ref),
         mac = mac / mac_ref,
-        mqlossc = mqlossc / mqlossc_ref,
+        masc = masc_ref,
         rmsc = rmsc / rmsc_ref,
-        smapc = smapc / smapc_ref
+        rmssc = rmssc_ref,
+        smapc = smapc / smapc_ref,
+        mqc = mqc / mqc_ref,
+        smqc = smqc / smqc_ref
       ) |> 
       dplyr::select(-dplyr::ends_with("_ref"))
 

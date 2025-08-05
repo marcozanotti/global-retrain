@@ -1,7 +1,7 @@
 analysis: {
     'name': 'sis2026',
     'types': ['evaluation', 'time', 'stability', 'cost'],
-    'method': 'absolute', # absolute / relative # run twice, one for absolute and  one for relative
+    'method': 'relative', # absolute / relative # run twice, one for absolute and  one for relative
     'sample_type': 'overlap' # overlap / nooverlap
 }
 
@@ -54,8 +54,8 @@ time_params: {
 }
 
 stability_params: {
-    'metrics': ['smapc', 'mqlossc'],
-    'outlier_cleaning_metrics': ['smapc', 'mqlossc'],
+    'metrics': ['masc', 'rmssc', 'smapc', 'smqc'],
+    'outlier_cleaning_metrics': ['smapc', 'smqc'],
     'outlier_cleaning_quantiles': [0.000, 0.990]
 }
 
