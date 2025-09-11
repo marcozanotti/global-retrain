@@ -2,7 +2,11 @@
 dataset: {
     'dataset_name': 'm5',
     'frequency': 'daily',
-    'ext': '.parquet'
+    'min_series_length': 730,
+    'max_series_length': null, 
+    'samples': null,
+    'ext': '.parquet',
+    'seed': 1992
 }
 
 fitting: {
@@ -34,16 +38,17 @@ model_names: [
     'NBEATSx',
     'NHITS',
     'EnsembleMean2A',
-    'EnsembleMean2T',
+    # 'EnsembleMean2T',
     'EnsembleMean3A',
-    'EnsembleMean3T',
+    # 'EnsembleMean3T',
     'EnsembleMean4A',
-    'EnsembleMean4T',
+    # 'EnsembleMean4T',
     'EnsembleMean5A',
-    'EnsembleMean5T'
+    # 'EnsembleMean5T'
 ]
 
 evaluation: {
-    metrics: ['stab_bias', 'mac', 'rmsc', 'smapc', 'mqlc'],
-    skip: 7
+    metrics: ['stab_bias', 'mac', 'masc', 'rmsc', 'rmssc', 'smapc', 'mqc', 'smqc'],
+    skip: 7,
+    evaluation_frequency: 'daily', # frequency for masc, rmssc, smqc
 }
