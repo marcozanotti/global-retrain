@@ -408,8 +408,9 @@ test_differences <- function(data, .metric, by = 'retrain_window', .method = NUL
         dplyr::select(dplyr::all_of(c('retrain_window', .metric))) |> 
         dplyr::mutate(id = rep(1:min_n_series, n_scn), .before = 1) |> 
         tidyr::pivot_wider(names_from = 'retrain_window', values_from = .metric) |> 
-        dplyr::select(-id)
-      
+        dplyr::select(-id) |>
+        as.matrix()
+
       test_res <- greybox::rmcb(data = data_test, level = 0.95, outplot = "none")
       data_test <- tibble::tibble(
         'method' = as.character(.method),
@@ -445,7 +446,8 @@ test_differences <- function(data, .metric, by = 'retrain_window', .method = NUL
         dplyr::select(dplyr::all_of(c('method', .metric))) |> 
         dplyr::mutate(id = rep(1:min_n_series, n_met), .before = 1) |> 
         tidyr::pivot_wider(names_from = 'method', values_from = .metric) |> 
-        dplyr::select(-id)
+        dplyr::select(-id) |> 
+        as.matrix()
       
       test_res <- greybox::rmcb(data = data_test, level = 0.95, outplot = "none")
       data_test <- tibble::tibble(
