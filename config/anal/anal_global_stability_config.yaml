@@ -1,6 +1,6 @@
 analysis: {
     'name': 'global_stability',
-    'types': ['evaluation', 'time', 'stability', 'cost'],
+    'types': ['evaluation', 'time', 'stability'],
     'method': 'relative', # absolute / relative # run twice, one for absolute and  one for relative
     'sample_type': 'overlap' # overlap / nooverlap
 }
@@ -58,8 +58,8 @@ time_params: {
 }
 
 stability_params: {
-    'metrics': ['smapc', 'mqlossc'],
-    'outlier_cleaning_metrics': ['smapc', 'mqlossc'],
+    'metrics': ['smapc', 'smqc'],
+    'outlier_cleaning_metrics': ['smapc', 'smqc'],
     'outlier_cleaning_quantiles': [0.000, 0.995]
 }
 
