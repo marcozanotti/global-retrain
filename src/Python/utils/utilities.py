@@ -208,7 +208,7 @@ def remove_file(path_list, name_list, ext = '.parquet'):
     return
 
 @pf.register_dataframe_method
-def save_data(data, path_list, name_list, ext = '.parquet'):
+def save_data(data, path_list, name_list, ext = '.parquet', append = False):
 
     """Function to save dataframes.
 
@@ -227,9 +227,15 @@ def save_data(data, path_list, name_list, ext = '.parquet'):
     module_logger.info(f'Saving {file_name} dataset...')
 
     if ext == '.parquet':
-        data.to_parquet(f'{path}{file_name}{ext}')
+        if append:
+            data.to_parquet(f'{path}{file_name}{ext}', engine = "fastparquet", append = True)
+        else:
+            data.to_parquet(f'{path}{file_name}{ext}')
     elif ext == '.csv':
-        data.to_csv(f'{path}{file_name}{ext}')
+        if append:
+            data.to_csv(f'{path}{file_name}{ext}', mode = 'a', header = False)
+        else:
+            data.to_csv(f'{path}{file_name}{ext}')
     else:
         raise(f'Unsupported file extension {ext}. Only .parquet and .csv are allowed')
 

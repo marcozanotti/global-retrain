@@ -11,10 +11,7 @@ from fit_models import retrain_model
 os.environ['NIXTLA_ID_AS_COL'] = '1'
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 # config = get_config('config/fit/TEST_retrain_dl_vn1_monthly_config.yaml')
-# config = get_config('config/fit/retrain_dl_vn1_monthly_config.yaml')
 # config = get_config('config/fit/retrain_dl_vn1_weekly_config.yaml')
-# config = get_config('config/fit/retrain_dl_m5_monthly_config.yaml')
-# config = get_config('config/fit/retrain_dl_m5_weekly_config.yaml')
 # config = get_config('config/fit/retrain_dl_m5_daily_config.yaml')
 config = get_config('config/fit/retrain_dl_m4_daily_config.yaml')
 configure_logging(

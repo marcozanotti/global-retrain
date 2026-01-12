@@ -1,4 +1,3 @@
-
 dataset: {
     dataset_name: 'm5',
     frequency: 'daily',
@@ -34,22 +33,21 @@ fitting: {
 }
 
 model_names: [
-    'LinearRegression'
+    'ETS',
+    'ARIMA'
 ]
-# model_params: null
+
 model_params: {
-    'LinearRegression': {'n_jobs': -1},
+    'ETS': {'season_length': 1, 'model': 'ZZZ'},
+    'ARIMA': {'season_length': 1}
 }
+
 target_transforms: null
+
 features: {
-    'static': ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id'],
-    'lags': [1, 7, 14, 21, 28, 35, 42, 49, 56],
-    'lag_transforms': {
-                1: [RollingMean(7), RollingMean(14), RollingMean(30), ExpandingMean()],
-                7: [RollingMean(7), RollingMean(14), RollingMean(30)],
-                14: [RollingMean(7), RollingMean(14), RollingMean(30)],
-                30: [RollingMean(7), RollingMean(14), RollingMean(30)]
-            },
-    'date': ['year', 'quarter', 'month', 'week', 'dayofweek', 'day', is_weekend],
-    'xregs': ['event']
+    'static': null,
+    'lags': null,
+    'lag_transforms': null,
+    'date': null,
+    'xregs': null
 }
