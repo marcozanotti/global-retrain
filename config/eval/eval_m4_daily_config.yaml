@@ -27,18 +27,20 @@ fitting: {
 }
 
 model_names: [
-    'LinearRegression', 
-    'RandomForestRegressor',
-    'XGBRegressor',
-    'LGBMRegressor',
-    'MLP',
-    'TCN',
-    'NBEATSx',
-    'NHITS',
-    'EnsembleMean2A',
-    'EnsembleMean3A',
-    'EnsembleMean4A',
-    'EnsembleMean5A'
+    'ETS',
+    'ARIMA',
+    # 'LinearRegression', 
+    # 'RandomForestRegressor',
+    # 'XGBRegressor',
+    # 'LGBMRegressor',
+    # 'MLP',
+    # 'TCN',
+    # 'NBEATSx',
+    # 'NHITS',
+    # 'EnsembleMean2A',
+    # 'EnsembleMean3A',
+    # 'EnsembleMean4A',
+    # 'EnsembleMean5A'
 ]
 
 evaluation: {

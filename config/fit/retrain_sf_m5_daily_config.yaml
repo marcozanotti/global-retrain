@@ -3,7 +3,7 @@ dataset: {
     frequency: 'daily',
     min_series_length: 730,
     max_series_length: null,
-    samples: 3,
+    samples: null,
     ext: '.parquet',
     seed: 1992
 }
@@ -13,15 +13,15 @@ fitting: {
     test_window: 56,
     retrain_scenarios: [
         7, 
-        # 14, 
-        # 21,
+        14, 
+        21,
         30, 
-        # 60,
-        # 90,
-        # 120,
-        # 150,
-        # 180,
-        # 364
+        60,
+        90,
+        120,
+        150,
+        180,
+        364
     ],
     'intervals': {
         'h': 28,

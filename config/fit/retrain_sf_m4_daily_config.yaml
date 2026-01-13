@@ -1,27 +1,27 @@
 dataset: {
-    dataset_name: 'm5',
+    dataset_name: 'm4',
     frequency: 'daily',
-    min_series_length: 730,
-    max_series_length: null,
-    samples: 3,
+    min_series_length: 1100,
+    max_series_length: 1100,
+    samples: null,
     ext: '.parquet',
     seed: 1992
 }
 
 fitting: {
     horizon: 28,
-    test_window: 56,
+    test_window: 364,
     retrain_scenarios: [
         7, 
-        # 14, 
-        # 21,
+        14, 
+        21,
         30, 
-        # 60,
-        # 90,
-        # 120,
-        # 150,
-        # 180,
-        # 364
+        60,
+        90,
+        120,
+        150,
+        180,
+        364
     ],
     'intervals': {
         'h': 28,

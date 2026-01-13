@@ -38,8 +38,8 @@ model_names: [
 ]
 
 model_params: {
-    'ETS': {'season_length': 1, 'model': 'ZZZ'},
-    'ARIMA': {'season_length': 1}
+    'ETS': {'season_length': 52, 'model': 'ZZZ'},
+    'ARIMA': {'season_length': 52}
 }
 
 target_transforms: null

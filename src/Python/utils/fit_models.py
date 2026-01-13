@@ -76,7 +76,7 @@ def get_model_name(engine):
         raise ValueError(f'Invalid engine class {engine_class}.')
 
     if len(model_names) > 1:
-        raise(f'Please specify only one model at a time')
+        raise('Please specify only one model at a time')
     else:
         model_name = model_names[0]
         
