@@ -1,6 +1,7 @@
 
 import os
 import yaml
+import time
 import pandas as pd
 import pandas_flavor as pf
 import pyarrow.parquet as pq
@@ -217,6 +218,7 @@ def save_data(data, path_list, name_list, ext = '.parquet', append = False):
         path_list (list): List of directories to be joined.
         name_list (list): List of names to be used to create the file name.
         ext (string, optional): File extension (default is '.parquet').
+        append (bool, optional): Append to existing file when supported.
     """
     
     path = create_file_path(path_list)
@@ -224,20 +226,37 @@ def save_data(data, path_list, name_list, ext = '.parquet', append = False):
         os.makedirs(path)
 
     file_name = create_file_name(name_list)
+    file_path = f'{path}{file_name}{ext}'
     module_logger.info(f'Saving {file_name} dataset...')
 
-    if ext == '.parquet':
-        if append:
-            data.to_parquet(f'{path}{file_name}{ext}', engine = "fastparquet", append = True)
+    def _save_once():
+        if ext == '.parquet':
+            if append:
+                data.to_parquet(file_path, engine = "fastparquet", append = True)
+            else:
+                data.to_parquet(file_path)
+        elif ext == '.csv':
+            if append:
+                data.to_csv(file_path, mode = 'a', header = False, index = False)
+            else:
+                data.to_csv(file_path, index = False)
         else:
-            data.to_parquet(f'{path}{file_name}{ext}')
-    elif ext == '.csv':
-        if append:
-            data.to_csv(f'{path}{file_name}{ext}', mode = 'a', header = False)
-        else:
-            data.to_csv(f'{path}{file_name}{ext}')
-    else:
-        raise(f'Unsupported file extension {ext}. Only .parquet and .csv are allowed')
+            raise(f'Unsupported file extension {ext}. Only .parquet and .csv are allowed')
+    
+    attempt = 1 # initial attempt
+    delay = 3 # seconds
+    retries = 3 # number of retries
+    while attempt <= retries:
+        try:
+            _save_once()
+            return
+        except Exception as e:
+            if attempt == retries:
+                module_logger.exception(f'Failed to save {file_path} after {retries} attempts.')
+                raise
+            module_logger.warning(f'Saving attempt {attempt} failed for {file_path}: {e}. Retrying in {delay} seconds...')
+            time.sleep(delay)
+            attempt += 1    
 
 def load_data(path_list, name_list, ext = '.parquet'):
 
@@ -254,12 +273,13 @@ def load_data(path_list, name_list, ext = '.parquet'):
 
     path = create_file_path(path_list)
     file_name = create_file_name(name_list)
+    file_path = f'{path}{file_name}{ext}'
     module_logger.info(f'Loading {file_name} dataset...')
 
     if ext == '.parquet':
-        res_df = pd.read_parquet(f'{path}{file_name}{ext}')
+        res_df = pd.read_parquet(file_path)
     elif ext == '.csv':
-        res_df = pd.read_csv(f'{path}{file_name}{ext}')
+        res_df = pd.read_csv(file_path)
     else:
         raise(f'Unsupported file extension {ext}. Only .parquet and .csv are allowed')
 
