@@ -166,15 +166,17 @@ def retrain_sf_model(
 
     # define the fitting time series
     series = list(train_df['unique_id'].unique())
+    # series = series[837:] # NOTE: TEMPORARY for testing purposes
     n_series = len(series)
     module_logger.info(f'[ Num series: {n_series} ]')
 
     # initialize the time dataframe (the only auto-incremental df with save at the end)
     time_df = pd.DataFrame()
-
+       
     for ts in series:
-
-        module_logger.info(f'[ Series: {ts} ]')
+        
+        i_series = series.index(ts) + 1
+        module_logger.info(f'[ Series: {ts} ({i_series} of {n_series}) ]')
         train_df_ts = train_df.query(f'unique_id == "{ts}"')
         test_df_ts = test_df.query(f'unique_id == "{ts}"')
         module_logger.info(f"Train size: {len(train_df_ts)} obs, Test size: {len(test_df_ts)} obs")
