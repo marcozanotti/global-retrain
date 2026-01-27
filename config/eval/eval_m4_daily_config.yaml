@@ -2,9 +2,9 @@
 dataset: {
     'dataset_name': 'm4',
     'frequency': 'daily',
-    'min_series_length': 1100,
-    'max_series_length': 1100, 
-    'samples': null,
+    'min_series_length': 1100, # 2200 for 364 retrain scenario, 1100 for others
+    'max_series_length': 1100, # 2200 for 364 retrain scenario, 1100 for others
+    'samples': 1000, # 1000 for sf models, null for ml and dl models
     'ext': '.parquet',
     'seed': 1992
 }

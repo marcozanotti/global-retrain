@@ -2,27 +2,26 @@
 dataset: {
     'dataset_names': [
         # 'm5', 
-        # 'vn1',
-        'm4'
+        'vn1',
+        # 'm4'
     ],
     'frequencies': [
         # 'daily', 
-        # 'weekly',
-        'daily'
+        'weekly'
     ],
     'ext': '.parquet'
 }
 
 model_names: [
     'ETS',
-    'ARIMA',
+    'ARIMA', # no m5
     'LinearRegression', 
-    'RandomForestRegressor', 
+    'RandomForestRegressor', # no m5
     'XGBRegressor', 
     'LGBMRegressor', 
-    # 'CatBoostRegressor',
+    'CatBoostRegressor', # no m4
     'MLP',
-    # 'LSTM',
+    'LSTM', # no m4, m5
     'TCN',
     'NBEATSx',
     'NHITS',
