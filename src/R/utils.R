@@ -70,6 +70,14 @@ aggregate_data <- function(
         }
       }
       data_agg[['total_fit_time']] = total_fit_time
+      data_agg <- data_agg |> 
+        dplyr::mutate(
+          total_fit_time = ifelse(
+            is.na(total_fit_time) | total_fit_time == 0, 
+            total_sample_time - total_predict_time, 
+            total_fit_time
+          )
+        )
     }
 
   }
@@ -106,6 +114,8 @@ get_model_type <- function(model_name) {
 get_model_name_abbr <- function(model_name) {
 
   model_name_abbr <- dplyr::case_when(
+    model_name == 'ETS' ~ 'ETS',
+    model_name == 'ARIMA' ~ 'ARIMA',
     model_name == 'LinearRegression' ~ 'LR',
     model_name == 'RandomForestRegressor' ~ 'RF',
     model_name == 'XGBRegressor' ~ 'XGBoost',
@@ -299,16 +309,19 @@ plot_retrain_results <- function(
   cat("Creating plot...\n")
 	
 	method_lvls <- c(
+    'ETS', 'ARIMA',
 		'LR', 'RF', 'XGBoost', 'LGBM', 'CatBoost', 'MLP',	'LSTM', 'TCN', 'NBEATSx', 'NHITS',
 		'Ens2A', 'Ens3A', 'Ens4A', 'Ens5A',	'Ens2T', 'Ens3T',	'Ens4T', 'Ens5T'
 	)
 	# colors_lbls <- c(
+  #   "ETS" = "#17BECF", "ARIMA" = "#FF6961",
 	# 	"LR" = "#003366", "RF" = "#17BECF", "XGBoost" = "#B3E5FC", "LGBM" = "#2CA02C", "CatBoost" = "#B2DF8A",   
 	# 	"MLP" = "#FEE08B", "LSTM" = "#FFD700", "TCN" = "#FFA500", "NBEATSx" = "#FF6961", "NHITS" = "#E31A1C",  
 	# 	"Ens2A" = "#003366", "Ens3A" = "#17BECF", "Ens4A" = "#2CA02C", "Ens5A" = "#B2DF8A",   
 	# 	"Ens2T" = "#FFD700", "Ens3T" = "#FFA500",	"Ens4T" = "#FF6961", "Ens5T" = "#E31A1C"
 	# )
 	colors_lbls <- c(
+    "ETS" = "#17BECF", "ARIMA" = "#FF6961",
 		"LR" = "#003366", "RF" = "#17BECF", "XGBoost" = "#B3E5FC", "LGBM" = "#2CA02C", "CatBoost" = "#B2DF8A",   
 		"MLP" = "#FEE08B", "LSTM" = "#FFD700", "TCN" = "#FFA500", "NBEATSx" = "#FF6961", "NHITS" = "#E31A1C",  
 		"Ens2A" = "#FFB6C1", "Ens3A" = "#E754B1", "Ens4A" = "#9467BD", "Ens5A" = "#6A0DAD",
@@ -391,16 +404,18 @@ test_differences <- function(data, .metric, by = 'retrain_window', .method = NUL
 
   if (by == 'retrain_window') {
 
-    cat(paste0("Testing differences in ", .metric, " for method ", .method, "...\n"))
     if (is.null(.method)) {.method <- unique(data$method)[1]}
     data_test <- data |> dplyr::filter(method == .method)
+    n_data <- nrow(data_test)
+    min_n_series <- min(table(data_test$retrain_window))
+    n_scn <- length(unique(data_test$retrain_window))
 
-    if (nrow(data_test) == 0) {
+    if (n_data == 0 | n_scn <= 1 | min_n_series <= 1) {
+      cat(paste0("No differences to test: ", n_data, " rows, ", n_scn, " scenarios, and ", min_n_series, " min n. series.\n"))
       return(NULL)
     } else {
-  
-      min_n_series <- min(table(data_test$retrain_window))
-      n_scn <- length(unique(data_test$retrain_window))
+
+      cat(paste0("Testing differences in ", .metric, " for method ", .method, "...\n"))
       data_test <- data_test |> 
         dplyr::group_by(retrain_window) |> 
         dplyr::slice_sample(n = min_n_series) |> # obtain homogenous samples for each retrain window
@@ -428,17 +443,18 @@ test_differences <- function(data, .metric, by = 'retrain_window', .method = NUL
 
   } else if (by == 'method') {
 
-    cat(paste0("Testing differences in ", .metric, " for retrain window ", .retrain_window, "...\n"))
-
     if (is.null(.retrain_window)) {.retrain_window <- min(data$retrain_window)}
     data_test <- data |> dplyr::filter(retrain_window == .retrain_window)
+    n_data <- nrow(data_test)
+    min_n_series <- min(table(as.character(data_test$method)))
+    n_met <- length(unique(data_test$method))
 
-    if (nrow(data_test) == 0) {
+    if (n_data == 0 | n_met <= 1 | min_n_series <= 1) {
+      cat(paste0("No differences to test: ", n_data, " rows, ", n_met, " methods, and ", min_n_series, " min n. series.\n"))
       return(NULL)
     } else {
-  
-      min_n_series <- min(table(as.character(data_test$method)))
-      n_met <- length(unique(data_test$method))
+
+      cat(paste0("Testing differences in ", .metric, " for retrain window ", .retrain_window, "...\n"))
       data_test <- data_test |> 
         dplyr::group_by(method) |> 
         dplyr::slice_sample(n = min_n_series) |> # obtain homogenous samples for each retrain window
@@ -497,6 +513,7 @@ plot_test_results <- function(
   cat("Creating plot...\n")
 
 	method_lvls <- c(
+    'ETS', 'ARIMA',
 		'LR', 'RF', 'XGBoost', 'LGBM', 'CatBoost', 'MLP',	'LSTM', 'TCN', 'NBEATSx', 'NHITS',
 		'Ens2A', 'Ens3A', 'Ens4A', 'Ens5A',	'Ens2T', 'Ens3T',	'Ens4T', 'Ens5T'
 	)
@@ -568,6 +585,7 @@ plot_test_results_facet <- function(
 	cat("Creating plot...\n")
 
 	method_lvls <- c(
+    'ETS', 'ARIMA',
 		'LR', 'RF', 'XGBoost', 'LGBM', 'CatBoost', 'MLP',	'LSTM', 'TCN', 'NBEATSx', 'NHITS',
 		'Ens2A', 'Ens3A', 'Ens4A', 'Ens5A',	'Ens2T', 'Ens3T',	'Ens4T', 'Ens5T'
 	)
@@ -705,11 +723,14 @@ compute_costs <- function(
   time_var, 
   n_skus, 
   dataset_n_skus, 
-  cost_per_hour = 3.5, 
+  cost_per_hour = c(1, 3.5), # cost of machines for SF models first 
   add_average = FALSE,
   compute_relative_costs = TRUE
 ) {
 	
+  sf_cost <- cost_per_hour[1]
+  others_cost <- cost_per_hour[2]
+
   if (add_average) {
     data_mean <- data |> 
       aggregate_data(
@@ -730,9 +751,9 @@ compute_costs <- function(
 			ct_per_sku = .data[[time_var]] / dataset_n_skus,
 			ct_hour = .data[[time_var]] / 60 / 60,
 			ct_hour_per_sku = ct_hour / dataset_n_skus,
-			ct_hour_tot = ct_hour_per_sku * n_skus,
-			cost = ct_hour_tot * cost_per_hour
+			ct_hour_tot = ct_hour_per_sku * n_skus
 		) |> 
+    dplyr::mutate(cost = ifelse(type == 'SF', ct_hour_tot * sf_cost, ct_hour_tot * others_cost)) |> 
 		dplyr::select(dplyr::all_of(c('type', 'method', 'retrain_window', 'cost'))) 
   
   if (compute_relative_costs) {
@@ -872,8 +893,9 @@ analyze_results <- function(config) {
   cost_metrics <- config$cost_params$metrics
   cost_time_var <- config$cost_params$time_var
   cost_n_skus <- config$cost_params$n_skus
-  cost_per_hour <- config$cost_params$cost_per_hour
+  cost_per_hour <- unlist(config$cost_params$cost_per_hour)
   cost_datasets_n_skus <- as.list(unlist(config$cost_params$cost_datasets_n_skus))
+  adjust_time_for_sf <- config$cost_params$adjust_time_for_sf
   
   # final analysis names
   data_types <- c('data', 'results')
@@ -928,6 +950,18 @@ analyze_results <- function(config) {
           dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
           dplyr::filter(method %in% model_names) |> 
           recode_data(model_type_levels, model_names_abbr)
+        if (adjust_time_for_sf) {
+          cat("Adjusting time data for local models...\n")
+          cost_dataset_n_skus_tmp <- cost_datasets_n_skus[[dn]]
+          sf_n_skus <- 1000 # number of time series used in sf experiments
+          n_cores <- 16 # number of cores 
+          anal_df_tmp <- anal_df_tmp |> 
+            dplyr::mutate(
+              total_fit_time = ifelse(type == 'SF', total_fit_time / sf_n_skus * cost_dataset_n_skus_tmp / n_cores, total_fit_time),
+              total_predict_time = ifelse(type == 'SF', total_predict_time / sf_n_skus * cost_dataset_n_skus_tmp / n_cores, total_predict_time),
+              total_sample_time = ifelse(type == 'SF', total_sample_time / sf_n_skus * cost_dataset_n_skus_tmp / n_cores, total_sample_time)
+            )
+        }
         anal_df_agg_tmp <- anal_df_tmp |> 
           aggregate_data(
             group_columns = c('type', 'method', 'retrain_window'),
@@ -976,6 +1010,17 @@ analyze_results <- function(config) {
           dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
           dplyr::filter(method %in% model_names) |> 
           recode_data(model_type_levels, model_names_abbr)
+        if (adjust_time_for_sf) {
+          cat("Adjusting time data for local models...\n")
+          sf_n_skus <- 1000 # number of time series used in sf experiments
+          n_cores <- 16 # number of cores 
+          anal_df_tmp <- anal_df_tmp |> 
+            dplyr::mutate(
+              total_fit_time = ifelse(type == 'SF', total_fit_time / sf_n_skus * cost_dataset_n_skus_tmp / n_cores, total_fit_time),
+              total_predict_time = ifelse(type == 'SF', total_predict_time / sf_n_skus * cost_dataset_n_skus_tmp / n_cores, total_predict_time),
+              total_sample_time = ifelse(type == 'SF', total_sample_time / sf_n_skus * cost_dataset_n_skus_tmp / n_cores, total_sample_time)
+            )
+        }
         anal_df_agg_tmp <- anal_df_tmp |> 
           aggregate_data(
             group_columns = c('type', 'method', 'retrain_window'),
@@ -1054,7 +1099,7 @@ analyze_results <- function(config) {
               model_names_abbr_mt_tmp |> 
                 purrr::map(
                   ~ test_differences(
-                    anal_df_mt_tmp, 
+                    data = anal_df_mt_tmp, 
                     .metric = am, 
                     by = "retrain_window",
                     .method = .x, 
@@ -1065,14 +1110,14 @@ analyze_results <- function(config) {
               retrain_scn_tmp |> 
                 purrr::map(
                   ~ test_differences(
-                    anal_df_mt_tmp, 
+                    data = anal_df_mt_tmp, 
                     .metric = am, 
                     by = "method",
                     .retrain_window = .x, 
                   )
                 ) |> 
                 dplyr::bind_rows() |> 
-                  dplyr::mutate("testing" = "method", .before = 1)
+                dplyr::mutate("testing" = "method", .before = 1)
             )
           } else {
             anal_test[[am]] <- NULL
@@ -1128,7 +1173,7 @@ plot_compared_results <- function(
 	
 	cat("Creating plot...\n")
 	
-	colors_lbls_2 <- c("ML" = "#17BECF", "DL" = "#FFA500", "ENSACC" = "#E754B1", "ENSTIME" = "#C97B63")
+	colors_lbls_2 <- c("SF" = "#003366", "ML" = "#17BECF", "DL" = "#FFA500", "ENSACC" = "#E754B1", "ENSTIME" = "#C97B63")
 	
 	params <- get_table_plot_params(metric, analysis_method)
 	
@@ -1180,7 +1225,7 @@ plot_scatter_results <- function(
 	
 	cat("Creating plot...\n")
 	
-	colors_lbls_2 <- c("ML" = "#17BECF", "DL" = "#FFA500", "ENSACC" = "#E754B1", "ENSTIME" = "#C97B63")
+	colors_lbls_2 <- c("SF" = "#003366", "ML" = "#17BECF", "DL" = "#FFA500", "ENSACC" = "#E754B1", "ENSTIME" = "#C97B63")
 	
 	params <- purrr::map(metrics, ~ get_table_plot_params(.x, analysis_method))
 	names(params) <- c('x', 'y')
@@ -1380,10 +1425,12 @@ plot_optimal_retrain_results <- function(
 	cat("Creating plot...\n")
 	
 	method_lvls <- c(
+    'ETS', 'ARIMA',
 		'LR', 'RF', 'XGBoost', 'LGBM', 'CatBoost', 'MLP',	'LSTM', 'TCN', 'NBEATSx', 'NHITS',
 		'Ens2A', 'Ens3A', 'Ens4A', 'Ens5A',	'Ens2T', 'Ens3T',	'Ens4T', 'Ens5T'
 	)
 	colors_lbls <- c(
+    "ETS" = "#17BECF", "ARIMA" = "#FF6961",
 		"LR" = "#003366", "RF" = "#17BECF", "XGBoost" = "#B3E5FC", "LGBM" = "#2CA02C", "CatBoost" = "#B2DF8A",   
 		"MLP" = "#FEE08B", "LSTM" = "#FFD700", "TCN" = "#FFA500", "NBEATSx" = "#FF6961", "NHITS" = "#E31A1C",  
 		"Ens2A" = "#FFB6C1", "Ens3A" = "#E754B1", "Ens4A" = "#9467BD", "Ens5A" = "#6A0DAD",
