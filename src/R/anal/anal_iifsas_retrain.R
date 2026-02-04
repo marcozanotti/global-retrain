@@ -11,10 +11,9 @@ source('src/R/utils.R')
 reticulate::source_python('src/Python/utils/utilities.py')
 
 # NOTE:
-# plot andamenti 1120x525
-# plot test 730x635
-# plot test doppio 1120x525
-# plot overall 800x800 or 900x800
+# plot andamenti 1100x1100
+# plot test 750x650
+
 
 
 # Load & prepare data -----------------------------------------------------
@@ -33,204 +32,145 @@ rm(analysis_results)
 
 # * Parameters ------------------------------------------------------------
 
-dataset_name1 <- 'm4_daily'
-dataset_name2 <- 'm5_daily'
-dataset_name3 <- 'vn1_weekly'
-
-models_type <- 'SF'
-models_type <- 'ML_DL'
-models_type <- 'ENSACC'
-
-
-
-# =========================================================================
-# * Evaluation ------------------------------------------------------------
-# =========================================================================
-
-eval_res1 <- res[[dataset_name1]][['evaluation']][['results']][[models_type]]
-eval_res2 <- res[[dataset_name2]][['evaluation']][['results']][[models_type]]
-eval_res3 <- res[[dataset_name3]][['evaluation']][['results']][[models_type]]
+df_nms <- c('m4_daily', 'm5_daily', 'vn1_weekly')
+mod_tps <- c('SF', 'ML_DL')
 eval_metrics <- c('rmsse', 'scaled_mqloss')
-
-# ** Tables ---------------------------------------------------------------
-for (m in eval_metrics) {
-	cat(paste(dataset_name1, m, "\n\n"))
-	print(xtable::xtable(eval_res1$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
-	cat(paste(dataset_name2, m, "\n\n"))
-	print(xtable::xtable(eval_res2$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
-	cat(paste(dataset_name3, m, "\n\n"))
-	print(xtable::xtable(eval_res3$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
-}
-
-# ** Plots -----------------------------------------------------------------
-for (m in eval_metrics) {
-	print(
-		eval_res1$plots[[m]] + ggplot2::guides(col = FALSE) +
-          	eval_res2$plots[[m]] + ggplot2::guides(col = FALSE) +
-          	eval_res3$plots[[m]] +
-			patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
-	)
-}
-
-# ** Tests -----------------------------------------------------------------
-for (m in eval_metrics) {
-	g1 <- plot_test_results_facet(
-		data = eval_res1$tests[[m]],
-		.metric = m, 
-		by = "retrain_window", 
-		metric_label = toupper(gsub("_", " ", m)),
-		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name1), "_.*", ""), "- Nemenyi Test"))
-	)
-	print(g1)
-	g2 <- plot_test_results_facet(
-		data = eval_res2$tests[[m]],
-		.metric = m, 
-		by = "retrain_window", 
-		metric_label = toupper(gsub("_", " ", m)),
-		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name2), "_.*", ""), "- Nemenyi Test"))
-	)
-	print(g2)
-  	g3 <- plot_test_results_facet(
-		data = eval_res3$tests[[m]],
-		.metric = m, 
-		by = "retrain_window", 
-		metric_label = toupper(gsub("_", " ", m)),
-		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name3), "_.*", ""), "- Nemenyi Test"))
-	)
-	print(g3)
-}
-
-
-
-# =========================================================================
-# * Time ------------------------------------------------------------------
-# =========================================================================
-
-time_res1 <- res[[dataset_name1]][['time']][['results']][[models_type]]
-time_res2 <- res[[dataset_name2]][['time']][['results']][[models_type]]
-time_res3 <- res[[dataset_name3]][['time']][['results']][[models_type]]
-time_metrics <- c('total_sample_time')
-
-# ** Tables ---------------------------------------------------------------
-for (m in time_metrics) {
-	cat(paste(dataset_name1, m, "\n\n"))
-	print(xtable::xtable(time_res1$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
-	cat(paste(dataset_name2, m, "\n\n"))
-	print(xtable::xtable(time_res2$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
-  	cat(paste(dataset_name3, m, "\n\n"))
-	print(xtable::xtable(time_res3$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
-}
-
-# ** Plots -----------------------------------------------------------------
-for (m in time_metrics) {
-	print(
-		time_res1$plots[[m]] + ggplot2::guides(col = FALSE) +
-            time_res2$plots[[m]] + ggplot2::guides(col = FALSE) +
-          	time_res3$plots[[m]] +
-			patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
-	)
-}
-
-
-
-# =========================================================================
-# * Cost ------------------------------------------------------------------
-# =========================================================================
-
-cost_res1 <- res[[dataset_name1]][['cost']][['results']][[models_type]]
-cost_res2 <- res[[dataset_name2]][['cost']][['results']][[models_type]]
-cost_res3 <- res[[dataset_name3]][['cost']][['results']][[models_type]]
-cost_metrics <- c('cost', 'savings_perc')
-
-# ** Tables ---------------------------------------------------------------
-for (m in cost_metrics) {
-	cat(paste(dataset_name1, m, "\n\n"))
-	print(xtable::xtable(cost_res1$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
-	cat(paste(dataset_name2, m, "\n\n"))
-	print(xtable::xtable(cost_res2$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
-  	cat(paste(dataset_name3, m, "\n\n"))
-	print(xtable::xtable(cost_res3$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
-}
-
-# ** Plots -----------------------------------------------------------------
-cost_res1$plots[['cost']] + cost_res1$plots[['savings_perc']] +
-	patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
-
-cost_res2$plots[['cost']] + cost_res2$plots[['savings_perc']] +
-	patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
-
-cost_res3$plots[['cost']] + cost_res3$plots[['savings_perc']] +
-	patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
-
-
-
-# =========================================================================
-# * Stability -------------------------------------------------------------
-# =========================================================================
-
-stab_res1 <- res[[dataset_name1]][['stability']][['results']][[models_type]]
-stab_res2 <- res[[dataset_name2]][['stability']][['results']][[models_type]]
-stab_res3 <- res[[dataset_name3]][['stability']][['results']][[models_type]]
 stab_metrics <- c('smapc', 'smqc')
 
+
+
+# =========================================================================
+# * Evaluation & Stability ------------------------------------------------
+# =========================================================================
+
 # ** Tables ---------------------------------------------------------------
-for (m in stab_metrics) {
-	cat(paste(dataset_name1, m, "\n\n"))
-	print(xtable::xtable(stab_res1$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
-	cat(paste(dataset_name2, m, "\n\n"))
-	print(xtable::xtable(stab_res2$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
-	cat(paste(dataset_name3, m, "\n\n"))
-	print(xtable::xtable(stab_res3$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
+for (i in seq_along(eval_metrics)) {
+	em <- eval_metrics[i]
+  	sm <- stab_metrics[i]
+    for (j in seq_along(df_nms)) {
+      	df_nm <- df_nms[j]
+      	tab_eval <- dplyr::bind_rows(
+			res[[df_nm]][['evaluation']][['results']][[mod_tps[1]]]$tables[[em]]$x$data,
+			res[[df_nm]][['evaluation']][['results']][[mod_tps[2]]]$tables[[em]]$x$data
+		)
+        tab_stab <- dplyr::bind_rows(
+			res[[df_nm]][['stability']][['results']][[mod_tps[1]]]$tables[[sm]]$x$data,
+			res[[df_nm]][['stability']][['results']][[mod_tps[2]]]$tables[[sm]]$x$data
+		)
+      	cat(paste(df_nms[j], em, "\n\n"))
+		print(xtable::xtable(tab_eval, digits = 3), include.rownames = FALSE)
+		cat("\n\n")
+        cat(paste(df_nms[j], sm, "\n\n"))
+		print(xtable::xtable(tab_stab, digits = 3), include.rownames = FALSE)
+		cat("\n\n")
+	}
 }
 
 # ** Plots -----------------------------------------------------------------
-for (m in stab_metrics) {
-	print(
-		stab_res1$plots[[m]] + ggplot2::guides(col = FALSE) + 
-            stab_res2$plots[[m]] + ggplot2::guides(col = FALSE) + 
-            stab_res3$plots[[m]] +
+for (k in mod_tps) {
+	eval_res1 <- res[[df_nms[1]]][['evaluation']][['results']][[k]]
+	eval_res2 <- res[[df_nms[2]]][['evaluation']][['results']][[k]]
+	eval_res3 <- res[[df_nms[3]]][['evaluation']][['results']][[k]]
+	stab_res1 <- res[[df_nms[1]]][['stability']][['results']][[k]]
+	stab_res2 <- res[[df_nms[2]]][['stability']][['results']][[k]]
+	stab_res3 <- res[[df_nms[3]]][['stability']][['results']][[k]]
+	for (i in seq_along(eval_metrics)) {
+		em <- eval_metrics[i]
+		sm <- stab_metrics[i]
+		print(
+			(
+				(eval_res1$plots[[em]] + ggplot2::guides(col = FALSE)) +
+				(stab_res1$plots[[sm]] + ggplot2::guides(col = FALSE)) 
+			) /
+			(
+				(eval_res2$plots[[em]] + ggplot2::guides(col = FALSE)) +
+				(stab_res2$plots[[sm]] + ggplot2::guides(col = FALSE))
+			) /
+			(
+				(eval_res3$plots[[em]]) +
+				(stab_res3$plots[[sm]])
+			) +
 			patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
-	)
+		)
+	}
 }
 
 # ** Tests -----------------------------------------------------------------
-for (m in stab_metrics) {
-	g1 <- plot_test_results_facet(
-		data = stab_res1$tests[[m]],
-		.metric = m, 
-		by = 'retrain_window', 
-		metric_label = toupper(gsub("_", " ", m)),
-		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name1), "_.*", ""), "- Nemenyi Test"))
-	)
-	print(g1)
-	g2 <- plot_test_results_facet(
-		data = stab_res2$tests[[m]],
-		.metric = m, 
-		by = 'retrain_window', 
-		metric_label = toupper(gsub("_", " ", m)),
-		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name2), "_.*", ""), "- Nemenyi Test"))
-	)
-	print(g2)
-	g3 <- plot_test_results_facet(
-		data = stab_res3$tests[[m]],
-		.metric = m, 
-		by = 'retrain_window', 
-		metric_label = toupper(gsub("_", " ", m)),
-		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name3), "_.*", ""), "- Nemenyi Test"))
-	)
-	print(g3)
+
+# for SF models
+for (k in mod_tps[1]) {
+	for (nm in df_nms) {
+      	eval_res <- res[[nm]][['evaluation']][['results']][[k]]
+      	stab_res <- res[[nm]][['stability']][['results']][[k]]
+      	df_nm <- stringr::str_replace_all(toupper(nm), "_.*", "")
+        g_list <- vector("list", length(eval_metrics))
+      	for (i in seq_along(eval_metrics)) {
+			em <- eval_metrics[i]
+			em_nm <- toupper(gsub("_", " ", ifelse(em == "scaled_mqloss", "smql", em))) 
+			sm <- stab_metrics[i]
+			sm_nm <- toupper(gsub("_", " ", sm))
+			ge <- plot_test_results_facet(
+				data = eval_res$tests[[em]], .metric = em, by = "retrain_window", 
+				metric_label = em_nm, title = paste(df_nm, "-", em_nm, "- Nemenyi Test")
+			)
+			gs <- plot_test_results_facet(
+				data = stab_res$tests[[sm]], .metric = sm, by = "retrain_window", 
+				metric_label = sm_nm, title = paste(df_nm, "-", sm_nm, "- Nemenyi Test")
+			)
+			g_list[[i]] <- ge + gs
+		}
+		g <- g_list[[1]] / g_list[[2]]
+        print(g)
+	}
+}
+
+# for ML_DL models
+for (k in mod_tps[2]) {
+  	eval_res1 <- res[[df_nms[1]]][['evaluation']][['results']][[k]]
+	eval_res2 <- res[[df_nms[2]]][['evaluation']][['results']][[k]]
+	eval_res3 <- res[[df_nms[3]]][['evaluation']][['results']][[k]]
+	stab_res1 <- res[[df_nms[1]]][['stability']][['results']][[k]]
+	stab_res2 <- res[[df_nms[2]]][['stability']][['results']][[k]]
+	stab_res3 <- res[[df_nms[3]]][['stability']][['results']][[k]]
+	for (i in seq_along(eval_metrics)) {
+		em <- eval_metrics[i]
+		em_nm <- toupper(gsub("_", " ", ifelse(em == "scaled_mqloss", "smql", em))) 
+		sm <- stab_metrics[i]
+		sm_nm <- toupper(gsub("_", " ", sm))
+		d1_nm <- stringr::str_replace_all(toupper(df_nms[1]), "_.*", "")
+		d2_nm <- stringr::str_replace_all(toupper(df_nms[2]), "_.*", "")
+		d3_nm <- stringr::str_replace_all(toupper(df_nms[3]), "_.*", "")
+		ge1 <- plot_test_results_facet(
+			data = eval_res1$tests[[em]], .metric = em, by = "retrain_window", 
+			metric_label = em_nm, title = paste(d1_nm, "-", em_nm, "- Nemenyi Test")
+		)
+		ge2 <- plot_test_results_facet(
+			data = eval_res2$tests[[em]], .metric = em, by = "retrain_window", 
+			metric_label = em_nm, title = paste(d2_nm, "-", em_nm, "- Nemenyi Test")
+		)
+		ge3 <- plot_test_results_facet(
+			data = eval_res3$tests[[em]], .metric = em, by = "retrain_window", 
+			metric_label = em_nm, title = paste(d3_nm, "-", em_nm, "- Nemenyi Test")
+		)
+		gs1 <- plot_test_results_facet(
+			data = stab_res1$tests[[sm]], .metric = sm, by = "retrain_window", 
+			metric_label = sm_nm, title = paste(d1_nm, "-", sm_nm, "- Nemenyi Test")
+		)
+		gs2 <- plot_test_results_facet(
+			data = stab_res2$tests[[sm]], .metric = sm, by = "retrain_window", 
+			metric_label = sm_nm, title = paste(d2_nm, "-", sm_nm, "- Nemenyi Test")
+		)
+		gs3 <- plot_test_results_facet(
+			data = stab_res3$tests[[sm]], .metric = sm, by = "retrain_window", 
+			metric_label = sm_nm, title = paste(d3_nm, "-", sm_nm, "- Nemenyi Test")
+		)
+		print(ge1)
+		print(ge2)
+		print(ge3)
+		print(gs1)
+		print(gs2)
+		print(gs3)
+	}
 }
 
 
@@ -276,132 +216,4 @@ opt_freq$m5_daily$stability$results$ML_DL$plots$smapc$bymethod
 opt_freq$m5_daily$stability$results$ML_DL$plots$smqc$bymethod
 
 opt_freq$vn1_weekly$stability$results$ML_DL$plots$smapc$bymethod
-opt_freq$vn1_weekly$stability$results$ML_DL$plots$smqc$bymethod
-
-
-
-# =========================================================================
-# * Ensemble Comparisons --------------------------------------------------
-# =========================================================================
-
-models_types <- c('ML_DL', 'ENSACC')
-
-# Overall Results ---------------------------------------------------------
-
-# * Evaluation ------------------------------------------------------------
-eval_res1 <- res[[dataset_name1]][['evaluation']][['results']]
-eval_res2 <- res[[dataset_name2]][['evaluation']][['results']]
-eval_res3 <- res[[dataset_name3]][['evaluation']][['results']]
-eval_metrics <- c('rmsse', 'scaled_mqloss')
-
-for (m in eval_metrics) {
-	cat(paste(m, "\n\n"))
-	print(
-		xtable::xtable(
-			dplyr::bind_rows(
-				eval_res2[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
-				eval_res2[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
-			) |>
-				dplyr::left_join(
-					dplyr::bind_rows(
-						eval_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
-						eval_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
-					),
-					by = 'Method'
-				) |> 
-				dplyr::rename('M5' = `7`, 'VN1' = `1`) |>
-				dplyr::relocate("M5", .after = "Method"),	
-			digits = 3
-		), 
-		include.rownames = FALSE
-	)
-	cat("\n\n")
-}
-
-# * Stability -------------------------------------------------------------
-stab_res1 <- res[[dataset_name1]][['stability']][['results']]
-stab_res2 <- res[[dataset_name2]][['stability']][['results']]
-stab_metrics <- c('smapc', 'smqc')
-
-for (m in stab_metrics) {
-	cat(paste(m, "\n\n"))
-	print(
-		xtable::xtable(
-			dplyr::bind_rows(
-				stab_res2[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
-				stab_res2[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
-			) |>
-				dplyr::left_join(
-					dplyr::bind_rows(
-						stab_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
-						stab_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
-					),
-					by = 'Method'
-				) |> 
-				dplyr::rename('M5' = `7`, 'VN1' = `1`) |>
-				dplyr::relocate("M5", .after = "Method"),	
-			digits = 3
-		), 
-		include.rownames = FALSE
-	)
-	cat("\n\n")
-}
-
-# * Evaluation - Stability ------------------------------------------------
-
-models_types <- c('SF', 'ML_DL', 'ENSACC')
-eval_res1 <- res[[dataset_name1]][['evaluation']][['results']]
-eval_res2 <- res[[dataset_name2]][['evaluation']][['results']]
-eval_res3 <- res[[dataset_name3]][['evaluation']][['results']]
-stab_res1 <- res[[dataset_name1]][['stability']][['results']]
-stab_res2 <- res[[dataset_name2]][['stability']][['results']]
-stab_res3 <- res[[dataset_name3]][['stability']][['results']]
-metrics <- list(c('rmsse', 'smapc'), c('scaled_mqloss', 'smqc'))
-
-for (m in metrics) {
-	g1 <- dplyr::bind_rows(
-		eval_res1[[models_types[[1]]]]$plots[[m[1]]]$data,
-		eval_res1[[models_types[[2]]]]$plots[[m[1]]]$data,
-		eval_res1[[models_types[[3]]]]$plots[[m[1]]]$data |> dplyr::filter(!type %in% c('ENSTIME'))
-	) |> 
-		dplyr::left_join(
-			dplyr::bind_rows(
-				stab_res1[[models_types[[1]]]]$plots[[m[2]]]$data,
-				stab_res1[[models_types[[2]]]]$plots[[m[2]]]$data,
-				stab_res1[[models_types[[3]]]]$plots[[m[2]]]$data
-			),
-			by = c('type', 'method', 'retrain_window')
-		) |> 
-		plot_scatter_results(metrics = m, .retrain_window = 7, title = "M4")
-	g2 <- dplyr::bind_rows(
-		eval_res2[[models_types[[1]]]]$plots[[m[1]]]$data,
-		eval_res2[[models_types[[2]]]]$plots[[m[1]]]$data,
-		eval_res2[[models_types[[3]]]]$plots[[m[1]]]$data |> dplyr::filter(!type %in% c('ENSTIME'))
-	) |> 
-		dplyr::left_join(
-			dplyr::bind_rows(
-				stab_res2[[models_types[[1]]]]$plots[[m[2]]]$data,
-				stab_res2[[models_types[[2]]]]$plots[[m[2]]]$data,
-				stab_res2[[models_types[[3]]]]$plots[[m[2]]]$data
-			),
-			by = c('type', 'method', 'retrain_window')
-		) |> 
-		plot_scatter_results(metrics = m, .retrain_window = 7, title = "M5")
-	g3 <- dplyr::bind_rows(
-		eval_res3[[models_types[[1]]]]$plots[[m[1]]]$data,
-		eval_res3[[models_types[[2]]]]$plots[[m[1]]]$data,
-		eval_res3[[models_types[[3]]]]$plots[[m[1]]]$data |> dplyr::filter(!type %in% c('ENSTIME'))
-	) |> 
-		dplyr::left_join(
-			dplyr::bind_rows(
-				stab_res3[[models_types[[1]]]]$plots[[m[2]]]$data,
-				stab_res3[[models_types[[2]]]]$plots[[m[2]]]$data,
-				stab_res3[[models_types[[3]]]]$plots[[m[2]]]$data
-			),
-			by = c('type', 'method', 'retrain_window')
-		) |> 
-		plot_scatter_results(metrics = m, .retrain_window = 1, title = "VN1")
-	g <- g1 + g2 + g3 +
-		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
-	print(g)
-}
+  opt_freq$vn1_weekly$stability$results$ML_DL$plots$smqc$bymethod
