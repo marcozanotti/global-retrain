@@ -195,7 +195,7 @@ def remove_series(data, min_series_length):
 
     series_length = data.groupby('unique_id')['y'].count()
 
-    module_logger.info(f'Removing series shorter than {min_series_length} observaions...')
+    module_logger.info(f'Removing series shorter than {min_series_length} observations...')
     remove_ids = series_length[series_length < min_series_length].index.tolist()
     res_df = data[~data['unique_id'].isin(remove_ids)]
 
@@ -221,7 +221,7 @@ def filter_series(data, max_series_length):
         pd.DataFrame: dataframe with series removed.
     """
 
-    module_logger.info(f'Filtering series longer than {max_series_length} observaions...')
+    module_logger.info(f'Filtering series longer than {max_series_length} observations...')
     res_df = data \
         .sort_values(['unique_id', 'ds']) \
         .groupby('unique_id') \

@@ -42,36 +42,37 @@ prepare_data('m4', 'daily', static_features = True, xregs = False, save = True)
 
 
 # checks
-# from src.Python.utils.collect_data import get_data
-# from src.Python.utils.utilities import configure_logging, create_logger, stop_logger
+from src.Python.utils.collect_data import get_data
+from src.Python.utils.utilities import configure_logging, create_logger, stop_logger
 
-# dataset_name = 'm5'
-# frequency = 'daily'
+dataset_name = 'm4'
+frequency = 'daily'
 
-# configure_logging(
-#     config_file = 'config/log_config.yaml', 
-#     name_list = [dataset_name, frequency, 'download']
-# )
-# logger = create_logger()
+configure_logging(
+    config_file = 'config/log_config.yaml', 
+    name_list = [dataset_name, frequency, 'download']
+)
+logger = create_logger()
 
 
-# data = get_data(
-#     path_list = ['data', dataset_name], 
-#     name_list = [dataset_name, frequency, 'prep'],
-#     ext = '.parquet'
-# )
-# len(data['unique_id'].unique())
-# data['ds'].min()
-# data['ds'].max()
-# data.groupby('unique_id')['ds'].min()
-# data.groupby('unique_id')['ds'].max()
+data = get_data(
+    path_list = ['data', dataset_name], 
+    name_list = [dataset_name, frequency, 'prep'],
+    ext = '.parquet'
+)
+len(data['unique_id'].unique())
+data['ds'].min()
+data['ds'].max()
+data.groupby('unique_id')['ds'].min()
+data.groupby('unique_id')['ds'].max()
 
-# get_data(
-#     path_list = ['data', dataset_name],  
-#     name_list = [dataset_name, frequency, 'prep'],
-#     ext = '.parquet', 
-#     min_series_length = 12 * 3
-# )
+get_data(
+    path_list = ['data', dataset_name],  
+    name_list = [dataset_name, frequency, 'prep'],
+    ext = '.parquet', 
+    min_series_length = 1100, 
+    max_series_length = 1100
+)
 
-# stop_logger(logger)
+stop_logger(logger)
 
