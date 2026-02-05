@@ -11,7 +11,7 @@ source('src/R/utils.R')
 reticulate::source_python('src/Python/utils/utilities.py')
 
 # NOTE:
-# plot andamenti 1100x1100
+# plot andamenti 700x700
 # plot test 750x650
 
 
@@ -79,12 +79,12 @@ for (k in mod_tps) {
 		sm <- stab_metrics[i]
 		print(
 			(
-				(eval_res1$plots[[em]] + ggplot2::guides(col = FALSE)) +
-				(stab_res1$plots[[sm]] + ggplot2::guides(col = FALSE)) 
+				(eval_res1$plots[[em]] + ggplot2::guides(col = FALSE) + ggplot2::labs(x = NULL)) +
+				(stab_res1$plots[[sm]] + ggplot2::guides(col = FALSE) + ggplot2::labs(x = NULL)) 
 			) /
 			(
-				(eval_res2$plots[[em]] + ggplot2::guides(col = FALSE)) +
-				(stab_res2$plots[[sm]] + ggplot2::guides(col = FALSE))
+				(eval_res2$plots[[em]] + ggplot2::guides(col = FALSE) + ggplot2::labs(x = NULL)) +
+				(stab_res2$plots[[sm]] + ggplot2::guides(col = FALSE) + ggplot2::labs(x = NULL))
 			) /
 			(
 				(eval_res3$plots[[em]]) +
@@ -95,7 +95,7 @@ for (k in mod_tps) {
 	}
 }
 
-# 500 x 300
+# 600 x 400
 {
   	eval_res2 <- res[[df_nms[2]]][['evaluation']][['results']][["SF"]]
 	stab_res2 <- res[[df_nms[2]]][['stability']][['results']][["SF"]]
@@ -216,29 +216,25 @@ for (k in mod_tps[2]) {
 # =========================================================================
 
 config = get_config('config/anal/anal_iifsas_retrain_config.yaml')
-opt_freq <- analyze_optimal_frequency(config, adjust = 2)
+opt_freq <- analyze_optimal_frequency_combined(config, adjust = 2)
+
+(
+	(opt_freq$m4_daily$ML_DL[[1]]$overall + ggplot2::labs(x = NULL)) + 
+    (opt_freq$m4_daily$ML_DL[[2]]$overall + ggplot2::labs(x = NULL))
+) /
+(
+	(opt_freq$m5_daily$ML_DL[[1]]$overall + ggplot2::labs(x = NULL)) +
+	(opt_freq$m5_daily$ML_DL[[2]]$overall + ggplot2::labs(x = NULL))
+) /
+(
+	opt_freq$vn1_weekly$ML_DL[[1]]$overall +
+	opt_freq$vn1_weekly$ML_DL[[2]]$overall
+) +
+patchwork::plot_layout(guides = "collect") &  ggplot2::theme(legend.position = "bottom")
 
 
 
-# Evaluation
-opt_freq$m4_daily$evaluation$results$ML_DL$plots$rmsse$overall +
-    opt_freq$m5_daily$evaluation$results$ML_DL$plots$rmsse$overall +
-	opt_freq$vn1_weekly$evaluation$results$ML_DL$plots$rmsse$overall
-
-opt_freq$m4_daily$evaluation$results$ML_DL$plots$scaled_mqloss$overall +
-    opt_freq$m5_daily$evaluation$results$ML_DL$plots$scaled_mqloss$overall +
-	opt_freq$vn1_weekly$evaluation$results$ML_DL$plots$scaled_mqloss$overall
-
-# Stability
-opt_freq$m4_daily$stability$results$ML_DL$plots$smapc$overall +
-    opt_freq$m5_daily$stability$results$ML_DL$plots$smapc$overall +
-	opt_freq$vn1_weekly$stability$results$ML_DL$plots$smapc$overall
-
-opt_freq$m4_daily$stability$results$ML_DL$plots$smqc$overall +
-    opt_freq$m5_daily$stability$results$ML_DL$plots$smqc$overall +
-	opt_freq$vn1_weekly$stability$results$ML_DL$plots$smqc$overall
 
 
-opt_freq$m4_daily$evaluation$results$ML_DL$plots$rmsse$bymethod
-opt_freq$m4_daily$evaluation$results$ML_DL$plots$scaled_mqloss$bymethod
+
 

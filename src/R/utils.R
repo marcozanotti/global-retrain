@@ -1,4 +1,3 @@
-
 get_retrain_ids <- function(test_window, horizon, retrain_window = 1) {
   res = seq.int(from = 0, to = (test_window - horizon + 1), by = retrain_window)
   return(res)
@@ -1496,3 +1495,208 @@ plot_optimal_retrain_results <- function(
 	return(g)
 	
 }
+
+analyze_optimal_frequency_combined <- function(config, adjust = 1) {
+	
+	# analysis config
+	analysis_name <- config$analysis$name
+	analysis_types <- config$analysis$types 
+	analysis_method <- config$analysis$method
+	analysis_sample_type <- config$analysis$sample_type
+	# dataset config
+	dataset_names <- config$dataset$dataset_names
+	frequencies <- config$dataset$frequencies
+	dataset_names_full <- paste(dataset_names, frequencies, sep = "_")
+	retrain_scenarios <- purrr::map(frequencies, get_retrain_scenarios) |> 
+		purrr::set_names(dataset_names_full)
+	ext <- config$dataset$ext
+	# model config
+	model_types <- config$models$types
+  model_types_names <- unlist(purrr::map(model_types, paste0, collapse = "_"))
+	model_names <- config$models$model_names
+	model_names_abbr <- config$models$model_names_abbr
+	model_type_levels <- unlist(model_types) # c('SF', 'ML', 'DL', 'ENSACC', 'ENSTIME')
+	# evaluation, and stability config
+	eval_metrics <- config$evaluation_params$metrics
+	eval_outlier_cleaning_metrics <- config$evaluation_params$outlier_cleaning_metrics
+	eval_outlier_cleaning_quantiles <- config$evaluation_params$outlier_cleaning_quantiles
+	stab_metrics <- config$stability_params$metrics
+	stab_outlier_cleaning_metrics <- config$stability_params$outlier_cleaning_metrics
+	stab_outlier_cleaning_quantiles <- config$stability_params$outlier_cleaning_quantiles
+	
+	# final analysis names
+  cols_to_keep <- c('type', 'method', 'test_window', 'horizon', 'retrain_window', 'unique_id')
+	analysis_results <- vector("list", length(dataset_names_full)) |> purrr::set_names(dataset_names_full)
+	
+	for (dn in dataset_names_full) {
+		
+		cat(paste0("*************** Analysing ", dn, " ***************\n"))
+		dataset_name_tmp <- unlist(strsplit(dn, "_"))[1]
+		freq_tmp <- unlist(strsplit(dn, "_"))[2]
+		retrain_scn_tmp <- retrain_scenarios[[dn]]
+
+    cat("Loading and preparing the evaluation data...\n")
+		eval_df_tmp = load_data(
+      path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
+      name_list = c(dataset_name_tmp, freq_tmp, 'eval', analysis_sample_type),
+      ext = ext
+		) |> 
+			tibble::as_tibble() |> 
+			dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
+			dplyr::filter(method %in% model_names) |> 
+			recode_data(model_type_levels, model_names_abbr) |> 
+			clean_outliers(.metric = eval_outlier_cleaning_metrics, q = eval_outlier_cleaning_quantiles)
+		
+		cat("Loading and preparing the stability data...\n")
+		stab_df_tmp = load_data(
+			path_list = c('results', dataset_name_tmp, freq_tmp, 'stability'),
+			name_list = c(dataset_name_tmp, freq_tmp, 'stab'),
+			ext = ext
+		) |> 
+			tibble::as_tibble() |> 
+			dplyr::filter(retrain_window %in% retrain_scn_tmp) |> 
+			dplyr::filter(method %in% model_names) |> 
+			recode_data(model_type_levels, model_names_abbr) |> 
+			clean_outliers(.metric = stab_outlier_cleaning_metrics, q = stab_outlier_cleaning_quantiles) |> 
+			dplyr::filter(type != 'ENSTIME') # remove ensemble time from stability analysis
+
+    anal_df_tmp <- dplyr::bind_rows(
+      eval_df_tmp |> 
+        dplyr::select(dplyr::all_of(c(cols_to_keep, eval_metrics))) |> 
+        tidyr::pivot_longer(cols = dplyr::all_of(eval_metrics), names_to = 'metric'),
+      stab_df_tmp |> 
+        dplyr::select(dplyr::all_of(c(cols_to_keep, stab_metrics))) |> 
+        tidyr::pivot_longer(cols = dplyr::all_of(stab_metrics), names_to = 'metric')
+    )
+
+    anal_model <- vector("list", length(model_types)) |> purrr::set_names(model_types_names)
+
+		for (mt in model_types) {
+				
+			cat(paste0("--- [ Model Types: ", paste0(mt, collapse = ", "), " ] ---\n"))
+			# filter datasets
+			anal_df_mt_tmp <- anal_df_tmp |> dplyr::filter(type %in% mt)
+			model_names_abbr_mt_tmp <- unique(as.character(anal_df_mt_tmp$method))
+				
+			anal_plot <- vector("list", length(eval_metrics))
+
+      for (i in seq_along(eval_metrics)) {
+
+        am <- c(eval_metrics[i], stab_metrics[i])
+        cat(paste0("Creating combined plot for ", toupper(paste(am, collapse = " - ")), "...\n"))
+        tp_par1 <- get_table_plot_params(am[1], analysis_method)
+        tp_par2 <- get_table_plot_params(am[2], analysis_method)
+
+        anal_df_mt_optimal_tmp <- anal_df_mt_tmp |> 
+						dplyr::select(dplyr::all_of(c('type', 'method', 'retrain_window', 'unique_id', 'metric', 'value'))) |> 
+            dplyr::filter(metric %in% am) |> 
+						dplyr::group_by(type, method, unique_id, metric) |> 
+						dplyr::arrange(type, method, unique_id, metric, value) |> 
+						dplyr::slice_head(n = 1) |> 
+						dplyr::ungroup()
+
+				anal_plot[[i]] <- list(
+					"overall" = plot_optimal_retrain_results_combined(
+						data = anal_df_mt_optimal_tmp, 
+						metric = am, 
+						title = toupper(dataset_name_tmp),
+						overall_only = TRUE,
+            adjust = adjust
+					),
+					"bymethod" = plot_optimal_retrain_results_combined(
+						data = anal_df_mt_optimal_tmp, 
+						metric = am, 
+						title = toupper(dataset_name_tmp),
+						overall_only = FALSE,
+						adjust = adjust
+					)
+				)
+
+      } 
+
+      mt_nm <- paste0(mt, collapse = "_")
+      anal_model[[mt_nm]] <- anal_plot
+			
+		}
+
+    analysis_results[[dn]] <- anal_model
+		
+	}
+	
+	cat("Done!\n")
+	return(invisible(analysis_results))
+	
+}
+
+plot_optimal_retrain_results_combined <- function(
+		data, 
+		metric, 
+		title = "", 
+		overall_only = TRUE,
+		adjust = 1
+) {
+	
+	cat("Creating plot...\n")
+	
+  method_lvls <- c(
+    'ETS', 'ARIMA',
+		'LR', 'RF', 'XGBoost', 'LGBM', 'CatBoost', 'MLP',	'LSTM', 'TCN', 'NBEATSx', 'NHITS',
+		'Ens2A', 'Ens3A', 'Ens4A', 'Ens5A',	'Ens2T', 'Ens3T',	'Ens4T', 'Ens5T'
+	)
+	colors_lbls <- c(
+    "RMSSE" = "#003366", "SMAPC" = "#FF6961",
+		"SMQL" = "#2CA02C", "SMQC" = "#FFD700"
+	)
+	
+	data_plot <- data |> 
+		dplyr::mutate(method = factor(method, levels = method_lvls, ordered = FALSE)) |> 
+    dplyr::mutate(metric = ifelse(metric == "scaled_mqloss", "SMQL", toupper(metric)))
+	
+	if (min(data$retrain_window) == 7) {
+		brks <- c(7, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360)
+		lim <- c(1, 365)
+	} else {
+		brks <- c(1, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52)
+		lim <- c(1, 53)
+	}
+	
+	if (overall_only) {
+		data_plot <- data_plot |> 
+			dplyr::mutate(type = 'Overall', method = 'Overall')
+  }
+
+	g <- data_plot |>
+		ggplot2::ggplot(
+	  	ggplot2::aes(
+				x = .data[['retrain_window']],
+		  	y = ggplot2::after_stat(scaled),
+        col = .data[['metric']],
+			  group = .data[['metric']],
+        key_glyph = "line"
+			)
+		)
+	g <- g + 
+    ggplot2::geom_density(adjust = adjust, show.legend = FALSE)	+
+    ggplot2::stat_density(geom = "line", position = "identity", adjust = adjust)
+	
+	g <- g +
+		ggplot2::scale_x_continuous(breaks = brks, limits = lim) +
+    ggplot2::scale_color_manual(values = colors_lbls) +
+		ggplot2::labs(
+			title = title, 
+			x = 'Retrain Scenario (r)', y = 'Density',
+			color = 'Metric', group = 'Method'
+		) + 
+		ggplot2::theme_minimal() +
+		ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+	
+	if (!overall_only) {
+		g <- g + 
+			ggplot2::facet_wrap(. ~ method, scales = 'free_x', ncol = 2) +
+			ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45))
+	}
+	
+	return(g)
+	
+}
+
