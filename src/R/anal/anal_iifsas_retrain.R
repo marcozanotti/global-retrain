@@ -19,8 +19,8 @@ reticulate::source_python('src/Python/utils/utilities.py')
 # Load & prepare data -----------------------------------------------------
 
 # run twice, one for absolute and one for relative
-analysis_file_name <- 'docs/iifsas_retrain/absolute_evaltimestabcost_overlap_20260128_165006.RData'
-analysis_file_name <- 'docs/iifsas_retrain/relative_evaltimestabcost_overlap_20260128_170356.RData'
+analysis_file_name <- 'docs/iifsas_retrain/absolute_evalstab_overlap_20260204_174211.RData'
+analysis_file_name <- 'docs/iifsas_retrain/relative_evalstab_overlap_20260204_171927.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results
@@ -94,6 +94,42 @@ for (k in mod_tps) {
 		)
 	}
 }
+
+# 500 x 300
+{
+  	eval_res2 <- res[[df_nms[2]]][['evaluation']][['results']][["SF"]]
+	stab_res2 <- res[[df_nms[2]]][['stability']][['results']][["SF"]]
+  	(
+		(
+			eval_res2$plots[["rmsse"]] + 
+				ggplot2::theme(
+					plot.title = ggplot2::element_blank(),
+					axis.title.x = ggplot2::element_blank(),
+					axis.text.x = ggplot2::element_blank(),
+					axis.ticks.x = ggplot2::element_blank()
+				)
+		) +
+		(
+			stab_res2$plots[["smapc"]] + 
+				ggplot2::theme(
+					plot.title = ggplot2::element_blank(),
+					axis.title.x = ggplot2::element_blank(),
+					axis.text.x = ggplot2::element_blank(),
+					axis.ticks.x = ggplot2::element_blank()
+				)
+		)
+	) /
+	(
+		(eval_res2$plots[["scaled_mqloss"]] + ggplot2::labs(title = NULL)) +
+		(stab_res2$plots[["smqc"]] + ggplot2::labs(title = NULL))
+	) +
+	patchwork::plot_layout(guides = "collect") & 
+        patchwork::plot_annotation('ETS - M5', theme = ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))) &
+        ggplot2::theme(legend.position = "none") &
+		ggplot2::scale_color_manual(values = c("#3b3b3b"))
+}
+
+
 
 # ** Tests -----------------------------------------------------------------
 
@@ -182,6 +218,8 @@ for (k in mod_tps[2]) {
 config = get_config('config/anal/anal_iifsas_retrain_config.yaml')
 opt_freq <- analyze_optimal_frequency(config, adjust = 2)
 
+
+
 # Evaluation
 opt_freq$m4_daily$evaluation$results$ML_DL$plots$rmsse$overall +
     opt_freq$m5_daily$evaluation$results$ML_DL$plots$rmsse$overall +
@@ -190,15 +228,6 @@ opt_freq$m4_daily$evaluation$results$ML_DL$plots$rmsse$overall +
 opt_freq$m4_daily$evaluation$results$ML_DL$plots$scaled_mqloss$overall +
     opt_freq$m5_daily$evaluation$results$ML_DL$plots$scaled_mqloss$overall +
 	opt_freq$vn1_weekly$evaluation$results$ML_DL$plots$scaled_mqloss$overall
-
-opt_freq$m4_daily$evaluation$results$ML_DL$plots$rmsse$bymethod
-opt_freq$m4_daily$evaluation$results$ML_DL$plots$scaled_mqloss$bymethod
-
-opt_freq$m5_daily$evaluation$results$ML_DL$plots$rmsse$bymethod
-opt_freq$m5_daily$evaluation$results$ML_DL$plots$scaled_mqloss$bymethod
-
-opt_freq$vn1_weekly$evaluation$results$ML_DL$plots$rmsse$bymethod
-opt_freq$vn1_weekly$evaluation$results$ML_DL$plots$scaled_mqloss$bymethod
 
 # Stability
 opt_freq$m4_daily$stability$results$ML_DL$plots$smapc$overall +
@@ -209,11 +238,7 @@ opt_freq$m4_daily$stability$results$ML_DL$plots$smqc$overall +
     opt_freq$m5_daily$stability$results$ML_DL$plots$smqc$overall +
 	opt_freq$vn1_weekly$stability$results$ML_DL$plots$smqc$overall
 
-opt_freq$m4_daily$stability$results$ML_DL$plots$smapc$bymethod
-opt_freq$m4_daily$stability$results$ML_DL$plots$smqc$bymethod
 
-opt_freq$m5_daily$stability$results$ML_DL$plots$smapc$bymethod
-opt_freq$m5_daily$stability$results$ML_DL$plots$smqc$bymethod
+opt_freq$m4_daily$evaluation$results$ML_DL$plots$rmsse$bymethod
+opt_freq$m4_daily$evaluation$results$ML_DL$plots$scaled_mqloss$bymethod
 
-opt_freq$vn1_weekly$stability$results$ML_DL$plots$smapc$bymethod
-  opt_freq$vn1_weekly$stability$results$ML_DL$plots$smqc$bymethod

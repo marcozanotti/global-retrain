@@ -1,7 +1,7 @@
 analysis: {
     'name': 'iifsas_retrain',
-    'types': ['evaluation', 'time', 'stability', 'cost'],
-    'method': 'relative', # absolute / relative # run twice, one for absolute and one for relative
+    'types': ['evaluation', 'stability'],
+    'method': 'absolute', # absolute / relative # run twice, one for absolute and one for relative
     'sample_type': 'overlap' # overlap / nooverlap
 }
 
@@ -12,7 +12,7 @@ dataset: {
 }
 
 models: {
-    'types': [['SF'], ['ML', 'DL'], ['ENSACC']], # ML and DL together, ENS alone
+    'types': [['SF'], ['ML', 'DL']], # ML and DL together, ENS alone
     'model_names': [
         'ETS',
         'ARIMA',
@@ -25,11 +25,7 @@ models: {
         'LSTM',
         'TCN',
         'NBEATSx',
-        'NHITS',
-        'EnsembleMean2A',
-        'EnsembleMean3A',
-        'EnsembleMean4A',
-        'EnsembleMean5A'
+        'NHITS'
     ],
     'model_names_abbr': [
         'ETS',
@@ -43,11 +39,7 @@ models: {
         'LSTM',
         'TCN',
         'NBEATSx',
-        'NHITS',
-        'Ens2A',
-        'Ens3A',
-        'Ens4A',
-        'Ens5A'
+        'NHITS'
     ]
 }
 
