@@ -216,7 +216,7 @@ for (k in mod_tps[2]) {
 # =========================================================================
 
 config = get_config('config/anal/anal_iifsas_retrain_config.yaml')
-opt_freq <- analyze_optimal_frequency_combined(config, adjust = 2)
+opt_freq <- analyze_optimal_frequency_combined(config, adjust = 1)
 
 (
 	(opt_freq$m4_daily$ML_DL[[1]]$overall + ggplot2::labs(x = NULL)) + 
@@ -233,6 +233,19 @@ opt_freq <- analyze_optimal_frequency_combined(config, adjust = 2)
 patchwork::plot_layout(guides = "collect") &  ggplot2::theme(legend.position = "bottom")
 
 
+(
+	(opt_freq$m4_daily$SF[[1]]$overall + ggplot2::labs(x = NULL)) + 
+    (opt_freq$m4_daily$SF[[2]]$overall + ggplot2::labs(x = NULL))
+) /
+(
+	(opt_freq$m5_daily$SF[[1]]$overall + ggplot2::labs(x = NULL)) +
+	(opt_freq$m5_daily$SF[[2]]$overall + ggplot2::labs(x = NULL))
+) /
+(
+	opt_freq$vn1_weekly$SF[[1]]$overall +
+	opt_freq$vn1_weekly$SF[[2]]$overall
+) +
+patchwork::plot_layout(guides = "collect") &  ggplot2::theme(legend.position = "bottom")
 
 
 
