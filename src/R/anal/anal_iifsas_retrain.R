@@ -129,7 +129,33 @@ for (k in mod_tps) {
 		ggplot2::scale_color_manual(values = c("#3b3b3b"))
 }
 
-
+# for ISF2026 presentation
+for (k in mod_tps) {
+	eval_res1 <- res[[df_nms[1]]][['evaluation']][['results']][[k]]
+	eval_res2 <- res[[df_nms[2]]][['evaluation']][['results']][[k]]
+	eval_res3 <- res[[df_nms[3]]][['evaluation']][['results']][[k]]
+	stab_res1 <- res[[df_nms[1]]][['stability']][['results']][[k]]
+	stab_res2 <- res[[df_nms[2]]][['stability']][['results']][[k]]
+	stab_res3 <- res[[df_nms[3]]][['stability']][['results']][[k]]
+	for (i in seq_along(eval_metrics)) {
+		em <- eval_metrics[i]
+		sm <- stab_metrics[i]
+		print(
+			(
+				(eval_res1$plots[[em]] + ggplot2::guides(col = FALSE) + ggplot2::labs(x = NULL)) +
+				(eval_res2$plots[[em]] + ggplot2::guides(col = FALSE) + ggplot2::labs(x = NULL)) +
+				(eval_res3$plots[[em]] + ggplot2::labs(x = NULL))
+			) /
+			(
+				
+				(stab_res1$plots[[sm]] + ggplot2::guides(col = FALSE) + ggplot2::labs(title = NULL)) +
+				(stab_res2$plots[[sm]] + ggplot2::guides(col = FALSE) + ggplot2::labs(title = NULL)) +
+				(stab_res3$plots[[sm]] + ggplot2::labs(title = NULL))
+			) +
+			patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
+		)
+	}
+}
 
 # ** Tests -----------------------------------------------------------------
 
@@ -216,7 +242,7 @@ for (k in mod_tps[2]) {
 # =========================================================================
 
 config = get_config('config/anal/anal_iifsas_retrain_config.yaml')
-opt_freq <- analyze_optimal_frequency_combined(config, adjust = 1)
+opt_freq <- analyze_optimal_frequency_combined(config, adjust = 2)
 
 (
 	(opt_freq$m4_daily$ML_DL[[1]]$overall + ggplot2::labs(x = NULL)) + 
@@ -247,7 +273,18 @@ patchwork::plot_layout(guides = "collect") &  ggplot2::theme(legend.position = "
 ) +
 patchwork::plot_layout(guides = "collect") &  ggplot2::theme(legend.position = "bottom")
 
-
-
+# for ISF2026 presentation
+(
+	(opt_freq$m4_daily$ML_DL[[1]]$overall + ggplot2::labs(x = NULL)) + 
+	(opt_freq$m5_daily$ML_DL[[1]]$overall + ggplot2::labs(x = NULL, y = NULL)) +
+	(opt_freq$vn1_weekly$ML_DL[[1]]$overall + ggplot2::labs(x = NULL, y = NULL))
+    
+) /
+(
+	(opt_freq$m4_daily$ML_DL[[2]]$overall + ggplot2::labs(title = NULL)) +
+	(opt_freq$m5_daily$ML_DL[[2]]$overall + ggplot2::labs(title = NULL, y = NULL)) +
+	(opt_freq$vn1_weekly$ML_DL[[2]]$overall + ggplot2::labs(title = NULL, y = NULL))
+) +
+patchwork::plot_layout(guides = "collect") &  ggplot2::theme(legend.position = "bottom")
 
 
