@@ -1,0 +1,69 @@
+analysis: {
+    'name': 'new_frontiers',
+    'types': ['evaluation', 'time', 'cost'],
+    'method': 'relative', # absolute / relative # run twice, one for absolute and one for relative
+    'sample_type': 'overlap' # overlap / nooverlap
+}
+
+dataset: {
+    'dataset_names': ['m5', 'vn1', 'm4'],
+    'frequencies': ['daily', 'weekly', 'daily'],
+    'ext': '.parquet'
+}
+
+models: {
+    'types': [['ML', 'DL']], # ML and DL together, ENS alone
+    'model_names': [
+        'LinearRegression', 
+        'RandomForestRegressor', 
+        'XGBRegressor',
+        'LGBMRegressor', 
+        'CatBoostRegressor',
+        'MLP',
+        'LSTM',
+        'TCN',
+        'NBEATSx',
+        'NHITS'
+    ],
+    'model_names_abbr': [
+        'LR', 
+        'RF', 
+        'XGBoost', 
+        'LGBM', 
+        'CatBoost',
+        'MLP',
+        'LSTM',
+        'TCN',
+        'NBEATSx',
+        'NHITS'
+    ]
+}
+
+evaluation_params: {
+    'metrics': ['rmsse', 'scaled_mqloss'],
+    'outlier_cleaning_metrics': ['rmsse', 'scaled_mqloss'],
+    'outlier_cleaning_quantiles': [0.000, 0.995]
+}
+
+time_params: {
+    'metrics': ['total_sample_time']
+}
+
+stability_params: {
+    'metrics': ['smapc', 'smqc'],
+    'outlier_cleaning_metrics': ['smapc', 'smqc'],
+    'outlier_cleaning_quantiles': [0.000, 0.995]
+}
+
+cost_params: {
+    'metrics': ['cost', 'savings_perc'],
+    'time_var': 'total_sample_time',
+    'n_skus': 1000000000, # 200000 skus * 5000 stores,
+    'cost_datasets_n_skus': [
+        'm5_daily': 28298,
+        'vn1_weekly': 15053,
+        'm4_daily': 2557
+    ],
+    'cost_per_hour': [1, 3.5], # cost of machines for SF models first
+    'adjust_time_for_sf': True # adjust value with value / 1000 * cost_datasets_n_skus
+}
