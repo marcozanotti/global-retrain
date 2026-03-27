@@ -17,6 +17,7 @@ reticulate::source_python('src/Python/utils/utilities.py')
 # Load & prepare data -----------------------------------------------------
 
 analysis_file_name <- 'docs/new_frontiers/relative_evaltimecost_overlap_20260316_114315.RData'
+analysis_file_name <- 'docs/new_frontiers/absolute_evaltimecost_overlap_20260317_150702.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results
@@ -92,6 +93,7 @@ for (k in mod_tps) {
 	)
 }
 
+
 # =========================================================================
 # * Cost ------------------------------------------------------------------
 # =========================================================================
@@ -124,3 +126,70 @@ for (k in mod_tps) {
 			ggplot2::theme(legend.position = "bottom")
 	)
 }
+
+
+# =========================================================================
+# * Environment -----------------------------------------------------------
+# =========================================================================
+
+cost_per_hour <- 3.5
+energy_coef <- 0.5 # energy coefficient at full utilization is approximately 0.18-0.30 kWh
+pue <- 1.54 # power usage effectiveness (PUE)
+carbon_intensity <- 0.38 # kg CO2 per kWh
+
+cost_data_daily <- res[[df_nms[2]]][['cost']]$data |>
+	dplyr::group_by(retrain_window) |>
+	dplyr::summarise('average' = mean(.data[['cost']]), .groups = 'drop') |>
+	dplyr::mutate(type = 'Daily', method = 'Daily', .before = 1) |>
+	purrr::set_names(c('type', 'method', 'retrain_window', 'cost')) |>
+	dplyr::mutate(
+		ct_hours = cost / cost_per_hour,
+		energy_kwh = ct_hours * energy_coef * pue,
+		carbon_kg = energy_kwh * carbon_intensity,
+		energy_mwh = energy_kwh / 1000,
+		carbon_tons = carbon_kg / 1000
+	)
+cost_data_weekly <- res[[df_nms[3]]][['cost']]$data |>
+	dplyr::group_by(retrain_window) |>
+	dplyr::summarise('average' = mean(.data[['cost']]), .groups = 'drop') |>
+	dplyr::mutate(type = 'Weekly', method = 'Weekly', .before = 1) |>
+	purrr::set_names(c('type', 'method', 'retrain_window', 'cost')) |>
+	dplyr::mutate(
+		ct_hours = cost / cost_per_hour,
+		energy_kwh = ct_hours * energy_coef * pue,
+		carbon_kg = energy_kwh * carbon_intensity,
+		energy_mwh = energy_kwh / 1000,
+		carbon_tons = carbon_kg / 1000
+	)
+cost_data <- dplyr::bind_rows(cost_data_daily, cost_data_weekly)
+
+cost_data_daily |>
+	dplyr::select(method, retrain_window, energy_mwh, carbon_tons)
+cost_data_weekly |>
+	dplyr::select(method, retrain_window, energy_mwh, carbon_tons)
+
+p_daily <- cost_data_daily |>
+	plot_retrain_results(
+		metric = 'carbon_tons',
+		metric_label = 'Carbon Emissions (tons CO2)',
+		title = 'Daily'
+	) +
+	ggplot2::scale_y_continuous(
+		breaks = scales::pretty_breaks(n = 10),
+		labels = function(x) scales::number(x, accuracy = 1)
+	) +
+	ggplot2::theme(legend.position = "none")
+
+p_weekly <- cost_data_weekly |>
+	plot_retrain_results(
+		metric = 'carbon_tons',
+		metric_label = 'Carbon Emissions (tons CO2)',
+		title = 'Weekly'
+	) +
+	ggplot2::scale_y_continuous(
+		breaks = scales::pretty_breaks(n = 10),
+		labels = function(x) scales::number(x, accuracy = 0.1)
+	) +
+	ggplot2::theme(legend.position = "none")
+
+p <- p_daily + p_weekly + patchwork::plot_layout(guides = "collect")
