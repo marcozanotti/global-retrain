@@ -11,6 +11,10 @@ source('src/R/utils.R')
 reticulate::source_python('src/Python/utils/utilities.py')
 
 
+# M5 Data
+m5_df <- load_data(c('data', 'm5'), list('m5_daily_prep'))
+head(m5_df)
+
 # VN1 Data
 vn1_df <- load_data(c('data', 'vn1'), list('vn1_weekly_prep'))
 

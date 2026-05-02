@@ -86,6 +86,22 @@ def download_data(dataset_name, save = True, ext = '.parquet'):
         test_df.drop('len_serie', axis = 1, inplace = True)
         test_df = test_df.sort_values(['unique_id', 'ds']).reset_index(drop = True)
     
+    elif dataset_name == 'hapag_region':
+
+        module_logger.info(f'Downloading {dataset_name} train dataset...')
+        train_df = pd.read_csv('data/hapag_region/hapag_region.csv', header = 1, sep = ';', quotechar = '"')
+        train_df = train_df[:-1] # drop last row with ###EndofFile### value
+        train_df['unique_id'] = train_df['Name'].str.replace(';', '_')
+        train_df = train_df[['unique_id'] + [col for col in train_df.columns if 'Date:' in col]]
+        train_df.columns = [col.replace('Date:', '') for col in train_df.columns]
+        train_df = train_df.melt(id_vars = ['unique_id'], var_name = 'ds', value_name = 'y')
+        train_df['ds'] = pd.to_datetime(train_df['ds'], format = '%Y-%m-%d')
+        train_df = train_df.sort_values(['unique_id', 'ds']).reset_index(drop = True)
+
+        # split into train and test with last 5 years as test
+        test_df = train_df[train_df['ds'] >= '2020-01-01'].copy()
+        train_df = train_df[train_df['ds'] < '2020-01-01'].copy()
+
     else:
 
         raise(f'Unknown dataset {dataset_name}')
@@ -289,6 +305,18 @@ def get_static_features(data, dataset_name):
         static_df.columns = ['unique_id', 'category']
         static_df['category'] = static_df['category'].astype('category').cat.codes
 
+    elif dataset_name == 'hapag_region' or dataset_name == 'hapag':
+
+        static_df['unique_id'] = static_df[0] + "_" \
+            + static_df[1] + "_" \
+            + static_df[2] + "_" \
+            + static_df[3]
+        static_df['geoscope'] = static_df[0].astype('category').cat.codes
+        static_df['eqtype'] = static_df[1].astype('category').cat.codes
+        static_df['georelated'] = static_df[2].astype('category').cat.codes
+        static_df['balance'] = static_df[3].astype('category').cat.codes
+        static_df.drop(columns = [0, 1, 2, 3], axis = 1, inplace = True)
+
     else:
         raise(f'Unknown dataset {dataset_name}')
 
@@ -338,27 +366,64 @@ def get_xregs_data(path_list, name_list, dataset_name, frequency, ext = '.parque
     if dataset_name == 'm5':
 
         ext = '.csv'
-        xreg_df = load_data(
+        xregs_df = load_data(
             path_list = path_list, 
             name_list = name_list, 
             ext = ext
         )
-        xreg_df['event'] = np.where(xreg_df['event_name_1'].isna(), 0, 1)
-        xreg_df['event'] = xreg_df['event'].astype(int)
-        xreg_df['date'] = pd.to_datetime(xreg_df['date'])
-        xreg_df.rename(columns = {'date': 'ds'}, inplace = True)
-        xreg_df = xreg_df[['ds', 'event']]
-        xreg_df = aggregate_data_by_frequency(xreg_df, dataset_name, frequency, drop_firstlast = False)
-        xreg_df['event'] = np.where(xreg_df['event'] == 0, 0, 1)
+        xregs_df['event'] = np.where(xregs_df['event_name_1'].isna(), 0, 1)
+        xregs_df['event'] = xregs_df['event'].astype(int)
+        xregs_df['date'] = pd.to_datetime(xregs_df['date'])
+        xregs_df.rename(columns = {'date': 'ds'}, inplace = True)
+        xregs_df = xregs_df[['ds', 'event']]
+        xregs_df = aggregate_data_by_frequency(xregs_df, dataset_name, frequency, drop_firstlast = False)
+        xregs_df['event'] = np.where(xregs_df['event'] == 0, 0, 1)
 
     elif dataset_name == 'vn1':
 
         raise ValueError(f'Xregs are not available for dataset {dataset_name}.')
 
+    elif dataset_name == 'm4':
+        
+        raise ValueError(f'Xregs are not available for dataset {dataset_name}.')
+    
+    elif dataset_name == 'hapag_region' or dataset_name == 'hapag':
+
+        ext = '.csv'
+        xregs_df = load_data(
+            path_list = path_list, 
+            name_list = name_list, 
+            kwargs = {'header': 1, 'sep': ';', 'quotechar': '"'},
+            ext = ext            
+        )
+        xregs_df = xregs_df[:-1]
+        xregs_df = xregs_df[['Name'] + [col for col in xregs_df.columns if 'Date:' in col]]
+        xregs_df = xregs_df.sort_values(['Name']).reset_index(drop = True)
+        xregs_df['xregs'] = ['xreg' + str(i) for i in range(1, len(xregs_df) + 1)]
+        xregs_df['xregs'] = xregs_df['xregs'].apply(lambda x: x if int(x[4:]) >= 10 else 'xreg0' + x[4:])
+
+        # create a new dataframe with Name and xregs columns to keep the mapping between them
+        xregs_mapping_df = xregs_df[['Name', 'xregs']].copy()
+        
+        xregs_df = xregs_df.drop(columns = ['Name'])
+        xregs_df.columns = [col.replace('Date:', '') for col in xregs_df.columns]
+        xregs_df = xregs_df.melt(id_vars = ['xregs'], var_name = 'ds', value_name = 'value')
+        xregs_df = xregs_df.pivot(index = 'ds', columns = 'xregs', values = 'value').reset_index()
+        xregs_df['ds'] = pd.to_datetime(xregs_df['ds'], format = '%Y-%m-%d')
+        xregs_df = xregs_df.sort_values(['ds']).reset_index(drop = True)
+
+        # save xregs mapping dataframe
+        save_data(
+            data = xregs_mapping_df, 
+            path_list = path_list, 
+            name_list = [dataset_name, 'xregs_mapping'],
+            ext = '.csv'
+        )
+
     else:
         raise ValueError(f'Unknown dataset {dataset_name}.')
 
-    return xreg_df
+    return xregs_df
 
 def prepare_data(dataset_name, frequency, static_features = True, xregs = True, save = True, ext = '.parquet'):
 
@@ -400,23 +465,23 @@ def prepare_data(dataset_name, frequency, static_features = True, xregs = True, 
     res_df = combine_train_test(train_df, test_df)
     del train_df, test_df
 
-    if dataset_name != 'm4':
-        res_df = aggregate_data_by_frequency(res_df, dataset_name, frequency, drop_firstlast = True)
-    else:
+    if dataset_name == 'm4':
         res_df = res_df[res_df['unique_id'].str.contains(get_frequency(frequency)[0])]
+    else:
+        res_df = aggregate_data_by_frequency(res_df, dataset_name, frequency, drop_firstlast = True)
         
     if static_features:
         res_df = get_static_features(res_df, dataset_name)
 
     if xregs:
-        xreg_df = get_xregs_data(
+        xregs_df = get_xregs_data(
             path_list = ['data', dataset_name],  
             name_list = [dataset_name, 'xregs'], 
             dataset_name = dataset_name,
             frequency = frequency, 
             ext = ext
         )
-        res_df = pd.merge(res_df, xreg_df, how = 'left', on = 'ds')
+        res_df = pd.merge(res_df, xregs_df, how = 'left', on = 'ds')
 
     if save:
         save_data(

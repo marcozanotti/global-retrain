@@ -17,7 +17,6 @@ prepare_data('m5', 'daily', static_features = True, xregs = True, save = True)
 # prepare_data('m5', 'monthly', static_features = True, xregs = True, save = True)
 
 
-
 # VN1
 # NOTE: vn1 data must be downloaded from Datasource.ai
 # https://www.datasource.ai/competitions/phase-2-vn1-forecasting-accuracy-challenge/
@@ -40,13 +39,21 @@ download_data('m4', save = True)
 prepare_data('m4', 'daily', static_features = True, xregs = False, save = True)
 
 
+# HAPAG
+download_data('hapag_region', save = True)
+
+# wwekly
+prepare_data('hapag_region', 'weekly', static_features = True, xregs = True, save = True)
+
+
+
 
 # checks
 from src.Python.utils.collect_data import get_data
 from src.Python.utils.utilities import configure_logging, create_logger, stop_logger
 
-dataset_name = 'm4'
-frequency = 'daily'
+dataset_name = 'hapag_region'
+frequency = 'weekly'
 
 configure_logging(
     config_file = 'config/log_config.yaml', 
@@ -60,7 +67,8 @@ data = get_data(
     name_list = [dataset_name, frequency, 'prep'],
     ext = '.parquet'
 )
-len(data['unique_id'].unique())
+data['unique_id'].nunique()
+data['unique_id'].value_counts()
 data['ds'].min()
 data['ds'].max()
 data.groupby('unique_id')['ds'].min()
@@ -70,8 +78,9 @@ get_data(
     path_list = ['data', dataset_name],  
     name_list = [dataset_name, frequency, 'prep'],
     ext = '.parquet', 
-    min_series_length = 1100, 
-    max_series_length = 1100
+    min_series_length = 1079, 
+    max_series_length = None,
+    samples = 1
 )
 
 stop_logger(logger)

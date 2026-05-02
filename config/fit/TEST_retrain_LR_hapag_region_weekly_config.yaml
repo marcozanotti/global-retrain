@@ -1,0 +1,66 @@
+
+dataset: {
+    dataset_name: 'hapag_region',
+    frequency: 'weekly',
+    min_series_length: null,
+    max_series_length: null,
+    samples: 5,
+    ext: '.parquet',
+    seed: 1992
+}
+
+fitting: {
+    horizon: 13,
+    test_window: 52,
+    retrain_scenarios: [
+        # 1, 
+        # 2, 
+        # 3,
+        # 4, 
+        # 6,
+        # 8,
+        # 10,
+        # 13,
+        # 26,
+        52
+    ],
+    'intervals': {
+        'h': 13,
+        'n_windows': 2,
+        'method': 'conformal_distribution'
+    },
+    levels: [50, 60, 70, 80, 90, 95, 99],
+    store_in_sample_results: False
+}
+
+model_names: [
+    'LinearRegression',
+    'XGBRegressor', 
+]
+# model_params: null
+model_params: {
+    'LinearRegression': {'n_jobs': -1},
+    'XGBRegressor': {
+        'objective': 'reg:squarederror',
+        'booster': 'gbtree',
+        'n_estimators': 1000,
+        'learning_rate': 0.03,
+        'max_leaves': 64,
+        'subsample': 0.85,
+        'colsample_bytree': 0.85,
+        'eval_metric': 'rmse',
+        'n_jobs': -1,
+        'device': 'cpu'
+    },
+}
+target_transforms: null
+features: {
+    'static': ['geoscope', 'eqtype', 'georelated', 'balance'],
+    'lags': [1, 2, 3, 4, 8],
+    'lag_transforms': {
+                1: [RollingMean(2), RollingMean(4)],
+                4: [RollingMean(4)]
+            },
+    'date': ['year', 'quarter', 'month', 'week'],
+    'xregs': ['xreg01', 'xreg02', 'xreg03']
+}
