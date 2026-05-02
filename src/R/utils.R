@@ -304,6 +304,72 @@ compute_relative_metrics <- function(data, type) {
   return(relative_data)
 }
 
+compute_relative_metrics_by_series <- function(data, type) {
+  reference_data <- data |>
+    dplyr::group_by(method, unique_id) |>
+    dplyr::slice_min(retrain_window) |>
+    dplyr::ungroup() |>
+    dplyr::select(-dplyr::any_of(c('type', 'retrain_window'))) |>
+    dplyr::rename_with(~ stringr::str_c(.x, "_ref"))
+
+  if (type == 'evaluation') {
+    relative_data <- data |>
+      dplyr::left_join(
+        reference_data,
+        by = c("method" = "method_ref", "unique_id" = "unique_id_ref")
+      ) |>
+      dplyr::mutate(
+        bias = abs(bias) / abs(bias_ref),
+        mae = mae / mae_ref,
+        mase = mase / mase_ref,
+        mse = mse / mse_ref,
+        msse = msse / msse_ref,
+        rmse = rmse / rmse_ref,
+        rmsse = rmsse / rmsse_ref,
+        mqloss = mqloss / mqloss_ref,
+        scaled_mqloss = scaled_mqloss / scaled_mqloss_ref,
+        scaled_crps = scaled_crps / scaled_crps_ref
+      ) |>
+      dplyr::select(-dplyr::ends_with("_ref"))
+  } else if (type == 'time') {
+    relative_data <- data |>
+      dplyr::left_join(reference_data, by = c("method" = "method_ref")) |>
+      dplyr::mutate(
+        total_fit_time = total_fit_time / total_fit_time_ref,
+        total_predict_time = total_predict_time / total_predict_time_ref,
+        total_sample_time = total_sample_time / total_sample_time_ref
+      ) |>
+      dplyr::select(-dplyr::ends_with("_ref"))
+  } else if (type == 'stability') {
+    relative_data <- data |>
+      dplyr::left_join(reference_data, by = c("method" = "method_ref")) |>
+      dplyr::mutate(
+        stability_bias = abs(stability_bias) / abs(stability_bias_ref),
+        mac = mac / mac_ref,
+        masc = masc_ref,
+        rmsc = rmsc / rmsc_ref,
+        rmssc = rmssc_ref,
+        smapc = smapc / smapc_ref,
+        mqc = mqc / mqc_ref,
+        smqc = smqc / smqc_ref
+      ) |>
+      dplyr::select(-dplyr::ends_with("_ref"))
+  } else if (type == 'cost') {
+    relative_data <- data |>
+      dplyr::left_join(reference_data, by = c("method" = "method_ref")) |>
+      dplyr::mutate(
+        cost_perc = cost / cost_ref * 100,
+        savings = cost_ref - cost,
+        savings_perc = (cost_ref - cost) / cost_ref * 100
+      ) |>
+      dplyr::select(-dplyr::ends_with("_ref"))
+  } else {
+    stop(paste0('Unknown type ', type))
+  }
+
+  return(relative_data)
+}
+
 table_retrain_results <- function(
   data,
   metric,

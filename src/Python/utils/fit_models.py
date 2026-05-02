@@ -172,7 +172,7 @@ def retrain_sf_model(
 
     # initialize the time dataframe (the only auto-incremental df with save at the end)
     time_df = pd.DataFrame()
-       
+
     for ts in series:
         
         i_series = series.index(ts) + 1
@@ -214,7 +214,7 @@ def retrain_sf_model(
             tot_sample_time = end_predict_time - start_fit_time
 
             if store_in_sample_results:
-                # FIXME: not working (must be fitted with  fit_predict and access fitted values in fitted_ attribute)
+                # FIXME: not working (must be fitted with fit_predict and access fitted values in fitted_ attribute)
                 # extract in-sample results from the model only when fitting
                 module_logger.info('Extracting fitted values...')
                 raise ValueError('Not yet implemented for SF models.')
