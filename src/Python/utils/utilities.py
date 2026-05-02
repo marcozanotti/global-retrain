@@ -258,7 +258,7 @@ def save_data(data, path_list, name_list, ext = '.parquet', append = False):
             time.sleep(delay)
             attempt += 1    
 
-def load_data(path_list, name_list, ext = '.parquet'):
+def load_data(path_list, name_list, ext = '.parquet', kwargs = {}):
 
     """Function to load the data.
 
@@ -279,7 +279,7 @@ def load_data(path_list, name_list, ext = '.parquet'):
     if ext == '.parquet':
         res_df = pd.read_parquet(file_path)
     elif ext == '.csv':
-        res_df = pd.read_csv(file_path)
+        res_df = pd.read_csv(file_path, **kwargs)
     else:
         raise(f'Unsupported file extension {ext}. Only .parquet and .csv are allowed')
 
@@ -340,6 +340,8 @@ def get_dataset_frequency(dataset_name):
         freq = 'weekly'
     elif dataset_name == 'm4':
         freq = 1
+    elif dataset_name == 'hapag_region' or dataset_name == 'hapag':
+        freq = 'weekly'
     else:
         raise ValueError(f'Invalid dataset: {dataset_name}')
 
