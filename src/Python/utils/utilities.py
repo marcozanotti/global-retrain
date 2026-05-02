@@ -307,7 +307,7 @@ def get_frequency(frequency):
         elif frequency == 'daily':
             freq = ['D', 7, 'D']
         elif frequency == 'weekly':
-            freq = ['W-MON', 52, 'W-MON']
+            freq = ['W', 52, 'W'] # WARN: possible breaking change (W instead of W-MON, because hapag based on SUN)
         elif frequency == 'monthly':
             freq = ['ME', 12, 'ME']
         elif frequency == 'quarterly':

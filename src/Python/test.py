@@ -23,6 +23,3 @@ f_importance_original.plot.bar()
 importance_df.plot.bar()
 
 
-
-# extract feature importance from xgbregressor
-
