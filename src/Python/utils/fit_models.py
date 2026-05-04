@@ -7,7 +7,9 @@ import pandas as pd
 from utilities import save_data, get_dataset_frequency
 from collect_data import get_data, combine_train_test
 from set_engine import get_model_type, set_engine, add_data_features
-from mlforecast.utils import PredictionIntervals
+from statsforecast.utils import ConformalIntervals as PredictionIntervalsSF
+from mlforecast.utils import PredictionIntervals as PredictionIntervalsML
+from neuralforecast.utils import PredictionIntervals as PredictionIntervalsDL
 
 import logging
 module_logger = logging.getLogger('fit_models')
@@ -81,11 +83,12 @@ def get_model_name(engine):
         
     return model_name
 
-def get_prediction_intervals(intervals):
+def get_prediction_intervals(intervals, model_class = 'ml'):
     """Function to get prediction intervals.
 
     Args:
         intervals (fun): prediction intervals function.
+        model_class (str): class of the model for prediction intervals. Defaults to 'ml'.
     
     Returns:
         list: list of prediction intervals.
@@ -94,11 +97,27 @@ def get_prediction_intervals(intervals):
     module_logger.info('Defining prediction intervals...')
 
     if intervals is not None:
-        intervals_new = PredictionIntervals(
-            h = intervals['h'],
-            n_windows = intervals['n_windows'],
-            method = intervals['method']
-        )
+
+        if model_class == 'sf':
+            intervals_new = PredictionIntervalsSF(
+                h = intervals['h'],
+                n_windows = intervals['n_windows'],
+                method = intervals['method']
+            )
+        elif model_class == 'ml':
+            intervals_new = PredictionIntervalsML(
+                h = intervals['h'],
+                n_windows = intervals['n_windows'],
+                method = intervals['method']
+            )
+        elif model_class == 'dl':
+            intervals_new = PredictionIntervalsDL(
+                n_windows = intervals['n_windows'],
+                method = intervals['method'],
+                step_size=1
+            )
+        else:
+            raise ValueError(f'Invalid model class {model_class} for prediction intervals.')
 
     return intervals_new
 
@@ -153,7 +172,7 @@ def retrain_sf_model(
     # intervals
     horizon_sf = horizon + retrain_window - 1
     intervals['h'] = horizon_sf
-    pred_intervals = get_prediction_intervals(intervals)
+    pred_intervals = get_prediction_intervals(intervals, model_class = 'sf')
 
     # keep only the necessary columns 
     # TODO: add features for SF models
@@ -345,7 +364,7 @@ def retrain_ml_model(
     module_logger.info(f'[ Model: {model_name} | Retrain Window: {retrain_window} ]')
 
     # intervals
-    pred_intervals = get_prediction_intervals(intervals)
+    pred_intervals = get_prediction_intervals(intervals, model_class = 'ml')
 
     # define the fitting times
     fitting_ids = get_retrain_ids(test_window, horizon, retrain_window)
@@ -553,7 +572,7 @@ def retrain_dl_model(
     module_logger.info(f'[ Model: {model_name} | Retrain Window: {retrain_window} ]')
 
     # intervals
-    pred_intervals = get_prediction_intervals(intervals)
+    pred_intervals = get_prediction_intervals(intervals, model_class = 'dl')
 
     # define the fitting times
     fitting_ids = get_retrain_ids(test_window, horizon, retrain_window)
