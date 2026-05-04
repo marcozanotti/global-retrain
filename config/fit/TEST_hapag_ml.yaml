@@ -10,8 +10,8 @@ dataset: {
 }
 
 fitting: {
-    horizon: 13,
-    test_window: 52,
+    horizon: 9,
+    test_window: 104,
     retrain_scenarios: [
         # 1, 
         # 2, 
@@ -25,8 +25,8 @@ fitting: {
         52
     ],
     'intervals': {
-        'h': 13,
-        'n_windows': 2,
+        'h': 9,
+        'n_windows': 4,
         'method': 'conformal_distribution'
     },
     levels: [50, 60, 70, 80, 90, 95, 99],
@@ -36,6 +36,7 @@ fitting: {
 model_names: [
     'LinearRegression',
     'XGBRegressor', 
+    'LGBMRegressor'
 ]
 # model_params: null
 model_params: {
@@ -52,15 +53,38 @@ model_params: {
         'n_jobs': -1,
         'device': 'cpu'
     },
+    'LGBMRegressor': {
+        'objective': 'regression',
+        'boosting_type': 'gbdt',
+        'n_estimators': 1000,
+        'learning_rate': 0.03,
+        'num_leaves': 64,
+        'min_child_samples': 100,
+        'subsample': 0.85,
+        'subsample_freq': 1,
+        'colsample_bytree': 0.85,
+        'metric': 'rmse',
+        'boost_from_average': False,
+        'n_jobs': -1,
+        'device': 'cpu',
+        'force_row_wise': True,
+        'verbosity': -1
+    }
 }
 target_transforms: null
 features: {
     'static': ['geoscope', 'eqtype', 'georelated', 'balance'],
-    'lags': [1, 2, 3, 4, 8],
+    'lags': [1, 2, 3, 4, 9],
     'lag_transforms': {
                 1: [RollingMean(2), RollingMean(4)],
                 4: [RollingMean(4)]
             },
     'date': ['year', 'quarter', 'month', 'week'],
-    'xregs': ['xreg01', 'xreg02', 'xreg03', 'xreg04', 'xreg05', 'xreg06', 'xreg07', 'xreg08', 'xreg09', 'xreg10']
+    'xregs': [
+        'xreg01', 'xreg02', 'xreg03', 'xreg04', 'xreg05', 'xreg06', 'xreg07', 'xreg08', 'xreg09', 'xreg10',
+        'xreg11', 'xreg12', 'xreg13', 'xreg14', 'xreg15', 'xreg16', 'xreg17', 'xreg18', 'xreg19', 'xreg20',
+        'xreg21', 'xreg22', 'xreg23', 'xreg24', 'xreg25', 'xreg26', 'xreg27', 'xreg28', 'xreg29', 'xreg30',
+        'xreg31', 'xreg32', 'xreg33', 'xreg34', 'xreg35', 'xreg36', 'xreg37', 'xreg38', 'xreg39', 'xreg40',
+        'xreg41', 'xreg42', 'xreg43', 'xreg44', 'xreg45', 'xreg46', 'xreg47'
+    ]
 }

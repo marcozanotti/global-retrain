@@ -1,4 +1,3 @@
-
 import sys
 sys.path.insert(0, 'src/Python/utils')
 import os
@@ -10,8 +9,9 @@ from fit_models import retrain_model
 os.environ['NIXTLA_ID_AS_COL'] = '1'
 # config = get_config('config/fit/TEST_retrain_ETS_m5_daily_config.yaml')
 # config = get_config('config/fit/TEST_retrain_ETS_vn1_weekly_config.yaml')
+config = get_config('config/fit/TEST_hapag_sf.yaml')
 # config = get_config('config/fit/retrain_sf_vn1_weekly_config.yaml')
-config = get_config('config/fit/retrain_sf_m5_daily_config.yaml')
+# config = get_config('config/fit/retrain_sf_m5_daily_config.yaml')
 # config = get_config('config/fit/retrain_sf_m4_daily_config.yaml')
 configure_logging(
     config_file = 'config/log_config.yaml', 
