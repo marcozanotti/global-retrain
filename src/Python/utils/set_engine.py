@@ -5,7 +5,7 @@ import os
 import pandas_flavor as pf
 from pandas.api.types import is_numeric_dtype
 from statsforecast import StatsForecast
-from statsforecast.models import AutoETS, AutoARIMA
+from statsforecast.models import Naive, SeasonalNaive, WindowAverage, AutoETS, AutoARIMA
 from mlforecast import MLForecast
 from neuralforecast import NeuralForecast
 from sklearn.linear_model import LinearRegression, Lasso, Ridge
@@ -143,7 +143,7 @@ def get_model_type(model_name):
         str: model type.
     """
     
-    sf = ['ETS', 'ARIMA']
+    sf = ['Naive', 'SeasonalNaive', 'WindowAverage', 'ETS', 'ARIMA']
     ml = [
         'LinearRegression', 'Lasso', 'Ridge', 
         'RandomForestRegressor', 
@@ -174,7 +174,29 @@ def get_default_model_params(model_name):
 
     module_logger.info('Defining default model parameters...')
 
-    if model_name == 'ETS':
+    if model_name == 'Naive':
+
+        model_params = {
+            model_name: {}
+        }
+    
+    elif model_name == 'SeasonalNaive':
+
+        model_params = {
+            model_name: {
+                'season_length': 1
+            }
+        }
+    
+    elif model_name == 'WindowAverage':
+        
+        model_params = {
+            model_name: {
+                'window_size': 1
+            }
+        }
+
+    elif model_name == 'ETS':
 
         model_params = {
             model_name: {
@@ -323,7 +345,13 @@ def set_model(model_name, model_params = None):
 
     if model_type == 'sf':
         
-        if model_name == 'ETS':
+        if model_name == 'Naive':
+            model = [Naive(alias = model_name)]
+        elif model_name == 'SeasonalNaive':
+            model = [SeasonalNaive(**model_params, alias = model_name)]
+        elif model_name == 'WindowAverage':
+            model = [WindowAverage(**model_params, alias = model_name)]
+        elif model_name == 'ETS':
             model = [AutoETS(**model_params, alias = model_name)]
         elif model_name == 'ARIMA':
             model = [AutoARIMA(**model_params, alias = model_name)]
@@ -446,7 +474,7 @@ def add_data_features(data, frequency, features, remove_static = False):
         pd.DataFrame: dataframe with date features added.
     """
 
-    module_logger.info(f'Adding features to the dataset...')
+    module_logger.info('Adding features to the dataset...')
 
     freq = get_frequency(frequency)[0]
     lags = get_lags(feature_list = features['lags'])
