@@ -1,3 +1,40 @@
+# NOTE: HapagLloyd Project
+- horizon: 9
+- seasonality: 'yearly' 
+- training: 884 (19 years)
+- test: 104 (last 2 years)
+- restraining scenarios: {1, 2, 3, 4, 6, 8, 10, 13, 26, 52}
+- features: {
+    'static': ['geoscope', 'eqtype', 'georelated', 'balance'],
+    'lags': [1, 2, 3, 4, 9],
+    'lag_transforms': {
+                1: [RollingMean(2), RollingMean(4)],
+                4: [RollingMean(4)]
+            },
+    'date': ['year', 'quarter', 'month', 'week'],
+    'xregs': all features? 
+  }
+- target_transforms: ?
+- interval: 'conformal'
+- models: LinearRegression, XGBoost, MLP, NBEATSx
+
+# WARN: 
+- no store models
+- no hyperparamenter tuning on retraining (keep initially optimized values) 
+
+- tuning before on:
+-- models: AutoXGBoost, AutoMLP, AutoNBEATSx
+-- training:
+-- validation:
+-- test:
+
+save model
+add prediction plot
+one-hot feature for XGBoost, sine-cosine for NBEATSx
+
+
+
+
 # NOTE:
 - valutare l'aggiunta di datasets (Rossmann, Favorita, M4, Wikipedia)
 - valutare l'aggiunta di un parametro skip per saltare di k le iterazioni 

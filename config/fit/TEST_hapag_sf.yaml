@@ -33,10 +33,10 @@ fitting: {
 }
 
 model_names: [
-    'Naive',
-    'SeasonalNaive',
-    'WindowAverage',
-    # 'ETS'
+    # 'Naive',
+    # 'SeasonalNaive',
+    # 'WindowAverage',
+    'ETS'
 ]
 
 model_params: {

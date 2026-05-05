@@ -1,6 +1,6 @@
-
 import os
 import yaml
+import re
 import time
 import pandas as pd
 import pandas_flavor as pf
@@ -117,7 +117,7 @@ def create_file_name(name_list, ext = None):
 
     return file_name
 
-def get_file_name(path_list, name_list = None, ext = '.parquet', remove_ext = True):
+def get_file_name(path_list, name_list = None, ext = '.parquet', remove_ext = True, add_path = False):
 
     """Function to get file names from a given path.
 
@@ -127,6 +127,7 @@ def get_file_name(path_list, name_list = None, ext = '.parquet', remove_ext = Tr
         ext (str, optional): Extension of the files. Defaults to '.parquet'.
         remove_ext (bool, optional): Whether to remove the extension from the file names. 
         Defaults to True.
+        add_path (bool, optional): Whether to add the path to the file names. Defaults to False.
     
     Returns:
         list: List of file names.
@@ -139,6 +140,8 @@ def get_file_name(path_list, name_list = None, ext = '.parquet', remove_ext = Tr
             file_names = list(filter(lambda x: str(n) in x, file_names))
     if remove_ext:
         file_names = [s.replace(ext, "") for s in file_names]
+    if add_path:
+        file_names = [path + s for s in file_names]
 
     return file_names
 
@@ -170,7 +173,14 @@ def combine_and_save_files(
     else:
         files = files_to_read
 
-    files.sort(key = lambda x: int("".join([i for i in x if i.isdigit()])))
+    def sort_key(s):
+        numbers = re.findall(r'\d+', s) # Find all numbers in the string
+        if numbers: # If numbers are found, return the first one as an integer
+            return int(numbers[0])
+        return 0 # Otherwise, return 0 or another default value
+
+    files.sort(key=sort_key)
+    # files.sort(key = lambda x: int("".join([i for i in x if i.isdigit()])))
     path_to_write = create_file_path(path_list_to_write)
     if not os.path.exists(path_to_write):
         os.makedirs(path_to_write)

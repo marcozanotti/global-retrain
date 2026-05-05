@@ -63,5 +63,3 @@ breaks_df = get_static_features(breaks_df, 'hapag')
 
 save_data(breaks_df, ['data', 'hapag_region'], ['hapag_breaks_prep'])
 
-
-

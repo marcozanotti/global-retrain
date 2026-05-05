@@ -75,3 +75,31 @@ vn1_res_df |>
   geom_line() +
   facet_wrap(~method, scales = 'free_y') +
   theme_bw()
+
+
+# Analyze predictions
+reticulate::use_condaenv('global_retrain')
+
+library(tidyverse)
+library(reticulate)
+
+source('src/R/utils.R')
+reticulate::source_python('src/Python/utils/utilities.py')
+
+# Hapag Data
+hapag_preds_df <- load_data(
+  c('results', 'hapag_region', 'weekly', 'preds'),
+  list('hapag_region_weekly_preds')
+) |> as_tibble()
+
+series_names <- c('A_40HC_E_E')
+series_names <- c('L_40RE_A_E')
+
+p <- hapag_preds_df |>
+  filter(unique_id %in% series_names) |>
+  ggplot(aes(x = ds)) +
+  geom_line(aes(y = y), color = 'black') +
+  geom_line(aes(y = fcst), color = 'red') +
+  facet_wrap(~method, scales = 'free_y') +
+  theme_bw()
+plotly::ggplotly(p)
