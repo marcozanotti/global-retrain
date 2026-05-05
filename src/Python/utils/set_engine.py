@@ -18,7 +18,7 @@ from neuralforecast.models import MLP, LSTM, TCN, NBEATSx, NHITS
 # NOTE: feature and transform functions must be imported to be used with eval('fun_name')
 # from sklearn.preprocessing import FunctionTransformer
 # from mlforecast.target_transforms import GlobalSklearnTransformer
-# from mlforecast.target_transforms import LocalStandardScaler, LocalMinMaxScaler, Differences
+from mlforecast.target_transforms import LocalRobustScaler#, LocalStandardScaler, LocalMinMaxScaler, Differences
 from mlforecast.lag_transforms import RollingMean, ExpandingMean
 from neuralforecast.losses.pytorch import MAE, MSE, RMSE
 from custom_feats import is_weekend

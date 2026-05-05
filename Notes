@@ -12,9 +12,9 @@
                 4: [RollingMean(4)]
             },
     'date': ['year', 'quarter', 'month', 'week'],
-    'xregs': all features? 
+    'xregs': all features 
   }
-- target_transforms: ?
+- target_transforms: no
 - interval: 'conformal'
 - models: LinearRegression, XGBoost, MLP, NBEATSx
 
@@ -28,9 +28,10 @@
 -- validation:
 -- test:
 
-save model
-add prediction plot
-one-hot feature for XGBoost, sine-cosine for NBEATSx
+
+add time trend scaled
+one-hot feature for XGBoost
+add sine-cosine for NBEATSx
 
 
 

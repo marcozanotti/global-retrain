@@ -4,7 +4,7 @@ import gc
 import time
 import numpy as np
 import pandas as pd
-from utilities import save_data, get_dataset_frequency
+from utilities import save_data, get_dataset_frequency, create_file_path
 from collect_data import get_data, combine_train_test
 from set_engine import get_model_type, set_engine, add_data_features
 from statsforecast.utils import ConformalIntervals as PredictionIntervalsSF
@@ -135,6 +135,7 @@ def retrain_sf_model(
     intervals = None,
     levels = [50, 60, 70, 80, 90, 95, 99],
     store_in_sample_results = False,
+    save_model = False,
     ext = '.parquet'
 ):
 
@@ -154,8 +155,8 @@ def retrain_sf_model(
         intervals (fun): intervals to be used for predictions. Defaults to None.
         levels (list): confidence levels for the predictions. Defaults to
         [60, 70, 80, 85, 90, 95, 99].
-        store_in_sample_results (bool, optional): store in-sample results.
-        Defaults to False.
+        store_in_sample_results (bool, optional): store in-sample results. Defaults to False.
+        save_model (bool, optional): whether to save the model. Defaults to False.
         ext (str, optional): file extension for storing results. Defaults to '.parquet'.
 
     Returns:
@@ -222,7 +223,7 @@ def retrain_sf_model(
                 engine.fit(df = train_df_tmp, prediction_intervals = pred_intervals)
 
             end_fit_time = time.time()
-                    
+
             # predict out-of-sample with the model        
             module_logger.info('Predicting...')
             start_predict_time = time.time()
@@ -329,6 +330,7 @@ def retrain_ml_model(
     intervals = None,
     levels = [50, 60, 70, 80, 90, 95, 99],
     store_in_sample_results = False,
+    save_model = False,
     ext = '.parquet'
 ):
 
@@ -350,6 +352,7 @@ def retrain_ml_model(
         [60, 70, 80, 85, 90, 95, 99].
         store_in_sample_results (bool, optional): store in-sample results.
         Defaults to False.
+        save_model (bool, optional): whether to save the model. Defaults to False.
         ext (str, optional): file extension for storing results. Defaults to '.parquet'.
 
     Returns:
@@ -421,6 +424,11 @@ def retrain_ml_model(
                 )
 
             end_fit_time = time.time()
+
+            if save_model and i == fitting_ids[0]: # save only the first fitted model for each series
+                module_logger.info('Saving model...')
+                f_path = create_file_path(['results', dataset_name, frequency, model_name, retrain_window, 'models'])
+                fit_tmp.save(f_path)
 
             # predict out-of-sample with the models
             module_logger.info('Predicting...')
@@ -537,6 +545,7 @@ def retrain_dl_model(
     intervals = None,
     levels = [50, 60, 70, 80, 90, 95, 99],
     store_in_sample_results = False,
+    save_model = False,
     ext = '.parquet'
 ):
 
@@ -556,8 +565,8 @@ def retrain_dl_model(
         intervals (fun): intervals to be used for predictions. Defaults to None.
         levels (list): confidence levels for the predictions. Defaults to
         [60, 70, 80, 85, 90, 95, 99].
-        store_in_sample_results (bool, optional): store in-sample results.
-        Defaults to False.
+        store_in_sample_results (bool, optional): store in-sample results. Defaults to False.
+        save_model (bool, optional): whether to save the model. Defaults to False.
         ext (str, optional): file extension for storing results. Defaults to '.parquet'.
 
     Returns:
@@ -623,6 +632,11 @@ def retrain_dl_model(
                 engine.fit(df = train_df_tmp, static_df = static_df, prediction_intervals = pred_intervals)
 
             end_fit_time = time.time()
+
+            if save_model and i == fitting_ids[0]: # save only the first fitted model for each series
+                module_logger.info('Saving model...')
+                f_path = create_file_path(['results', dataset_name, frequency, model_name, retrain_window, 'models'])
+                engine.save(f_path)
 
             # predict out-of-sample with the models
             module_logger.info('Predicting...')
@@ -764,6 +778,7 @@ def retrain_model(config):
     model_params = config['model_params']
     target_transforms = config['target_transforms']
     features = config['features']
+    save_model = config['save_model']
 
     # load the dataset
     if samples is not None:
@@ -813,6 +828,7 @@ def retrain_model(config):
                     intervals = intervals,
                     levels = levels,
                     store_in_sample_results = store_in_sample_results,
+                    save_model = save_model,
                     ext = ext
                 )
 
@@ -832,6 +848,7 @@ def retrain_model(config):
                     intervals = intervals,
                     levels = levels,
                     store_in_sample_results = store_in_sample_results,
+                    save_model = save_model,
                     ext = ext
                 )
 
@@ -851,6 +868,7 @@ def retrain_model(config):
                     intervals = intervals,
                     levels = levels,
                     store_in_sample_results = store_in_sample_results,
+                    save_model = save_model,
                     ext = ext
                 )    
             

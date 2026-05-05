@@ -22,7 +22,8 @@ fitting: {
         # 10,
         # 13,
         # 26,
-        52
+        # 52,
+        104
     ],
     'intervals': {
         'h': 9,
@@ -37,7 +38,7 @@ model_names: [
     'MLP',
     'NBEATSx'
 ]
-# model_params: null
+
 model_params: {
     'MLP': {
         'h': 9,
@@ -73,7 +74,9 @@ model_params: {
         'random_seed': 1992 
     }   
 }
+
 target_transforms: null
+
 features: {
     'static': ['geoscope', 'eqtype', 'georelated', 'balance'],
     'lags': null,
@@ -87,3 +90,5 @@ features: {
         'xreg41', 'xreg42', 'xreg43', 'xreg44', 'xreg45', 'xreg46', 'xreg47'
     ]
 }
+
+save_model: False

@@ -7,7 +7,7 @@ import pandas as pd
 import pandas_flavor as pf
 from functools import partial
 from utilsforecast.losses import (
-    bias, mae, mse, rmse, mape, smape, mase, msse, rmsse, 
+    bias, mae, mse, rmse, mape, smape, mase, msse, rmsse, spis,
     quantile_loss, mqloss, scaled_quantile_loss, scaled_mqloss,
     coverage, calibration, scaled_crps
 )
@@ -144,6 +144,8 @@ def get_metrics(metric_names, frequency = None):
         metrics.append(partial(msse, seasonality = freq))
     if 'rmsse' in metric_names:
         metrics.append(partial(rmsse, seasonality = freq))
+    if 'spis' in metric_names:
+        metrics.append(spis)
     if 'ql' in metric_names:
         metrics.append(quantile_loss)
     if 'mql' in metric_names:

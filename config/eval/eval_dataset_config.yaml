@@ -1,9 +1,9 @@
-
 dataset: {
     'dataset_names': [
         # 'm5', 
-        'vn1',
-        # 'm4'
+        # 'vn1',
+        # 'm4',
+        'hapag_region'
     ],
     'frequencies': [
         # 'daily', 
@@ -13,25 +13,28 @@ dataset: {
 }
 
 model_names: [
+    'Naive',
+    'SeasonalNaive',
+    'WindowAverage',
     'ETS',
-    'ARIMA', # no m5
+    # 'ARIMA', # no m5
     'LinearRegression', 
-    'RandomForestRegressor', # no m5
+    # 'RandomForestRegressor', # no m5
     'XGBRegressor', 
     'LGBMRegressor', 
-    'CatBoostRegressor', # no m4
+    # 'CatBoostRegressor', # no m4
     'MLP',
-    'LSTM', # no m4, m5
-    'TCN',
+    # 'LSTM', # no m4, m5
+    # 'TCN',
     'NBEATSx',
-    'NHITS',
-    'EnsembleMean2A',
+    # 'NHITS',
+    # 'EnsembleMean2A',
     # 'EnsembleMean2T',
-    'EnsembleMean3A',
+    # 'EnsembleMean3A',
     # 'EnsembleMean3T',
-    'EnsembleMean4A',
+    # 'EnsembleMean4A',
     # 'EnsembleMean4T',
-    'EnsembleMean5A',
+    # 'EnsembleMean5A',
     # 'EnsembleMean5T'
 ]
 

@@ -21,7 +21,8 @@ fitting: {
         # 10,
         # 13,
         # 26,
-        52
+        # 52,
+        104
     ],
     'intervals': {
         'h': 9,
@@ -55,3 +56,5 @@ features: {
     'date': null,
     'xregs': []
 }
+
+save_model: False
