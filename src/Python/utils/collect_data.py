@@ -532,7 +532,7 @@ def create_one_hot_features(data, columns, drop_columns = True):
     """
 
     for column in columns:
-        one_hot_df = pd.get_dummies(data[column], prefix = column, drop_first=True, prefix_sep='')
+        one_hot_df = pd.get_dummies(data[column], prefix = column, drop_first=True, prefix_sep='_d')
         data = pd.concat([data, one_hot_df], axis = 1)
         if drop_columns:
             data.drop(columns = [column], axis = 1, inplace = True)
@@ -552,17 +552,18 @@ def normalize_features(data, columns, type='min-max'):
         pd.DataFrame: dataframe with normalized features.
     """
 
-    if type == 'min-max':
-        for column in columns:
-            data[column] = (data[column] - data[column].min()) / (data[column].max() - data[column].min())
-    elif type == 'z-score':
-        for column in columns:
-            data[column] = (data[column] - data[column].mean()) / data[column].std()
-    elif type == 'robust':
-        for column in columns:
+    for column in columns:
+        column_new = f'{column}_n'
+        if type == 'min-max':
+            data[column_new] = (data[column] - data[column].min()) / (data[column].max() - data[column].min())
+        elif type == 'z-score':
+            data[column_new] = (data[column] - data[column].mean()) / data[column].std()
+        elif type == 'robust':
             median = data[column].median()
             mad = (data[column] - median).abs().median()
-            data[column] = (data[column] - median) / mad
+            data[column_new] = (data[column] - median) / mad
+        else:
+            raise ValueError(f'Unknown normalization type: {type}')
 
     return data
 

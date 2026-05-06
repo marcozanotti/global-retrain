@@ -51,7 +51,7 @@ prepare_data(
     trend = ['1'], 
     fourier={'52': 1, '13': 1},
     calendar_features = ['year', 'quarter', 'month', 'yweek'], 
-    features_to_normalize = ['trend1'],
+    features_to_normalize = ['trend1', 'year', 'quarter', 'month', 'yweek', 'geoscope', 'eqtype', 'georelated', 'balance'],
     features_to_one_hot = ['geoscope', 'eqtype', 'georelated', 'balance', 'year', 'quarter', 'month', 'yweek'],
     save = True
 )
@@ -72,27 +72,21 @@ configure_logging(
 )
 logger = create_logger()
 
-
 data = get_data(
-    path_list = ['data', dataset_name], 
+    path_list = ['data', dataset_name],  
     name_list = [dataset_name, frequency, 'prep'],
-    ext = '.parquet'
+    ext = '.parquet', 
+    min_series_length = None, 
+    max_series_length = None,
+    samples = 1
 )
+data.columns.tolist()
 data['unique_id'].nunique()
 data['unique_id'].value_counts()
 data['ds'].min()
 data['ds'].max()
 data.groupby('unique_id')['ds'].min()
 data.groupby('unique_id')['ds'].max()
-
-get_data(
-    path_list = ['data', dataset_name],  
-    name_list = [dataset_name, frequency, 'prep'],
-    ext = '.parquet', 
-    min_series_length = 1079, 
-    max_series_length = None,
-    samples = 1
-)
 
 stop_logger(logger)
 

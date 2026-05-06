@@ -36,12 +36,21 @@ fitting: {
 
 model_names: [
     'LinearRegression',
+    'RandomForestRegressor',
     'XGBRegressor', 
     'LGBMRegressor'
 ]
 
 model_params: {
     'LinearRegression': {'n_jobs': -1},
+    'RandomForestRegressor': {
+        'criterion': 'squared_error',
+        'n_estimators': 500,
+        'min_samples_leaf': 52,
+        'max_features': 0.85,
+        'max_depth': 6,
+        'n_jobs': -1
+    },
     'XGBRegressor': {
         'objective': 'reg:squarederror',
         'booster': 'gbtree',
@@ -60,7 +69,7 @@ model_params: {
         'n_estimators': 1000,
         'learning_rate': 0.03,
         'num_leaves': 64,
-        'min_child_samples': 100,
+        'min_child_samples': 52,
         'subsample': 0.85,
         'subsample_freq': 1,
         'colsample_bytree': 0.85,
@@ -76,20 +85,46 @@ model_params: {
 target_transforms: [LocalRobustScaler(scale='mad')]
 
 features: {
-    'static': ['geoscope', 'eqtype', 'georelated', 'balance'],
+    'static': [
+        # 'geoscope', 'eqtype', 'georelated', 'balance'
+    ],
     'lags': [1, 2, 3, 4, 9],
     'lag_transforms': {
                 1: [RollingMean(2), RollingMean(4)],
                 4: [RollingMean(4)]
             },
-    'date': ['year', 'quarter', 'month', 'week'],
+    'date': [
+        # 'year', 'quarter', 'month', 'week'
+    ],
     'xregs': [
         'xreg01', 'xreg02', 'xreg03', 'xreg04', 'xreg05', 'xreg06', 'xreg07', 'xreg08', 'xreg09', 'xreg10',
         'xreg11', 'xreg12', 'xreg13', 'xreg14', 'xreg15', 'xreg16', 'xreg17', 'xreg18', 'xreg19', 'xreg20',
         'xreg21', 'xreg22', 'xreg23', 'xreg24', 'xreg25', 'xreg26', 'xreg27', 'xreg28', 'xreg29', 'xreg30',
         'xreg31', 'xreg32', 'xreg33', 'xreg34', 'xreg35', 'xreg36', 'xreg37', 'xreg38', 'xreg39', 'xreg40',
         'xreg41', 'xreg42', 'xreg43', 'xreg44', 'xreg45', 'xreg46', 'xreg47', 
-        'trend1', 'fourier52sin1', 'fourier52cos1', 'fourier13sin1', 'fourier13cos1'
+        # 'trend1', 
+        'fourier52sin1', 'fourier52cos1', 'fourier13sin1', 'fourier13cos1',
+        'trend1_n', 
+        # 'year_n', 'quarter_n', 'month_n', 'yweek_n', 
+        # 'geoscope_n', 'eqtype_n', 'georelated_n', 'balance_n',
+        'geoscope_d1', 'geoscope_d2', 'geoscope_d3', 'geoscope_d4', 'geoscope_d5', 
+        'eqtype_d1', 'eqtype_d2', 'eqtype_d3', 'eqtype_d4', 'eqtype_d5', 'eqtype_d6', 'eqtype_d7', 'eqtype_d8', 'eqtype_d9', 'eqtype_d10',
+        'georelated_d1', 'georelated_d2', 'georelated_d3', 'georelated_d4', 'georelated_d5', 'georelated_d6', 
+        'balance_d1',
+        'year_d2006', 'year_d2007', 'year_d2008', 'year_d2009', 'year_d2010', 
+        'year_d2011', 'year_d2012', 'year_d2013', 'year_d2014', 'year_d2015', 
+        'year_d2016', 'year_d2017', 'year_d2018', 'year_d2019', 'year_d2020', 
+        'year_d2021', 'year_d2022', 'year_d2023', 'year_d2024', 'year_d2025',
+        'quarter_d2', 'quarter_d3', 'quarter_d4',
+        'month_d2', 'month_d3', 'month_d4', 'month_d5', 'month_d6', 'month_d7', 
+        'month_d8', 'month_d9', 'month_d10', 'month_d11', 'month_d12',
+        'yweek_d2', 'yweek_d3', 'yweek_d4', 'yweek_d5', 'yweek_d6', 'yweek_d7', 'yweek_d8', 'yweek_d9', 'yweek_d10', 
+        'yweek_d11', 'yweek_d12', 'yweek_d13', 'yweek_d14', 'yweek_d15', 'yweek_d16', 'yweek_d17', 'yweek_d18', 
+        'yweek_d19', 'yweek_d20', 'yweek_d21', 'yweek_d22', 'yweek_d23', 'yweek_d24', 'yweek_d25', 'yweek_d26',
+        'yweek_d27', 'yweek_d28', 'yweek_d29', 'yweek_d30', 'yweek_d31', 'yweek_d32', 'yweek_d33', 'yweek_d34',
+        'yweek_d35', 'yweek_d36', 'yweek_d37', 'yweek_d38', 'yweek_d39', 'yweek_d40', 'yweek_d41', 'yweek_d42', 
+        'yweek_d43', 'yweek_d44', 'yweek_d45', 'yweek_d46', 'yweek_d47', 'yweek_d48', 'yweek_d49', 'yweek_d50', 
+        'yweek_d51', 'yweek_d52'
     ]
 }
 

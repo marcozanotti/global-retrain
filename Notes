@@ -18,17 +18,20 @@
 - interval: 'conformal'
 - models: LinearRegression, XGBoost, MLP, NBEATSx
 
-# WARN: 
-- no store models
-- no hyperparamenter tuning on retraining (keep initially optimized values) 
-
+# TODO:
+- check manually results on Naive, WindowAverage, ETS
+- better to scale or one-hot static variables?
+- ML one-hot date variables? DL better with fourier at 52 and 13 or with scaled date variables?
 - tuning before on:
 -- models: AutoXGBoost, AutoLGBM, AutoMLP, AutoNBEATSx
 -- training:
 -- validation: 104
 -- test: 104
 
-
+- next steps?
+-- how do we communicate? teams?
+-- how to evaluate? 
+-- tuning pipeline
 
 
 # NOTE:
@@ -40,23 +43,3 @@
 - valutare il save e load dei modelli ad ogni fitting
 - aggiungere encoding per categorical variables
 https://nixtlaverse.nixtla.io/mlforecast/docs/how-to-guides/sklearn_pipelines.html
-
-Seasonality values corresponding with the frequencies: minutely, 10_minutes, 
-half_hourly, hourly, daily, weekly, monthly, quarterly and yearly
-Consider multiple seasonalities for frequencies less than daily
-# SEASONALITY_MAP = {
-#    "minutely": [1440, 10080, 525960],
-#    "10_minutes": [144, 1008, 52596],
-#    "half_hourly": [48, 336, 17532],
-#    "hourly": [24, 168, 8766],
-#    "daily": 7,
-#    "weekly": 365.25/7,
-#    "monthly": 12,
-#    "quarterly": 4,
-#    "yearly": 1
-# }
-
-# find the best model
-# con tutti i valori dei modelli sulle colonne
-# es. unique_id, LinearRegression, Lasso, etc
-# evals['best_model'] = evals.idxmin(axis=1)
