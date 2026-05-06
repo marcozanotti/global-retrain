@@ -1,28 +1,5 @@
 
-# Assuming 'fit_tmp' is your trained XGBoost model object
-# and 'X_train' is the DataFrame used for training
 import pandas as pd
-
-fit_tmp
-train_df_tmp.columns
-
-
-# importance_type = ['weight', 'gain', 'cover', 'total_gain', 'total_cover']
-fit_tmp.models_['XGBRegressor'].feature_importances_
-fit_tmp.models_['XGBRegressor'].get_booster().get_score(importance_type='gain')
-
-f_importance = fit_tmp.models_['XGBRegressor'].get_booster().get_score(importance_type='gain')
-
-
-
-f_importance_original = pd.DataFrame(data = fit_tmp.models_['XGBRegressor'].feature_importances_, index = f_importance.keys())
-
-importance_df = pd.DataFrame.from_dict(data=f_importance, orient='index')
-
-f_importance_original.plot.bar()
-importance_df.plot.bar()
-
-
 from src.Python.utils.collect_data import get_static_features
 from src.Python.utils.utilities import save_data
 
@@ -62,4 +39,27 @@ breaks_df['break'] = breaks_df['break'].fillna(0)
 breaks_df = get_static_features(breaks_df, 'hapag')
 
 save_data(breaks_df, ['data', 'hapag_region'], ['hapag_breaks_prep'])
+
+
+
+# Feature Importance -------------------------------------------------------------------
+import sys
+sys.path.insert(0, 'src/Python/utils')
+import plotly.express as px
+from importance import compute_feature_importance, plot_feature_importance
+
+# Parameters
+dataset_name = 'hapag_region'
+frequency = 'weekly'
+model_names = ['LinearRegression', 'XGBRegressor', 'LGBMRegressor', 'MLPRegressor', 'NBEATSx']
+retrain_scenarios = [104] # [1, 2, 3, 4, 6, 8, 10, 13, 26, 52, 104]
+
+f_imp_df = compute_feature_importance(
+    dataset_name = dataset_name,
+    frequency = frequency,
+    model_names = ['LinearRegression', 'XGBRegressor', 'LGBMRegressor'],
+    retrain_scenarios = [104]
+)
+
+plot_feature_importance(f_imp_df, retrain_scenario=104, top_n=20).show()
 

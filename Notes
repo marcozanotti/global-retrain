@@ -25,8 +25,8 @@
 - tuning before on:
 -- models: AutoXGBoost, AutoLGBM, AutoMLP, AutoNBEATSx
 -- training:
--- validation:
--- test:
+-- validation: 104
+-- test: 104
 
 
 
