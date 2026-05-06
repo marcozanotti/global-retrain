@@ -15,19 +15,20 @@ fitting: {
         # 10,
         # 13,
         # 26,
-        52
+        # 52,
+        104
     ],
     combine_only: False
 }
 
 model_names: [
-    # 'Naive',
-    # 'SeasonalNaive',
+    'Naive',
+    'SeasonalNaive',
     'WindowAverage',
-    # 'ETS',
-    # 'LinearRegression', 
-    # 'XGBRegressor', 
-    # 'LGBMRegressor', 
-    # 'MLP',
-    # 'NBEATSx'
+    'ETS',
+    'LinearRegression', 
+    'XGBRegressor', 
+    'LGBMRegressor', 
+    'MLP',
+    'NBEATSx'
 ]

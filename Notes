@@ -23,15 +23,10 @@
 - no hyperparamenter tuning on retraining (keep initially optimized values) 
 
 - tuning before on:
--- models: AutoXGBoost, AutoMLP, AutoNBEATSx
+-- models: AutoXGBoost, AutoLGBM, AutoMLP, AutoNBEATSx
 -- training:
 -- validation:
 -- test:
-
-
-add time trend scaled
-one-hot feature for XGBoost
-add sine-cosine for NBEATSx
 
 
 

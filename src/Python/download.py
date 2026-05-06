@@ -42,8 +42,19 @@ prepare_data('m4', 'daily', static_features = True, xregs = False, save = True)
 # HAPAG
 download_data('hapag_region', save = True)
 
-# wwekly
-prepare_data('hapag_region', 'weekly', static_features = True, xregs = True, save = True)
+# weekly
+prepare_data(
+    dataset_name='hapag_region', 
+    frequency='weekly', 
+    static_features = True, 
+    xregs = True, 
+    trend = ['1'], 
+    fourier={'52': 1, '13': 1},
+    calendar_features = ['year', 'quarter', 'month', 'yweek'], 
+    features_to_normalize = ['trend1'],
+    features_to_one_hot = ['geoscope', 'eqtype', 'georelated', 'balance', 'year', 'quarter', 'month', 'yweek'],
+    save = True
+)
 
 
 

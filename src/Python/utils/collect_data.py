@@ -1,10 +1,10 @@
-
 import sys
 sys.path.insert(0, 'src/Python/utils')
 import numpy as np
 import pandas as pd
 import pandas_flavor as pf
 from utilities import save_data, load_data, get_frequency, get_dataset_frequency
+from pytimetk import get_timeseries_signature
 
 import logging
 module_logger = logging.getLogger('collect_data')
@@ -261,6 +261,7 @@ def get_static_features(data, dataset_name):
     Args:
         data (pd.DataFrame): Input dataframe in Nixtla's format.
         dataset_name (string): Name of the dataset (e.g., 'm5', 'm4').
+        normalize (bool, optional): Whether to normalize the static features. Defaults to True.
     
     Returns:
         pd.DataFrame: dataframe with static features added.
@@ -425,7 +426,158 @@ def get_xregs_data(path_list, name_list, dataset_name, frequency, ext = '.parque
 
     return xregs_df
 
-def prepare_data(dataset_name, frequency, static_features = True, xregs = True, save = True, ext = '.parquet'):
+def create_time_trend(ds, trend_type='1'):
+
+    """
+    Create one or multiple time trends from a single series/column of dates (or index values).
+
+    Args:
+        ds (pd.Series or array-like): sequence of dates or ordinal values.
+        trend_type (str or list): single trend type or list of trend types.
+            Supported values: '1', '2', '3', ..., 'exponential', 'exp', 'log', 'ln', 'sqrt'.
+
+    Returns:
+        pd.DataFrame: dataframe with columns ['ds', trend_...].
+    """
+
+    # remove duplicates from ds and sort it
+    ds = pd.Series(ds).drop_duplicates().reset_index(drop=True)
+    tmp = pd.DataFrame({'ds': ds})
+    tmp = tmp.sort_values('ds').reset_index(drop=True).copy()
+    t = np.arange(len(tmp)).astype(float)
+
+    if isinstance(trend_type, (str, int)):
+        trend_types = [trend_type]
+    else:
+        trend_types = list(trend_type)
+
+    def build_series(trend_key):
+        key = str(trend_key).strip().lower()
+
+        if key.isdigit():
+            return t ** int(key), f'trend{key}'
+        if key in ('exponential', 'exp'):
+            t_scaled = t / (t.max() if t.max() > 0 else 1.0)
+            return np.exp(t_scaled), 'trendexp'
+        if key in ('log', 'ln'):
+            return np.log(t + 1.0), 'trendlog'
+        if key == 'sqrt':
+            return np.sqrt(t), 'trendsqrt'
+
+        raise ValueError(f'Unknown trend_type: {trend_key}')
+
+    out = tmp[['ds']].copy()
+
+    for trend_key in trend_types:
+        series, col_name = build_series(trend_key)
+        out[col_name] = series
+
+    return out
+
+def create_fourier_terms(ds, fourier):
+    
+    """
+    Create Fourier terms for a given frequency and number of harmonics.
+
+    Args:
+        ds (pd.Series or array-like): sequence of dates or ordinal values.
+        fourier (dict): Dictionary specifying the number of Fourier terms to add for each period. Keys are period strings (e.g., '7' for weekly seasonality) and values are the number of harmonics (K).
+    Returns:
+        pd.DataFrame: dataframe with columns ['ds', 'fourier1_sin', 'fourier1_cos', ..., 'fourierK_sin', 'fourierK_cos'].
+    """
+
+    ds = pd.Series(ds).drop_duplicates().reset_index(drop=True)
+    tmp = pd.DataFrame({'ds': ds})
+    tmp = tmp.sort_values('ds').reset_index(drop=True).copy()
+    t = np.arange(len(tmp)).astype(float)
+
+    for period, K in fourier.items():
+        period = float(period)
+
+        for k in range(1, K + 1):
+            tmp[f'fourier{int(period)}sin{k}'] = np.sin(2 * np.pi * k * t / period)
+            tmp[f'fourier{int(period)}cos{k}'] = np.cos(2 * np.pi * k * t / period)
+
+    return tmp
+
+def create_calendar_features(ds, feature_list = None):
+
+    """Function to create calendar features from a date column.
+
+    Args:
+        ds (pd.Series or array-like): sequence of dates.
+        feature_list (list, optional): List of calendar features to be created. Supported values include 'year', 'month', 'day', 'dayofweek', 'weekofyear', etc. If None, all available features will be created. Defaults to None.
+    Returns:
+        pd.DataFrame: dataframe with calendar features.
+    """
+
+    ds = pd.Series(ds).drop_duplicates().reset_index(drop=True)
+    calendar_df = get_timeseries_signature(ds)
+    calendar_df.columns = [col.replace('ds_', '', 1) for col in calendar_df.columns]
+    if feature_list is not None:
+        calendar_df = calendar_df[['ds'] + feature_list]
+
+    return calendar_df
+
+def create_one_hot_features(data, columns, drop_columns = True):
+
+    """Function to create one-hot features from a categorical column.
+
+    Args:
+        data (pd.DataFrame): Input dataframe in Nixtla's format.
+        columns (list): List of column names to be one-hot encoded.
+        drop_columns (bool, optional): Whether to drop the original columns after encoding. Defaults to True.
+    Returns:
+        pd.DataFrame: dataframe with one-hot features.
+    """
+
+    for column in columns:
+        one_hot_df = pd.get_dummies(data[column], prefix = column, drop_first=True, prefix_sep='')
+        data = pd.concat([data, one_hot_df], axis = 1)
+        if drop_columns:
+            data.drop(columns = [column], axis = 1, inplace = True)
+
+    return data
+
+def normalize_features(data, columns, type='min-max'):
+
+    """Function to normalize features.
+
+    Args:
+        data (pd.DataFrame): Input dataframe in Nixtla's format.
+        columns (list): List of column names to be normalized.
+        type (str, optional): Type of normalization to be applied. Supported values: 'min-max', 'z-score', 'robust'. Defaults to 'min-max'.
+    
+    Returns:
+        pd.DataFrame: dataframe with normalized features.
+    """
+
+    if type == 'min-max':
+        for column in columns:
+            data[column] = (data[column] - data[column].min()) / (data[column].max() - data[column].min())
+    elif type == 'z-score':
+        for column in columns:
+            data[column] = (data[column] - data[column].mean()) / data[column].std()
+    elif type == 'robust':
+        for column in columns:
+            median = data[column].median()
+            mad = (data[column] - median).abs().median()
+            data[column] = (data[column] - median) / mad
+
+    return data
+
+def prepare_data(
+    dataset_name, 
+    frequency, 
+    static_features = True, 
+    xregs = True, 
+    trend = None, 
+    fourier = None,
+    calendar_features = None,
+    features_to_normalize = None,
+    features_to_one_hot = None,
+    save = True, 
+    ext = '.parquet'):
 
     """Function to prepare saved datasets.
 
@@ -434,6 +586,11 @@ def prepare_data(dataset_name, frequency, static_features = True, xregs = True, 
         frequency (string, optional): The frequency of the data (e.g., 'daily', 'weekly').
         static_features (bool, optional): Whether to include static features. Defaults to True.
         xregs (bool, optional): Whether to include external regressors. Defaults to True.
+        trend (str or list, optional): Type(s) of time trend to add. Supported values: '1', '2', '3', ..., 'exponential', 'exp', 'log', 'ln', 'sqrt'. Defaults to None.
+        fourier (dict, optional): Dictionary specifying the number of Fourier terms to add for each period. Keys are period strings (e.g., '7' for weekly seasonality) and values are the number of harmonics (K). Defaults to None.
+        calendar_features (list, optional): List of calendar features to be created. Supported values include 'year', 'month', 'day', 'dayofweek', 'weekofyear', etc. If None, no calendar features will be created. Defaults to None.
+        features_to_normalize (list, optional): List of feature names to be normalized. Defaults to None.
+        features_to_one_hot (list, optional): List of feature names to be one-hot encoded. Defaults to None.
         save (bool, optional): Whether to save the processed dataset. Defaults to False.
         ext (string, optional): Extension of the saved files. Defaults to '.parquet'.
 
@@ -482,6 +639,24 @@ def prepare_data(dataset_name, frequency, static_features = True, xregs = True, 
             ext = ext
         )
         res_df = pd.merge(res_df, xregs_df, how = 'left', on = 'ds')
+
+    if trend is not None:
+        trend_df = create_time_trend(res_df['ds'], trend_type = trend)
+        res_df = pd.merge(res_df, trend_df, how = 'left', on = 'ds')
+
+    if fourier is not None:
+        fourier_df = create_fourier_terms(res_df['ds'], fourier = fourier)
+        res_df = pd.merge(res_df, fourier_df, how = 'left', on = 'ds')
+
+    if calendar_features is not None:
+        calendar_df = create_calendar_features(res_df['ds'], feature_list = calendar_features)
+        res_df = pd.merge(res_df, calendar_df, how = 'left', on = 'ds')
+
+    if features_to_normalize is not None:
+        res_df = normalize_features(res_df, columns = features_to_normalize, type = 'min-max')
+    
+    if features_to_one_hot is not None:
+        res_df = create_one_hot_features(res_df, columns = features_to_one_hot, drop_columns = True)
 
     if save:
         save_data(

@@ -87,6 +87,21 @@ source('src/R/utils.R')
 reticulate::source_python('src/Python/utils/utilities.py')
 
 # Hapag Data
+hapag_eval_df <- load_data(
+  c('results', 'hapag_region', 'weekly', 'evaluation'),
+  list('hapag_region_weekly_eval_overlap')
+) |>
+  as_tibble()
+
+hapag_eval_df |>
+  group_by(method) |>
+  summarise(
+    mase = mean(mase),
+    rmsse = mean(rmsse)
+  ) |>
+  arrange(mase)
+
+
 hapag_preds_df <- load_data(
   c('results', 'hapag_region', 'weekly', 'preds'),
   list('hapag_region_weekly_preds')

@@ -52,7 +52,8 @@ model_params: {
             'xreg11', 'xreg12', 'xreg13', 'xreg14', 'xreg15', 'xreg16', 'xreg17', 'xreg18', 'xreg19', 'xreg20',
             'xreg21', 'xreg22', 'xreg23', 'xreg24', 'xreg25', 'xreg26', 'xreg27', 'xreg28', 'xreg29', 'xreg30',
             'xreg31', 'xreg32', 'xreg33', 'xreg34', 'xreg35', 'xreg36', 'xreg37', 'xreg38', 'xreg39', 'xreg40',
-            'xreg41', 'xreg42', 'xreg43', 'xreg44', 'xreg45', 'xreg46', 'xreg47'
+            'xreg41', 'xreg42', 'xreg43', 'xreg44', 'xreg45', 'xreg46', 'xreg47', 
+            'trend1', 'fourier52sin1', 'fourier52cos1', 'fourier13sin1', 'fourier13cos1'
         ],
         'random_seed': 1992 
     },
