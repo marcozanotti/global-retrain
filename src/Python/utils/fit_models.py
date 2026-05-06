@@ -791,7 +791,7 @@ def retrain_model(config):
         max_series_length = max_series_length,
         samples = samples
     )
-    data = data[['unique_id', 'ds', 'y'] + features['static'] + features['xregs']] # WARN: possible breaking change 
+    data = data[['unique_id', 'ds', 'y'] + features['static'] + features['xregs']] 
     # split the data into train and test dataframes
     train_df, test_df = split_train_test(data, test_window)
     del data

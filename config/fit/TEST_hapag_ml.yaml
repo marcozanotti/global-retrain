@@ -36,6 +36,7 @@ fitting: {
 
 model_names: [
     'LinearRegression',
+    'Lasso',
     'RandomForestRegressor',
     'XGBRegressor', 
     'LGBMRegressor'
@@ -43,6 +44,7 @@ model_names: [
 
 model_params: {
     'LinearRegression': {'n_jobs': -1},
+    'Lasso': {'alpha': 1.0},
     'RandomForestRegressor': {
         'criterion': 'squared_error',
         'n_estimators': 500,

@@ -7,7 +7,7 @@ from statsforecast import StatsForecast
 from statsforecast.models import Naive, SeasonalNaive, WindowAverage, AutoETS, AutoARIMA
 from mlforecast import MLForecast
 from neuralforecast import NeuralForecast
-from sklearn.linear_model import LinearRegression, Lasso, Ridge
+from sklearn.linear_model import LinearRegression, Lasso, Ridge, ElasticNet
 from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
@@ -144,7 +144,7 @@ def get_model_type(model_name):
     
     sf = ['Naive', 'SeasonalNaive', 'WindowAverage', 'ETS', 'ARIMA']
     ml = [
-        'LinearRegression', 'Lasso', 'Ridge', 
+        'LinearRegression', 'Lasso', 'Ridge', 'ElasticNet',
         'RandomForestRegressor', 
         'XGBRegressor', 'LGBMRegressor', 'CatBoostRegressor' 
     ]
@@ -228,6 +228,14 @@ def get_default_model_params(model_name):
 
         model_params = {
             model_name: {}
+        }
+    
+    elif model_name == 'ElasticNet':
+        
+        model_params = {
+            model_name: {
+                'l1_ratio': 0.5
+            }
         }
     
     elif model_name == 'RandomForestRegressor':
@@ -365,6 +373,8 @@ def set_model(model_name, model_params = None):
             model = [Lasso(**model_params)]
         elif model_name == 'Ridge':
             model = [Ridge(**model_params)]
+        elif model_name == 'ElasticNet':
+            model = [ElasticNet(**model_params)]
         elif model_name == 'RandomForestRegressor':
             model = [RandomForestRegressor(**model_params)]
         elif model_name == 'XGBRegressor':
