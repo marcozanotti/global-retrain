@@ -40,9 +40,11 @@ def compute_feature_importance(
 
             module_logger.info("Computing feature importance...")
 
-            if m in ['LinearRegression']:
+            if m in ['LinearRegression', 'Lasso']:
                 f_imp = dict(zip(fit_tmp.feature_names_in_, fit_tmp.coef_)) 
                 f_imp = {k: abs(v) for k, v in f_imp.items()}
+            elif m in ['RandomForestRegressor']:
+                f_imp = dict(zip(fit_tmp.feature_names_in_, fit_tmp.feature_importances_))
             elif m in ['XGBRegressor']:            
                 f_imp = fit_tmp.get_booster().get_score(importance_type='weight')
             elif m in ['LGBMRegressor']:

@@ -1,3 +1,4 @@
+from sqlalchemy import over
 import sys
 sys.path.insert(0, 'src/Python/utils')
 import gc
@@ -636,7 +637,7 @@ def retrain_dl_model(
             if save_model and i == fitting_ids[0]: # save only the first fitted model for each series
                 module_logger.info('Saving model...')
                 f_path = create_file_path(['results', dataset_name, frequency, model_name, retrain_window, 'models'])
-                engine.save(f_path)
+                engine.save(f_path, overwrite = True)
 
             # predict out-of-sample with the models
             module_logger.info('Predicting...')

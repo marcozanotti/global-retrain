@@ -51,13 +51,13 @@ from importance import compute_feature_importance, plot_feature_importance
 # Parameters
 dataset_name = 'hapag_region'
 frequency = 'weekly'
-model_names = ['LinearRegression', 'XGBRegressor', 'LGBMRegressor', 'MLPRegressor', 'NBEATSx']
+model_names = ['LinearRegression', 'Lasso', 'RandomForestRegressor', 'XGBRegressor', 'LGBMRegressor', 'MLPRegressor', 'NBEATSx', 'NHITS']
 retrain_scenarios = [104] # [1, 2, 3, 4, 6, 8, 10, 13, 26, 52, 104]
 
 f_imp_df = compute_feature_importance(
     dataset_name = dataset_name,
     frequency = frequency,
-    model_names = ['LinearRegression', 'XGBRegressor', 'LGBMRegressor'],
+    model_names = ['LinearRegression', 'Lasso', 'RandomForestRegressor', 'XGBRegressor', 'LGBMRegressor'],
     retrain_scenarios = [104]
 )
 

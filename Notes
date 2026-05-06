@@ -20,6 +20,7 @@
 
 # TODO:
 - check manually results on Naive, WindowAverage, ETS
+- loss function, better MAE or MSE?
 - better to scale or one-hot static variables?
 - ML one-hot date variables? DL better with fourier at 52 and 13 or with scaled date variables?
 - tuning before on:
@@ -31,6 +32,7 @@
 - next steps?
 -- how do we communicate? teams?
 -- how to evaluate? 
+-- iqast cloud?
 -- tuning pipeline
 
 

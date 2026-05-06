@@ -27,8 +27,11 @@ model_names: [
     'WindowAverage',
     'ETS',
     'LinearRegression', 
+    'Lasso',
+    'RandomForestRegressor',
     'XGBRegressor', 
     'LGBMRegressor', 
     'MLP',
-    'NBEATSx'
+    'NBEATSx',
+    'NHITS'
 ]
