@@ -4,37 +4,42 @@ import pandas as pd
 from utilities import create_file_path
 from mlforecast import MLForecast
 import plotly.express as px
+from utilities import save_data, create_file_path
 
 import logging
 module_logger = logging.getLogger('importance')
 
-def compute_feature_importance(
-    dataset_name: str,
-    frequency: str,
-    model_names: list[str],
-    retrain_scenarios: list[int]
-):
+def compute_feature_importance(config = None):
     
     """ Compute feature importance for the specified models and retrain scenarios.
     Args:
-        dataset_name (str): Name of the dataset.
-        frequency (str): Frequency of the data (e.g., 'weekly').
-        model_names (list[str]): List of model names to compute feature importance for.
-        retrain_scenarios (list[int]): List of retrain scenarios to consider.
-        importance_type (str, optional): Type of importance to compute. Defaults to "gain".
+        config (dict): Configuration dictionary containing all necessary parameters.
     Returns:
         pd.DataFrame: DataFrame containing feature importance for each model and retrain scenario.
     """
 
-    xregs_map = pd.read_csv(f"data/{dataset_name}/{dataset_name}_xregs_mapping.csv")
-    xregs_map["Name"] = xregs_map["Name"].apply(lambda x: x[1:] if x.startswith("_") else x)
+    module_logger.info('===============================================================')
+
+    # dataset parameters
+    dataset_name = config['dataset']['dataset_name']
+    frequency = config['dataset']['frequency']
+    has_xregs_mapping = config['dataset']['has_xregs_mapping']
+    ext = config['dataset']['ext']
+    # fitting parameters
+    retrain_scenarios = config['fitting']['retrain_scenarios']
+    # model parameters
+    model_names = config['model_names']
+    save_results = True
 
     for rs in retrain_scenarios:
+
+        module_logger.info('---------------------------- START ----------------------------')
         rows = []
 
         for m in model_names:
 
             module_logger.info(f"Processing model: {m}, retrain scenario: {rs}")
+
             path_tmp = create_file_path(["results", dataset_name, frequency, m, str(rs), "models"])
             fit_tmp = MLForecast.load(path_tmp).models_[m]
 
@@ -53,27 +58,34 @@ def compute_feature_importance(
                 module_logger.warning(f"Feature importance not implemented for model: {m}")
                 continue
             
-            f_imp_df = (
-                pd.DataFrame.from_dict(f_imp, orient="index", columns=["importance"])
-                .reset_index()
-                .merge(xregs_map, left_on="index", right_on="xregs", how="left")
-            )
-            f_imp_df["feature"] = f_imp_df.apply(
-                lambda row: row["Name"] if pd.notnull(row["Name"]) else row["index"], axis=1
-            )
-            f_imp_df = (
-                f_imp_df[["feature", "importance"]]
-                .sort_values("importance", ascending=True)
-                .assign(model=m, retrain_scenario=rs)
-            )
-
+            f_imp_df = pd.DataFrame.from_dict(f_imp, orient="index", columns=["importance"]).reset_index()
+            f_imp_df = f_imp_df.rename(columns={"index": "xregs"})
+            f_imp_df = f_imp_df.assign(method = m, retrain_scenario = rs)
             rows.append(f_imp_df)
 
         res_df = pd.concat(rows, ignore_index=True)
 
+        module_logger.info('---------------------------- END ----------------------------')
+
+    if has_xregs_mapping:
+        xregs_map = pd.read_csv(f"data/{dataset_name}/{dataset_name}_xregs_mapping.csv")
+        res_df = res_df.merge(xregs_map, left_on="xregs", right_on="xregs", how="left")
+        res_df["feature"] = res_df.apply(
+            lambda row: row["Name"] if pd.notnull(row["Name"]) else row["xregs"], axis=1
+        )
+        res_df = res_df[["feature", "xregs", "method", "retrain_scenario", "importance"]]
+    else:
+        res_df["feature"] = res_df["xregs"]
+        res_df = res_df[["feature", "xregs", "method", "retrain_scenario", "importance"]]
+
+    if save_results:
+        save_data(res_df, ["results", dataset_name, frequency, "importance"], ["imp", f"{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"])
+
+    module_logger.info('===============================================================')
+
     return res_df
 
-def plot_feature_importance(f_imp_df, retrain_scenario: int, top_n: int = 10):
+def plot_feature_importance(f_imp_df, retrain_scenario: int, top_n: int = 50):
 
     """ Plot feature importance for the specified retrain scenario.
     Args:
@@ -85,7 +97,7 @@ def plot_feature_importance(f_imp_df, retrain_scenario: int, top_n: int = 10):
     """ 
 
     f_imp_df_rs = f_imp_df[f_imp_df["retrain_scenario"] == retrain_scenario]
-    plot_df = f_imp_df_rs.groupby('model').tail(top_n)
+    plot_df = f_imp_df_rs.groupby('method').tail(top_n)
 
     fig = px.bar(
         plot_df,

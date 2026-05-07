@@ -41,27 +41,4 @@ breaks_df = get_static_features(breaks_df, 'hapag')
 save_data(breaks_df, ['data', 'hapag_region'], ['hapag_breaks_prep'])
 
 
-
-# Feature Importance -------------------------------------------------------------------
-import sys
-sys.path.insert(0, 'src/Python/utils')
-import plotly.express as px
-from importance import compute_feature_importance, plot_feature_importance
-
-# Parameters
-dataset_name = 'hapag_region'
-frequency = 'weekly'
-model_names = ['LinearRegression', 'Lasso', 'RandomForestRegressor', 'XGBRegressor', 'LGBMRegressor', 'MLPRegressor', 'NBEATSx', 'NHITS']
-retrain_scenarios = [104] # [1, 2, 3, 4, 6, 8, 10, 13, 26, 52, 104]
-
-f_imp_df = compute_feature_importance(
-    dataset_name = dataset_name,
-    frequency = frequency,
-    model_names = ['LinearRegression', 'Lasso', 'RandomForestRegressor', 'XGBRegressor', 'LGBMRegressor'],
-    retrain_scenarios = [104]
-)
-
-plot_feature_importance(f_imp_df, retrain_scenario=104, top_n=20).show()
-
-
-# Evaluate performance
+# Feature importance

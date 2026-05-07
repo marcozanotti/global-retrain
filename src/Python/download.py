@@ -4,7 +4,6 @@ from src.Python.utils.collect_data import download_data, prepare_data
 pd.set_option("display.max_rows", 4)
 
 
-
 # M5
 # NOTE: m5 data is downloaded from Nixtla's benchmark
 download_data('m5', save = True)

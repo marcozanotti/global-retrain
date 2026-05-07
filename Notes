@@ -22,7 +22,8 @@
 - check manually results on Naive, WindowAverage, ETS
 - loss function, better MAE or MSE?
 - better to scale or one-hot static variables?
-- ML one-hot date variables? DL better with fourier at 52 and 13 or with scaled date variables?
+- add lags and rolling, also rolling std 
+- ML one-hot date variables? DL better with fourier at 52 and 13 or with scaled date variables? Do not double scale in DL
 - tuning before on:
 -- models: AutoXGBoost, AutoLGBM, AutoMLP, AutoNBEATSx
 -- training:

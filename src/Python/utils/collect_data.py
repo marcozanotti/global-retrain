@@ -405,6 +405,8 @@ def get_xregs_data(path_list, name_list, dataset_name, frequency, ext = '.parque
 
         # create a new dataframe with Name and xregs columns to keep the mapping between them
         xregs_mapping_df = xregs_df[['Name', 'xregs']].copy()
+        xregs_mapping_df['Name'] = xregs_mapping_df['Name'].str.lstrip('_')
+        xregs_mapping_df['Name'] = xregs_mapping_df['Name'].str.lstrip('_')
         
         xregs_df = xregs_df.drop(columns = ['Name'])
         xregs_df.columns = [col.replace('Date:', '') for col in xregs_df.columns]

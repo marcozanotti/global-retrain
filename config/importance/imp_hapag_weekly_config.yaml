@@ -1,0 +1,30 @@
+dataset: {
+    'dataset_name': 'hapag_region',
+    'frequency': 'weekly',
+    'has_xregs_mapping': True,
+    'ext': '.parquet',
+}
+
+fitting: {
+    'retrain_scenarios': [
+        # 1, 
+        # 2, 
+        # 3,
+        # 4, 
+        # 6,
+        # 8,
+        # 10,
+        # 13,
+        # 26,
+        # 52,
+        104
+    ]
+}
+
+model_names: [
+    'LinearRegression', 
+    'Lasso',
+    'RandomForestRegressor',
+    'XGBRegressor', 
+    'LGBMRegressor'
+]
