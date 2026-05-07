@@ -63,3 +63,5 @@ f_imp_df = compute_feature_importance(
 
 plot_feature_importance(f_imp_df, retrain_scenario=104, top_n=20).show()
 
+
+# Evaluate performance

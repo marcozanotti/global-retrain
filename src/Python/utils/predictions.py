@@ -1,7 +1,16 @@
-from utilities import get_file_name, combine_and_save_files
+import sys
+sys.path.insert(0, 'src/Python/utils')
+import gc
+import numpy as np
+import pandas as pd
+from utilities import (
+    get_file_name, save_data, combine_and_save_files
+)
+from collect_data import get_data
+from evaluate_forecasts import get_metrics, evaluate_forecasts, aggregate_data
 
 import logging
-module_logger = logging.getLogger('evaluate_forecasts')
+module_logger = logging.getLogger('predictions')
 
 def combine_model_predictions(config):
 
@@ -107,6 +116,101 @@ def combine_dataset_predictions(config):
             ext = ext,
             files_to_read = preds_f_list
         )
+
+    module_logger.info('===============================================================')
+
+    return
+
+def evaluate_predictions(config):
+
+    """Function to evaluate predictions.
+
+    Args:
+        config (dict): configuration dictionary.
+    """
+
+    module_logger.info('===============================================================')
+    module_logger.info('---------------------------- START ----------------------------')
+
+    # dataset parameters
+    dataset_name = config['dataset']['dataset_name']
+    frequency = config['dataset']['frequency']
+    min_series_length = config['dataset']['min_series_length']
+    max_series_length = config['dataset']['max_series_length']
+    samples = config['dataset']['samples']
+    ext = config['dataset']['ext']
+    seed = config['dataset']['seed']
+    # fitting parameters    
+    retrain_scenarios = config['fitting']['retrain_scenarios']
+    levels = config['fitting']['levels']
+    # combine_only = config['fitting']['combine_only']
+    # model parameters
+    model_names = config['model_names']
+    # evaluation parameters
+    eval_freq = config['evaluation']['evaluation_frequency']
+    metrics = get_metrics(config['evaluation']['metrics'], eval_freq)
+    eval_sample_type = config['evaluation']['evaluation_sample_type']
+
+    # load the dataset
+    if samples is not None:
+        np.random.seed(seed)
+    train_df = get_data(
+        path_list = ['data', dataset_name],
+        name_list = [dataset_name, frequency, 'prep'],
+        ext = '.parquet',
+        min_series_length = min_series_length, 
+        max_series_length = max_series_length, 
+        samples = samples
+    )
+    train_df = train_df[['unique_id', 'ds', 'y']]
+
+    preds_df = get_data(
+        path_list = ['results', dataset_name, frequency, 'preds'],
+        name_list = [dataset_name, frequency, 'preds'],
+        ext = ext
+    )
+
+    eval_df = pd.DataFrame()
+
+    for rs in retrain_scenarios:
+
+        module_logger.info('---------------------------- START ----------------------------')
+        module_logger.info(f'[ Retrain scenario: {rs} ]')
+
+        for m in model_names:
+
+            module_logger.info(f'[ Model name: {m} ]')
+            if preds_df[preds_df['method'] == m].empty:
+                module_logger.warning(f'No predictions found for model {m}. Skipping evaluation for this model.')
+                continue
+            preds_df_tmp = preds_df[preds_df['retrain_window'] == rs]
+            preds_df_tmp = preds_df_tmp[preds_df_tmp['method'] == m]
+            preds_df_tmp.reset_index(drop = True, inplace = True)
+
+            eval_df_tmp = evaluate_forecasts(
+                out_sample_df = preds_df_tmp, 
+                metrics = metrics, 
+                train_df = train_df,
+                levels = levels
+            ).aggregate_data(
+                group_columns = ['method', 'test_window', 'horizon', 'retrain_window', 'unique_id'],
+                drop_columns = ['sample'],
+                function_name = 'mean',
+                adjust_metrics = True
+            )
+
+            eval_df = pd.concat([eval_df, eval_df_tmp], axis = 0)
+            del preds_df_tmp, eval_df_tmp
+            gc.collect()
+        
+        module_logger.info('----------------------------- END -----------------------------')
+
+    save_data(
+        eval_df,
+        path_list = ['results', dataset_name, frequency, 'preds'],
+        name_list = [dataset_name, frequency, 'preds', 'eval', eval_sample_type],
+        ext = ext
+    )
 
     module_logger.info('===============================================================')
 
