@@ -37,7 +37,7 @@ fitting: {
 model_names: [
     'MLP',
     'NBEATSx',
-    'NHITS'
+    # 'NHITS'
 ]
 
 model_params: {
