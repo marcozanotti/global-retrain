@@ -659,7 +659,7 @@ def prepare_data(
         res_df = normalize_features(res_df, columns = features_to_normalize, type = 'min-max')
     
     if features_to_one_hot is not None:
-        res_df = create_one_hot_features(res_df, columns = features_to_one_hot, drop_columns = True)
+        res_df = create_one_hot_features(res_df, columns = features_to_one_hot, drop_columns = False)
 
     if save:
         save_data(
