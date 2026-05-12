@@ -39,7 +39,9 @@ model_names: [
 ]
 
 evaluation: {
-    metrics: ['bias', 'mae', 'mse', 'rmse', 'mase', 'msse', 'rmsse', 'mql', 'smql', 'mape', 'spis'],
+    metrics: ['bias', 'mae', 'mse', 'rmse', 'mase', 'msse', 'rmsse', 'mql', 'smql', 'mape'],
     evaluation_frequency: 'yearly', 
-    evaluation_sample_type: 'overlap'
+    evaluation_sample_type: 'overlap',
+    weighted_metrics: ['mape'],
+    weights: 'auto'
 }

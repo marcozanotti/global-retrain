@@ -150,6 +150,8 @@ def evaluate_predictions(config):
     eval_freq = config['evaluation']['evaluation_frequency']
     metrics = get_metrics(config['evaluation']['metrics'], eval_freq)
     eval_sample_type = config['evaluation']['evaluation_sample_type']
+    weighted_metrics = config['evaluation']['weighted_metrics']
+    weights = config['evaluation']['weights']
 
     # load the dataset
     if samples is not None:
@@ -191,16 +193,20 @@ def evaluate_predictions(config):
                 out_sample_df = preds_df_tmp, 
                 metrics = metrics, 
                 train_df = train_df,
-                levels = levels
-            ).aggregate_data(
+                levels = levels, 
+                weighted_metrics = config['evaluation']['weighted_metrics'],
+                weights = config['evaluation']['weights']
+            )
+            eval_df_agg_tmp = aggregate_data(
+                data = eval_df_tmp,
                 group_columns = ['method', 'test_window', 'horizon', 'retrain_window', 'unique_id'],
                 drop_columns = ['sample'],
                 function_name = 'mean',
                 adjust_metrics = True
             )
 
-            eval_df = pd.concat([eval_df, eval_df_tmp], axis = 0)
-            del preds_df_tmp, eval_df_tmp
+            eval_df = pd.concat([eval_df, eval_df_agg_tmp], axis = 0)
+            del preds_df_tmp, eval_df_tmp, eval_df_agg_tmp
             gc.collect()
         
         module_logger.info('----------------------------- END -----------------------------')

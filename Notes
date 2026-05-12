@@ -1,27 +1,5 @@
-# NOTE: HapagLloyd Project
-- horizon: 9
-- seasonality: 'yearly' 
-- training: 884 (19 years)
-- test: 104 (last 2 years)
-- restraining scenarios: {1, 2, 3, 4, 6, 8, 10, 13, 26, 52}
-- features: {
-    'static': ['geoscope', 'eqtype', 'georelated', 'balance'],
-    'lags': [1, 2, 3, 4, 9],
-    'lag_transforms': {
-                1: [RollingMean(2), RollingMean(4)],
-                4: [RollingMean(4)]
-            },
-    'date': ['year', 'quarter', 'month', 'week'],
-    'xregs': all features 
-  }
-- target_transforms: no
-- interval: 'conformal'
-- models: LinearRegression, XGBoost, MLP, NBEATSx
-
-# TODO:
+# TODO: HapagLloyd Project
 - check manually results on Naive, WindowAverage, ETS
-- loss function, better MAE or MSE?
-- better to scale or one-hot static variables?
 - add lags and rolling, also rolling std 
 - ML one-hot date variables? DL better with fourier at 52 and 13 or with scaled date variables? Do not double scale in DL
 - tuning before on:
@@ -31,9 +9,6 @@
 -- test: 104
 
 - next steps?
--- how do we communicate? teams?
--- how to evaluate? 
--- iqast cloud?
 -- tuning pipeline
 
 

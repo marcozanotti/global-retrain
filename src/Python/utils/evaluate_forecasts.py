@@ -184,11 +184,56 @@ def get_metrics(metric_names, frequency = None):
     return metrics
 
 @pf.register_dataframe_method
+def compute_weighted_metrics(eval_df, metric_names, weights = 'auto', out_sample_df = None):
+    
+    """Function to compute weighted evaluation metrics.
+
+    Args:
+        eval_df (pd.DataFrame): dataframe with evaluation results for each metric in wide format.
+        metric_names (list): list of evaluation metric names to compute the weighted version of.
+        weights (dict or str, optional): dataframe with weights for each series or 'auto' to compute 
+        weights automatically based on actuals volume. Defaults to 'auto'.
+        out_sample_df (pd.DataFrame, optional): dataframe with out-of-sample forecasts and actuals. 
+        Defaults to None.
+
+    Returns:
+        pd.DataFrame: dataframe with weighted evaluation metrics.
+    """
+
+    if weights == 'auto':
+        if out_sample_df is None:
+            raise ValueError('out_sample_df must be provided when weights is "auto"')
+        else:
+            # compute weights based on actuals volume
+            weights_df = out_sample_df \
+                .groupby('unique_id')['y'] \
+                .sum() \
+                .reset_index() \
+                .rename(columns = {'y': 'wt'})
+            weights_df['wt'] = weights_df['wt'] / weights_df['wt'].sum()
+            res_df = eval_df.merge(weights_df, on = 'unique_id', how = 'left')
+    elif isinstance(weights, dict):
+        weights_df = pd.DataFrame.from_dict(weights, orient='index', columns=['wt'])
+        res_df = eval_df.merge(weights_df, on = 'unique_id', how = 'left')
+    else:
+        raise ValueError('Invalid weights format')
+
+    for m in metric_names:
+        if m in res_df.columns:
+            res_df[f'{m}_wt'] = res_df['wt'] * res_df[m]
+        else:
+            module_logger.warning(f'Metric {m} not found in eval_df columns. Skipping weighted version of this metric.')
+
+    return res_df
+
+@pf.register_dataframe_method
 def evaluate_forecasts(
     out_sample_df, 
     metrics = [bias, mae, mse, rmse], 
     train_df = None,
-    levels = None
+    levels = None,
+    weighted_metrics = None,
+    weights = 'auto'
 ):
 
     """Function to evaluate the point forecasts.
@@ -198,6 +243,11 @@ def evaluate_forecasts(
         metrics (list): list of evaluation metrics.
         train_df (pd.DataFrame, optional): training data in the Nixtla's format. 
         Defaults to None.
+        levels (list, optional): list of levels to evaluate. Defaults to None.
+        weighted_metrics (list, optional): list of metric names to compute the weighted version of. 
+        Defaults to None.
+        weights (dict or str, optional): dataframe with weights for each series or 'auto' to compute 
+        weights automatically based on actuals volume. Defaults to 'auto'.
 
     Returns:
         pd.DataFrame: dataframe with evaluation results for each metric.
@@ -212,16 +262,27 @@ def evaluate_forecasts(
     for s in samples:
 
         # module_logger.info(f'Samlple {s} of {n_samples}...')
+        out_sample_df_tmp = out_sample_df[out_sample_df['sample'] == s]
         eval_df_tmp = evaluate(
-            out_sample_df[out_sample_df['sample'] == s], 
+            df = out_sample_df_tmp,
             metrics = metrics,
             models = ['fcst'],
             train_df = train_df,
             id_col = 'unique_id',
             level = levels   
-        ) \
+        )         
+        eval_df_tmp = eval_df_tmp \
             .pivot(index = 'unique_id', columns = 'metric', values = 'fcst') \
             .reset_index()
+
+        if weighted_metrics is not None:
+            module_logger.info('Computing weighted evaluation metrics...')
+            eval_df_tmp = compute_weighted_metrics(
+                eval_df = eval_df_tmp,
+                metric_names = weighted_metrics, 
+                weights = weights, 
+                out_sample_df = out_sample_df_tmp
+            )
         eval_df_tmp['sample'] = s
         eval_df = pd.concat([eval_df, eval_df_tmp], axis = 0)
 
@@ -260,6 +321,8 @@ def evaluate_model(config):
     eval_freq = config['evaluation']['evaluation_frequency']
     metrics = get_metrics(config['evaluation']['metrics'], eval_freq)
     eval_sample_type = config['evaluation']['evaluation_sample_type']
+    weighted_metrics = config['evaluation']['weighted_metrics']
+    weights = config['evaluation']['weights']
 
     # load the dataset
     if samples is not None:
@@ -318,7 +381,9 @@ def evaluate_model(config):
                         out_sample_df = eval_df_tmp, 
                         metrics = metrics, 
                         train_df = train_df,
-                        levels = levels
+                        levels = levels, 
+                        weighted_metrics = weighted_metrics,
+                        weights = weights
                     )
                     eval_df_retrain = pd.concat([eval_df_retrain, eval_df_tmp], axis = 0)
                     del eval_df_tmp
