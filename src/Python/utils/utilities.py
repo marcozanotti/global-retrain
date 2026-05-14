@@ -7,6 +7,7 @@ import pandas_flavor as pf
 import pyarrow.parquet as pq
 import logging
 import logging.config
+import json
 from time import gmtime, strftime
 
 module_logger = logging.getLogger('utilities')
@@ -250,8 +251,13 @@ def save_data(data, path_list, name_list, ext = '.parquet', append = False):
                 data.to_csv(file_path, mode = 'a', header = False, index = False)
             else:
                 data.to_csv(file_path, index = False)
+        elif ext == '.json':
+            if append:
+                data.to_json(file_path, orient = 'records', lines = True, mode = 'a', header = False)
+            else:
+                data.to_json(file_path, orient = 'records', lines = True)
         else:
-            raise(f'Unsupported file extension {ext}. Only .parquet and .csv are allowed')
+            raise(f'Unsupported file extension {ext}. Only .parquet, .csv and .json are allowed')
     
     attempt = 1 # initial attempt
     delay = 3 # seconds
