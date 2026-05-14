@@ -13,6 +13,9 @@ from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
 from neuralforecast.models import MLP, LSTM, TCN, NBEATSx, NHITS
+from mlforecast.auto import AutoMLForecast, AutoXGBoost, AutoLightGBM
+from neuralforecast.auto import AutoMLP, AutoNBEATSx
+import optuna
 
 # NOTE: feature and transform functions must be imported to be used with eval('fun_name')
 # from sklearn.preprocessing import FunctionTransformer
@@ -25,6 +28,7 @@ from utilities import get_frequency
 
 import logging
 module_logger = logging.getLogger('set_engine')
+optuna.logging.set_verbosity(optuna.logging.ERROR)
 
 def get_loss_function(loss):
     """Function to get the loss function.
@@ -149,6 +153,8 @@ def get_model_type(model_name):
         'XGBRegressor', 'LGBMRegressor', 'CatBoostRegressor' 
     ]
     dl = ['MLP', 'LSTM', 'TCN', 'NBEATSx', 'NHITS']
+    automl = ['AutoXGBoost', 'AutoLightGBM']
+    autodl = ['AutoMLP', 'AutoNBEATSx']
 
     if model_name in sf:
         model_type = 'sf'
@@ -156,6 +162,10 @@ def get_model_type(model_name):
         model_type ='ml'
     elif model_name in dl:
         model_type = 'dl'
+    elif model_name in automl:
+        model_type = 'automl'
+    elif model_name in autodl:
+        model_type = 'autodl'
     else:
         raise ValueError(f'Invalid model: {model_name}')
 
@@ -326,6 +336,30 @@ def get_default_model_params(model_name):
                 'early_stop_patience_steps': 10 
             }
         }
+
+    elif model_name == 'AutoXGBoost':
+
+        model_params = {
+            model_name: {}
+        }
+    
+    elif model_name == 'AutoLightGBM':
+
+        model_params = {
+            model_name: {}
+        }
+    
+    elif model_name == 'AutoMLP':
+
+        model_params = {
+            model_name: {}
+        }
+
+    elif model_name == 'AutoNBEATSx':
+
+        model_params = {
+            model_name: {}
+        }    
     
     else:
         raise ValueError(f'Invalid model: {model_name}')
@@ -353,15 +387,15 @@ def set_model(model_name, model_params = None):
     if model_type == 'sf':
         
         if model_name == 'Naive':
-            model = [Naive(alias = model_name)]
+            model = [Naive(**model_params)]
         elif model_name == 'SeasonalNaive':
-            model = [SeasonalNaive(**model_params, alias = model_name)]
+            model = [SeasonalNaive(**model_params)]
         elif model_name == 'WindowAverage':
-            model = [WindowAverage(**model_params, alias = model_name)]
+            model = [WindowAverage(**model_params)]
         elif model_name == 'ETS':
-            model = [AutoETS(**model_params, alias = model_name)]
+            model = [AutoETS(**model_params)]
         elif model_name == 'ARIMA':
-            model = [AutoARIMA(**model_params, alias = model_name)]
+            model = [AutoARIMA(**model_params)]
         else:
             raise ValueError(f'Invalid model: {model_name}')
 
@@ -404,6 +438,24 @@ def set_model(model_name, model_params = None):
         else:
             raise ValueError(f'Invalid model: {model_name}')
     
+    elif model_type == 'automl':
+        
+        if model_name == 'AutoXGBoost':
+            model = [AutoXGBoost(**model_params)]
+        elif model_name == 'AutoLightGBM':
+            model = [AutoLightGBM(**model_params)]
+        else:
+            raise ValueError(f'Invalid model: {model_name}')
+    
+    elif model_type == 'autodl':
+        
+        if model_name == 'AutoMLP':
+            model = [AutoMLP(**model_params)]
+        elif model_name == 'AutoNBEATSx':
+            model = [AutoNBEATSx(**model_params)]
+        else:
+            raise ValueError(f'Invalid model: {model_name}')
+
     else:
         raise ValueError(f'Invalid model type: {model_type}')
 
@@ -428,9 +480,10 @@ def set_engine(model_name, frequency, features, target_transforms = None, model_
     module_logger.info('Setting the engine...')
     model_type = get_model_type(model_name)
     model = set_model(model_name, model_params)
-
     freq = get_frequency(frequency)[0]
+    seas_len = get_frequency(frequency)[1]
     target_transforms = get_target_transforms(target_transforms = target_transforms)
+    static_features = features['static']
     lags = get_lags(feature_list = features['lags'])
     lag_transforms = get_lag_transforms(feature_list = features['lag_transforms'])
     date_features = get_date_features(feature_list = features['date'])
@@ -462,6 +515,41 @@ def set_engine(model_name, frequency, features, target_transforms = None, model_
             freq = freq,
             local_scaler_type = target_transforms
         )
+
+    elif model_type == 'automl':
+
+        def init_config(trial: optuna.Trial):
+            return {
+                'target_transforms': target_transforms,
+                'lags': lags,
+                'lag_transforms': lag_transforms,
+                'date_features': date_features
+            }
+        def fit_config(trial: optuna.Trial):
+            return {'static_features': static_features}
+
+        engine = AutoMLForecast(
+            models = model,
+            freq = freq,
+            season_length = seas_len,
+            init_config = init_config,
+            fit_config = fit_config,
+            num_threads = os.cpu_count(),
+            reuse_cv_splits = True
+        )
+    
+    elif model_type == 'autodl':
+
+        raise NotImplementedError('AutoDL models are not yet implemented.')
+        # engine = AutoNeuralForecast(
+        #     models = model, 
+        #     freq = freq,
+        #     season_length = None,
+        #     init_config = None,
+        #     fit_config = None,
+        #     num_threads = -1,
+        #     reuse_cv_splits = False
+        # )
         
     else:
         raise ValueError(f'Invalid model: {model_name}')
