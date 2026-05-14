@@ -1,4 +1,3 @@
-from prompt_toolkit import validation
 import sys
 sys.path.insert(0, 'src/Python/utils')
 import gc
@@ -883,7 +882,6 @@ def retrain_model(config):
 
 def fit_automl_model(
     train_df, 
-    test_df,
     dataset_name,
     frequency,
     model_name,
@@ -892,7 +890,6 @@ def fit_automl_model(
     valid_window,
     step_size,
     valid_loss,
-    test_window,
     horizon,
     features,
     intervals,
@@ -906,7 +903,6 @@ def fit_automl_model(
     
         Args:
         train_df (pd.DataFrame): Training dataframe.
-        test_df (pd.DataFrame): Testing dataframe.
         dataset_name (str): Name of the dataset.
         frequency (str): Frequency of the time series data.
         model_name (str): Name of the model to fit.
@@ -915,7 +911,6 @@ def fit_automl_model(
         valid_window (int): Size of the validation window.
         step_size (int): Step size between each cross validation window.
         valid_loss (function): Function that takes the validation and train dataframes and produces a float. If None will use the average SMAPE across series.
-        test_window (int): Size of the testing window.
         horizon (int): Forecasting horizon.
         features (dict): Dictionary containing feature information.
         intervals (list): List of intervals for prediction intervals.
@@ -944,7 +939,6 @@ def fit_automl_model(
     # static_features = features['static']
 
     module_logger.info(f'Train dataset contains: {list(train_df.columns)}...')
-    module_logger.info(f'Test dataset contains: {list(test_df.columns)}...')
 
     start_time = time.time()
     auto_mlf = engine.fit(
@@ -1081,7 +1075,6 @@ def fit_auto_model(config):
 
             fit_automl_model(
                 train_df = train_df, 
-                test_df = test_df,
                 dataset_name = dataset_name,
                 frequency = frequency,
                 model_name = m,
@@ -1090,7 +1083,6 @@ def fit_auto_model(config):
                 valid_window = valid_window,
                 step_size = step_size,
                 valid_loss = valid_loss,
-                test_window = test_window,
                 horizon = horizon,
                 features = features,
                 intervals = intervals,
@@ -1104,13 +1096,11 @@ def fit_auto_model(config):
 
             fit_autodl_model(
                 # train_df = train_df, 
-                # test_df = test_df,
                 # dataset_name = dataset_name,
                 # frequency = frequency,
                 # model_name = m,
                 # engine = engine_tmp,
                 # valid_window = valid_window,
-                # test_window = test_window,
                 # horizon = horizon,
                 # features = features,
                 # intervals = intervals,

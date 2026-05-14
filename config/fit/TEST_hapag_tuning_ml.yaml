@@ -10,8 +10,8 @@ dataset: {
 }
 
 fitting: {
-    horizon: 9,
     test_window: 104,
+    horizon: 9,
     intervals: {
         'h': 9,
         'n_windows': 4,
@@ -31,7 +31,10 @@ model_names: [
 ]
 
 model_params: {
-    'AutoXGBoost': {},
+    'AutoXGBoost': {
+        'learning_rate': 0.05,
+        'n_estimators': "trial.suggest_int('n_estimators', 100, 1000, log=False)",
+    },
     'AutoLightGBM': {}
 }
 

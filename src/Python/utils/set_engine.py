@@ -13,7 +13,7 @@ from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
 from neuralforecast.models import MLP, LSTM, TCN, NBEATSx, NHITS
-from mlforecast.auto import AutoMLForecast, AutoXGBoost, AutoLightGBM
+from mlforecast.auto import AutoMLForecast, AutoModel, AutoXGBoost, AutoLightGBM
 from neuralforecast.auto import AutoMLP, AutoNBEATSx
 import optuna
 
@@ -366,6 +366,27 @@ def get_default_model_params(model_name):
 
     return model_params
 
+def get_automl_config(model_config):
+    """Function to get the automl config for the model.
+
+    Args:
+        model_params (dict): parameters for the model.
+
+    Returns:
+        function: automl config function.
+    """
+
+    def automl_config(trial: optuna.Trial):
+        evaluated_config = {}
+        for key, value in model_config.items():
+            if isinstance(value, str):
+                evaluated_config[key] = eval(value)
+            else:
+                evaluated_config[key] = value
+        return evaluated_config
+
+    return automl_config
+
 def set_model(model_name, model_params = None):
     """Function to get the models for the dataset.
 
@@ -439,11 +460,23 @@ def set_model(model_name, model_params = None):
             raise ValueError(f'Invalid model: {model_name}')
     
     elif model_type == 'automl':
-        
+
         if model_name == 'AutoXGBoost':
-            model = [AutoXGBoost(**model_params)]
+
+            if model_params == {}:
+                model = [AutoXGBoost(**model_params)]
+            else:
+                automl_config = get_automl_config(model_params)
+                model = {model_name: AutoModel(model = XGBRegressor(), config = automl_config)}
+
         elif model_name == 'AutoLightGBM':
-            model = [AutoLightGBM(**model_params)]
+
+            if model_params == {}:
+                model = [AutoXGBoost(**model_params)]
+            else:
+                automl_config = get_automl_config(model_params)
+                model = {model_name: AutoModel(model = LGBMRegressor(), config = automl_config)}
+
         else:
             raise ValueError(f'Invalid model: {model_name}')
     
