@@ -1,4 +1,3 @@
-
 import sys
 sys.path.insert(0, 'src/Python/utils')
 import numpy as np

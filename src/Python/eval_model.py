@@ -4,21 +4,24 @@ import os
 from utilities import (
     get_config, configure_logging, create_logger, stop_logger
 )
-from predictions import combine_model_predictions
+from evaluate_forecasts import evaluate_model
 
 os.environ['NIXTLA_ID_AS_COL'] = '1'
-config = get_config('config/preds/preds_hapag_weekly_config.yaml')
+# config = get_config('config/eval/vn1_weekly.yaml')
+# config = get_config('config/eval/m5_daily.yaml')
+# config = get_config('config/eval/m4_daily.yaml')
+config = get_config('config/eval/hapag_weekly.yaml')
 
 configure_logging(
     config_file = 'config/log_config.yaml', 
     name_list = [
         config['dataset']['dataset_name'], 
         config['dataset']['frequency'], 
-        'predictions'
+        'evaluation'
     ]
 )
 logger = create_logger()
 
-combine_model_predictions(config = config)
+evaluate_model(config = config)
 
 stop_logger(logger)

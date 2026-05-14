@@ -7,12 +7,10 @@ from utilities import (
 from fit_models import retrain_model
 
 os.environ['NIXTLA_ID_AS_COL'] = '1'
-# config = get_config('config/fit/TEST_retrain_LR_m5_daily_config.yaml')
-# config = get_config('config/fit/TEST_retrain_LR_vn1_weekly_config.yaml')
-config = get_config('config/fit/TEST_hapag_ml.yaml')
-# config = get_config('config/fit/retrain_ml_vn1_weekly_config.yaml')
-# config = get_config('config/fit/retrain_ml_m5_daily_config.yaml')
-# config = get_config('config/fit/retrain_ml_m4_daily_config.yaml')
+config = get_config('config/fit/hapag_weekly_retrain_ml.yaml')
+# config = get_config('config/fit/vn1_weekly_retrain_ml.yaml')
+# config = get_config('config/fit/m5_daily_retrain_ml.yaml')
+# config = get_config('config/fit/m4_daily_retrain_ml.yaml')
 configure_logging(
     config_file = 'config/log_config.yaml', 
     name_list = [

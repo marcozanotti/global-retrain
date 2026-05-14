@@ -4,20 +4,21 @@ import os
 from utilities import (
     get_config, configure_logging, create_logger, stop_logger
 )
-from predictions import combine_dataset_predictions
+from importance import compute_feature_importance
 
 os.environ['NIXTLA_ID_AS_COL'] = '1'
-config = get_config('config/preds/preds_dataset_config.yaml')
+config = get_config('config/importance/hapag_weekly.yaml')
+
 configure_logging(
     config_file = 'config/log_config.yaml', 
     name_list = [
-        config['dataset']['dataset_names'], 
-        config['dataset']['frequencies'], 
-        'predictions', 'dataset'
+        config['dataset']['dataset_name'], 
+        config['dataset']['frequency'], 
+        'importance'
     ]
 )
 logger = create_logger()
 
-combine_dataset_predictions(config = config)
+compute_feature_importance(config = config)
 
 stop_logger(logger)

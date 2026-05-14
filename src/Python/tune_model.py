@@ -4,21 +4,23 @@ import os
 from utilities import (
     get_config, configure_logging, create_logger, stop_logger
 )
-from predictions import evaluate_predictions
+from fit_models import fit_auto_model
+import optuna
 
 os.environ['NIXTLA_ID_AS_COL'] = '1'
-config = get_config('config/preds/preds_eval_hapag_weekly_config.yaml')
-
+optuna.logging.set_verbosity(optuna.logging.ERROR)
+# config = get_config('config/tune/hapag_weekly_ml.yaml')
+config = get_config('config/tune/hapag_weekly_dl.yaml')
 configure_logging(
     config_file = 'config/log_config.yaml', 
     name_list = [
         config['dataset']['dataset_name'], 
         config['dataset']['frequency'], 
-        'predictions_evaluation'
+        'tuning'
     ]
 )
 logger = create_logger()
 
-evaluate_predictions(config = config)
+fit_auto_model(config = config)
 
 stop_logger(logger)
