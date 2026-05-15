@@ -22,7 +22,7 @@ import optuna
 # from mlforecast.target_transforms import GlobalSklearnTransformer
 from mlforecast.target_transforms import LocalRobustScaler#, LocalStandardScaler, LocalMinMaxScaler, Differences
 from mlforecast.lag_transforms import RollingMean, ExpandingMean
-from neuralforecast.losses.pytorch import MAE, MSE, RMSE
+from neuralforecast.losses.pytorch import MAE, MSE, RMSE, MAPE, SMAPE
 from custom_feats import is_weekend
 from utilities import get_frequency
 
@@ -49,6 +49,8 @@ def get_loss_function(loss):
             fun_tmp = 'error'
         if fun_tmp != 'error':
             loss = fun_tmp
+    else:
+        loss = MAE()
 
     return loss
 
@@ -352,13 +354,17 @@ def get_default_model_params(model_name):
     elif model_name == 'AutoMLP':
 
         model_params = {
-            model_name: {}
+            model_name: {
+                'h': 28
+            }
         }
 
     elif model_name == 'AutoNBEATSx':
 
         model_params = {
-            model_name: {}
+            model_name: {
+                'h': 28
+            }
         }    
     
     else:
@@ -366,7 +372,7 @@ def get_default_model_params(model_name):
 
     return model_params
 
-def get_automl_config(model_config):
+def get_automodel_config(model_config):
     """Function to get the automl config for the model.
 
     Args:
@@ -379,7 +385,7 @@ def get_automl_config(model_config):
     def automl_config(trial: optuna.Trial):
         evaluated_config = {}
         for key, value in model_config.items():
-            if isinstance(value, str):
+            if isinstance(value, str) and value.startswith('trial.'):
                 evaluated_config[key] = eval(value)
             else:
                 evaluated_config[key] = value
@@ -466,26 +472,52 @@ def set_model(model_name, model_params = None):
             if model_params == {}:
                 model = [AutoXGBoost(**model_params)]
             else:
-                automl_config = get_automl_config(model_params)
+                automl_config = get_automodel_config(model_params)
                 model = {model_name: AutoModel(model = XGBRegressor(), config = automl_config)}
 
         elif model_name == 'AutoLightGBM':
 
             if model_params == {}:
-                model = [AutoXGBoost(**model_params)]
+                model = [AutoLightGBM(**model_params)]
             else:
-                automl_config = get_automl_config(model_params)
+                automl_config = get_automodel_config(model_params)
                 model = {model_name: AutoModel(model = LGBMRegressor(), config = automl_config)}
 
         else:
             raise ValueError(f'Invalid model: {model_name}')
     
     elif model_type == 'autodl':
+
+        h = model_params['h']
+        model_params['backend'] = 'optuna'
+        model_params['refit_with_val'] = False
+        if 'loss' in model_params.keys():
+            model_params['loss'] = get_loss_function(model_params['loss'])
         
         if model_name == 'AutoMLP':
-            model = [AutoMLP(**model_params)]
+
+            if model_params['config'] == {}:
+                # if no config is provided, we set the default one with the specified horizon and backend
+                autodl_config = AutoMLP.get_default_config(h = h, backend=model_params['backend'])
+                model_params['config'] = autodl_config
+                model = [AutoMLP(**model_params)]
+            else:
+                automl_config = get_automodel_config(model_params['config'])
+                model_params['config'] = automl_config
+                model = [AutoMLP(**model_params)]
+
         elif model_name == 'AutoNBEATSx':
-            model = [AutoNBEATSx(**model_params)]
+
+            if model_params['config'] == {}:
+                # if no config is provided, we set the default one with the specified horizon and backend
+                autodl_config = AutoNBEATSx.get_default_config(h = h, backend=model_params['backend'])
+                model_params['config'] = autodl_config
+                model = [AutoNBEATSx(**model_params)]
+            else:
+                automl_config = get_automodel_config(model_params['config'])
+                model_params['config'] = automl_config
+                model = [AutoNBEATSx(**model_params)]
+
         else:
             raise ValueError(f'Invalid model: {model_name}')
 
@@ -573,16 +605,11 @@ def set_engine(model_name, frequency, features, target_transforms = None, model_
     
     elif model_type == 'autodl':
 
-        raise NotImplementedError('AutoDL models are not yet implemented.')
-        # engine = AutoNeuralForecast(
-        #     models = model, 
-        #     freq = freq,
-        #     season_length = None,
-        #     init_config = None,
-        #     fit_config = None,
-        #     num_threads = -1,
-        #     reuse_cv_splits = False
-        # )
+        engine = NeuralForecast(
+            models = model, 
+            freq = freq,
+            local_scaler_type = target_transforms
+        )
         
     else:
         raise ValueError(f'Invalid model: {model_name}')

@@ -3,7 +3,7 @@ dataset: {
     frequency: 'weekly',
     min_series_length: null,
     max_series_length: null,
-    samples: null,
+    samples: 10,
     ext: '.parquet',
     seed: 1992
 }
@@ -12,9 +12,9 @@ fitting: {
     test_window: 104,
     horizon: 9,
     intervals: {
-        'h': 9,
-        'n_windows': 4,
-        'method': 'conformal_distribution'
+        h: 9,
+        n_windows: 4,
+        method: 'conformal_distribution'
     },
     levels: [50, 60, 70, 80, 90, 95, 99],
     store_in_sample_results: False,
@@ -25,33 +25,50 @@ fitting: {
 }
 
 model_names: [
-    'AutoXGBoost', 
-    'AutoLightGBM'
+    'AutoMLP', 
+    'AutoNBEATSx'
 ]
 
 model_params: {
-    'AutoXGBoost': {
-        'learning_rate': 0.05,
-        'n_estimators': "trial.suggest_int('n_estimators', 100, 1000, log=False)",
+    AutoMLP: {
+        h: 9,
+        num_samples: 2, # same as n_models, but needed to be specified in the model_params
+        loss: SMAPE(),
+        time_budget: null,
+        config: {
+            max_steps: 10,
+            scaler_type: 'robust',
+            stat_exog_list: [
+                'geoscope', 'eqtype', 'georelated', 'balance'
+            ],
+            input_size: "trial.suggest_int('input_size', 1, 26, log=False)"
+        }
     },
-    'AutoLightGBM': {}
+    AutoNBEATSx: {
+        h: 9,
+        num_samples: 2, # same as n_models, but needed to be specified in the model_params
+        loss: SMAPE(),
+        time_budget: null,
+        config: {
+            max_steps: 10,
+            input_size: 9,
+            scaler_type: 'robust'
+        }        
+    }
 }
 
-target_transforms: [LocalRobustScaler(scale='mad')]
+target_transforms: null
 
 features: {
-    'static': [
+    static: [
         'geoscope', 'eqtype', 'georelated', 'balance'
     ],
-    'lags': [1, 2, 3, 4, 9],
-    'lag_transforms': {
-                1: [RollingMean(2), RollingMean(4)],
-                4: [RollingMean(4)]
-            },
-    'date': [
+    lags: null,
+    lag_transforms: null,
+    date: [
         'year', 'quarter', 'month', 'week'
     ],
-    'xregs': [
+    xregs: [
         # 'xreg01', 'xreg02', 'xreg03', 'xreg04', 'xreg05', 'xreg06', 'xreg07', 'xreg08', 'xreg09', 'xreg10',
         # 'xreg11', 'xreg12', 'xreg13', 'xreg14', 'xreg15', 'xreg16', 'xreg17', 'xreg18', 'xreg19', 'xreg20',
         # 'xreg21', 'xreg22', 'xreg23', 'xreg24', 'xreg25', 'xreg26', 'xreg27', 'xreg28', 'xreg29', 'xreg30',
