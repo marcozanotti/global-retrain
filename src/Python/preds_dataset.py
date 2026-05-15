@@ -7,7 +7,9 @@ from utilities import (
 from predictions import combine_dataset_predictions
 
 os.environ['NIXTLA_ID_AS_COL'] = '1'
-config = get_config('config/preds/dataset.yaml')
+
+
+config = get_config('config/preds/dataset_preds.yaml')
 configure_logging(
     config_file = 'config/log_config.yaml', 
     name_list = [
@@ -17,7 +19,5 @@ configure_logging(
     ]
 )
 logger = create_logger()
-
 combine_dataset_predictions(config = config)
-
 stop_logger(logger)

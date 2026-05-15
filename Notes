@@ -1,15 +1,19 @@
-# TODO: HapagLloyd Project
+
+# HapagLloyd Project
+
+# TODO: 
 - check manually results on Naive, WindowAverage, ETS
 - add lags and rolling, also rolling std 
 - ML one-hot date variables? DL better with fourier at 52 and 13 or with scaled date variables? Do not double scale in DL
-- tuning before on:
--- models: AutoXGBoost, AutoLGBM, AutoMLP, AutoNBEATSx
--- training:
--- validation: 104
--- test: 104
 
-- next steps?
--- tuning pipeline
+# WARN:
+- before running, need to know the structural changes over the test set
+
+
+
+
+
+
 
 
 # NOTE:

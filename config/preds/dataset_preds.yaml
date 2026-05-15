@@ -13,16 +13,10 @@ dataset: {
 }
 
 model_names: [
-    'Naive',
-    'SeasonalNaive',
-    'WindowAverage',
     'ETS',
     'LinearRegression', 
-    'Lasso',
-    'RandomForestRegressor',
     'XGBRegressor', 
     'LGBMRegressor', 
     'MLP',
-    'NBEATSx',
-    'NHITS'
+    'NBEATSx'
 ]

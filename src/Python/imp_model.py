@@ -7,8 +7,9 @@ from utilities import (
 from importance import compute_feature_importance
 
 os.environ['NIXTLA_ID_AS_COL'] = '1'
-config = get_config('config/importance/hapag_weekly.yaml')
 
+
+config = get_config('config/importance/hapag_weekly.yaml')
 configure_logging(
     config_file = 'config/log_config.yaml', 
     name_list = [
@@ -18,7 +19,5 @@ configure_logging(
     ]
 )
 logger = create_logger()
-
 compute_feature_importance(config = config)
-
 stop_logger(logger)

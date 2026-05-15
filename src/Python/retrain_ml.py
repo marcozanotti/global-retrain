@@ -7,6 +7,8 @@ from utilities import (
 from fit_models import retrain_model
 
 os.environ['NIXTLA_ID_AS_COL'] = '1'
+
+
 config = get_config('config/fit/hapag_weekly_retrain_ml.yaml')
 # config = get_config('config/fit/vn1_weekly_retrain_ml.yaml')
 # config = get_config('config/fit/m5_daily_retrain_ml.yaml')
@@ -20,7 +22,5 @@ configure_logging(
     ]
 )
 logger = create_logger()
-
 retrain_model(config = config)
-
 stop_logger(logger)

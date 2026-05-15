@@ -23,8 +23,6 @@ fitting: {
 
 model_names: [
     'LinearRegression', 
-    'Lasso',
-    'RandomForestRegressor',
     'XGBRegressor', 
     'LGBMRegressor'
 ]

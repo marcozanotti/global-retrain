@@ -7,9 +7,11 @@ from utilities import (
 from fit_ensembles import fit_ensembles
 
 os.environ['NIXTLA_ID_AS_COL'] = '1'
-# config = get_config('config/ensemble/m5_daily.yaml')
-# config = get_config('config/ensemble/vn1_weekly.yaml')
-config = get_config('config/ensemble/m4_daily.yaml')
+
+
+# config = get_config('config/ensemble/m5_daily_ens.yaml')
+# config = get_config('config/ensemble/vn1_weekly_ens.yaml')
+config = get_config('config/ensemble/m4_daily_ens.yaml')
 configure_logging(
     config_file = 'config/log_config.yaml', 
     name_list = [
@@ -19,7 +21,5 @@ configure_logging(
     ]
 )
 logger = create_logger()
-
 fit_ensembles(config = config)
-
 stop_logger(logger)

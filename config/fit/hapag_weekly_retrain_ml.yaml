@@ -1,4 +1,3 @@
-
 dataset: {
     dataset_name: 'hapag_region',
     frequency: 'weekly',
@@ -35,24 +34,13 @@ fitting: {
 }
 
 model_names: [
-    # 'LinearRegression',
-    # 'Lasso',
-    # 'RandomForestRegressor',
+    'LinearRegression',
     'XGBRegressor', 
     'LGBMRegressor'
 ]
 
 model_params: {
     'LinearRegression': {'n_jobs': -1},
-    'Lasso': {'alpha': 1.0},
-    'RandomForestRegressor': {
-        'criterion': 'squared_error',
-        'n_estimators': 500,
-        'min_samples_leaf': 52,
-        'max_features': 0.85,
-        'max_depth': 6,
-        'n_jobs': -1
-    },
     'XGBRegressor': {
         'objective': 'reg:squarederror',
         'booster': 'gbtree',
@@ -90,10 +78,11 @@ features: {
     'static': [
         # 'geoscope', 'eqtype', 'georelated', 'balance'
     ],
-    'lags': [1, 2, 3, 4, 9],
+    'lags': [1, 2, 3, 4, 9, 13, 26, 52],
     'lag_transforms': {
-                1: [RollingMean(2), RollingMean(4)],
-                4: [RollingMean(4)]
+                1: [RollingMean(9), RollingMean(13)],
+                4: [RollingMean(9), RollingMean(13)],
+                13: [RollingMean(13)]
             },
     'date': [
         # 'year', 'quarter', 'month', 'week'
@@ -108,11 +97,11 @@ features: {
         'fourier52sin1', 'fourier52cos1', 'fourier13sin1', 'fourier13cos1',
         'trend1_n', 
         'year_n', 'quarter_n', 'month_n', 'yweek_n', 
-        'geoscope_n', 'eqtype_n', 'georelated_n', 'balance_n',
-        # 'geoscope_d1', 'geoscope_d2', 'geoscope_d3', 'geoscope_d4', 'geoscope_d5', 
-        # 'eqtype_d1', 'eqtype_d2', 'eqtype_d3', 'eqtype_d4', 'eqtype_d5', 'eqtype_d6', 'eqtype_d7', 'eqtype_d8', 'eqtype_d9', 'eqtype_d10',
-        # 'georelated_d1', 'georelated_d2', 'georelated_d3', 'georelated_d4', 'georelated_d5', 'georelated_d6', 
-        # 'balance_d1',
+        # 'geoscope_n', 'eqtype_n', 'georelated_n', 'balance_n',
+        'geoscope_d1', 'geoscope_d2', 'geoscope_d3', 'geoscope_d4', 'geoscope_d5', 
+        'eqtype_d1', 'eqtype_d2', 'eqtype_d3', 'eqtype_d4', 'eqtype_d5', 'eqtype_d6', 'eqtype_d7', 'eqtype_d8', 'eqtype_d9', 'eqtype_d10',
+        'georelated_d1', 'georelated_d2', 'georelated_d3', 'georelated_d4', 'georelated_d5', 'georelated_d6', 
+        'balance_d1',
         # 'year_d2006', 'year_d2007', 'year_d2008', 'year_d2009', 'year_d2010', 
         # 'year_d2011', 'year_d2012', 'year_d2013', 'year_d2014', 'year_d2015', 
         # 'year_d2016', 'year_d2017', 'year_d2018', 'year_d2019', 'year_d2020', 

@@ -9,6 +9,8 @@ from fit_models import retrain_model
 
 os.environ['NIXTLA_ID_AS_COL'] = '1'
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+
+
 config = get_config('config/fit/hapag_weekly_retrain_dl.yaml')
 # config = get_config('config/fit/vn1_weekly_retrain_dl.yaml')
 # config = get_config('config/fit/m5_daily_retrain_dl.yaml')
@@ -24,9 +26,7 @@ configure_logging(
 logger = create_logger()
 logging.getLogger('pytorch_lightning.utilities').setLevel(logging.ERROR)
 logging.getLogger('lightning_fabric.utilities').setLevel(logging.ERROR)
-
 retrain_model(config = config)
-
 stop_logger(logger)
 
 
