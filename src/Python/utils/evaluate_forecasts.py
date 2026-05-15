@@ -276,7 +276,7 @@ def evaluate_forecasts(
             .reset_index()
 
         if weighted_metrics is not None:
-            module_logger.info('Computing weighted evaluation metrics...')
+            # module_logger.info('Computing weighted evaluation metrics...')
             eval_df_tmp = compute_weighted_metrics(
                 eval_df = eval_df_tmp,
                 metric_names = weighted_metrics, 

@@ -42,7 +42,7 @@ model_params: {
     'MLP': {
         'h': 9,
         'input_size': 52,
-        'max_steps': 500,
+        'max_steps': 100,
         'scaler_type': 'robust',
         'stat_exog_list': [],
         'futr_exog_list': [
@@ -61,7 +61,7 @@ model_params: {
     'NBEATSx': {
         'h': 9,
         'input_size': 52,
-        'max_steps': 500,
+        'max_steps': 100,
         'scaler_type': 'robust',
         'stack_types': ['identity', 'trend', 'seasonality'],
         'stat_exog_list': [],

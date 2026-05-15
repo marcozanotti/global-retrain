@@ -2,9 +2,7 @@
 # HapagLloyd Project
 
 # TODO: 
-- check manually results on Naive, WindowAverage, ETS
-- add lags and rolling, also rolling std 
-- ML one-hot date variables? DL better with fourier at 52 and 13 or with scaled date variables? Do not double scale in DL
+- dashboard with evaluation of forecast errors
 
 # WARN:
 - before running, need to know the structural changes over the test set

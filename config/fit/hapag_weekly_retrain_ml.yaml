@@ -78,12 +78,12 @@ features: {
     'static': [
         # 'geoscope', 'eqtype', 'georelated', 'balance'
     ],
-    'lags': [1, 2, 3, 4, 9, 13, 26, 52],
+    'lags': [1, 2, 3, 4, 9, 13],
     'lag_transforms': {
-                1: [RollingMean(9), RollingMean(13)],
-                4: [RollingMean(9), RollingMean(13)],
-                13: [RollingMean(13)]
-            },
+        1: [RollingMean(9), RollingMean(13)],
+        4: [RollingMean(9), RollingMean(13)],
+        9: [RollingMean(13)]
+    },
     'date': [
         # 'year', 'quarter', 'month', 'week'
     ],

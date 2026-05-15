@@ -13,9 +13,9 @@ dataset: {
 }
 
 model_names: [
-    'Naive',
-    'SeasonalNaive',
-    'WindowAverage',
+    # 'Naive',
+    # 'SeasonalNaive',
+    # 'WindowAverage',
     'ETS',
     # 'ARIMA', # no m5
     'LinearRegression', 

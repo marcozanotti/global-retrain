@@ -21,7 +21,7 @@ import optuna
 # from sklearn.preprocessing import FunctionTransformer
 # from mlforecast.target_transforms import GlobalSklearnTransformer
 from mlforecast.target_transforms import LocalRobustScaler#, LocalStandardScaler, LocalMinMaxScaler, Differences
-from mlforecast.lag_transforms import RollingMean, ExpandingMean
+from mlforecast.lag_transforms import RollingMean, ExpandingMean, RollingStd
 from neuralforecast.losses.pytorch import MAE, MSE, RMSE, MAPE, SMAPE
 from custom_feats import is_weekend
 from utilities import get_frequency
