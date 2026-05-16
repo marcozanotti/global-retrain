@@ -7,6 +7,8 @@ from utilities import (
 from evaluate_forecasts import evaluate_dataset
 
 os.environ['NIXTLA_ID_AS_COL'] = '1'
+
+
 config = get_config('config/eval/dataset_eval.yaml')
 configure_logging(
     config_file = 'config/log_config.yaml', 
@@ -17,7 +19,5 @@ configure_logging(
     ]
 )
 logger = create_logger()
-
 evaluate_dataset(config = config)
-
 stop_logger(logger)

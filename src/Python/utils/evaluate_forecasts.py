@@ -76,10 +76,29 @@ def aggregate_data(
     if drop_columns is not None:
         data_agg.drop(columns = drop_columns, inplace = True)
 
-    data_agg = data_agg \
-        .groupby(group_columns) \
-        .agg(function_name) \
-        .reset_index()
+    agg_fun = get_aggregate_function(function_name)
+
+    # if there are coluumns with _wt suffix, separate them and use the sum as aggregate function for them
+    wt_columns = [col for col in data_agg.columns if col.endswith('wt')]
+    if len(wt_columns) > 0:
+        agg_fun_wt = get_aggregate_function('sum')
+        data_agg_wt = data_agg[wt_columns + group_columns] \
+            .groupby(group_columns) \
+            .agg(agg_fun_wt) \
+            .reset_index()
+        data_agg = data_agg \
+            .drop(columns = wt_columns) \
+            .groupby(group_columns) \
+            .agg(function_name) \
+            .reset_index()
+        data_agg = data_agg.merge(data_agg_wt, on = group_columns, how = 'left')
+        if 'wt' in data_agg.columns:
+            data_agg.drop(columns = ['wt'], inplace = True)
+    else:
+        data_agg = data_agg \
+            .groupby(group_columns) \
+            .agg(function_name) \
+            .reset_index()
     
     if adjust_metrics:
 

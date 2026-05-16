@@ -26,12 +26,12 @@ def compute_feature_importance(config = None):
     has_xregs_mapping = config['dataset']['has_xregs_mapping']
     ext = config['dataset']['ext']
     # fitting parameters
-    retrain_scenarios = config['fitting']['retrain_scenarios']
+    retrain_window = config['fitting']['retrain_scenarios']
     # model parameters
     model_names = config['model_names']
     save_results = True
 
-    for rs in retrain_scenarios:
+    for rs in retrain_window:
 
         module_logger.info('---------------------------- START ----------------------------')
         rows = []
@@ -60,7 +60,9 @@ def compute_feature_importance(config = None):
             
             f_imp_df = pd.DataFrame.from_dict(f_imp, orient="index", columns=["importance"]).reset_index()
             f_imp_df = f_imp_df.rename(columns={"index": "xregs"})
-            f_imp_df = f_imp_df.assign(method = m, retrain_scenario = rs)
+            f_imp_df = f_imp_df.assign(method = m, retrain_window = rs)
+            # add column relative importance
+            f_imp_df["relative_importance"] = f_imp_df["importance"] / f_imp_df["importance"].max()
             rows.append(f_imp_df)
 
         res_df = pd.concat(rows, ignore_index=True)
@@ -73,10 +75,10 @@ def compute_feature_importance(config = None):
         res_df["feature"] = res_df.apply(
             lambda row: row["Name"] if pd.notnull(row["Name"]) else row["xregs"], axis=1
         )
-        res_df = res_df[["feature", "xregs", "method", "retrain_scenario", "importance"]]
+        res_df = res_df[["feature", "xregs", "method", "retrain_window", "importance", "relative_importance"]]
     else:
         res_df["feature"] = res_df["xregs"]
-        res_df = res_df[["feature", "xregs", "method", "retrain_scenario", "importance"]]
+        res_df = res_df[["feature", "xregs", "method", "retrain_window", "importance", "relative_importance"]]
 
     if save_results:
         save_data(res_df, ["results", dataset_name, frequency, "importance"], ["imp", f"{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"])

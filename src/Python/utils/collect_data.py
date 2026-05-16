@@ -269,6 +269,23 @@ def get_static_features(data, dataset_name):
 
     module_logger.info(f'Extracting static features from {dataset_name} dataset...')
 
+    def create_mapping_df(static_df, original_column_names, code_column_names, variable_names = None):
+
+        if variable_names is None:
+            variable_names = code_column_names
+
+        mapping_dfs = pd.DataFrame()
+
+        for original_col, code_col, var_name in zip(original_column_names, code_column_names, variable_names):
+            mapping_df = static_df[[original_col, code_col]].drop_duplicates().sort_values(code_col)
+            mapping_df.columns = ['value', 'code']
+            mapping_df['variable'] = var_name
+            mapping_dfs = pd.concat([mapping_dfs, mapping_df], axis = 0)
+        
+        mapping_dfs = mapping_dfs.reset_index(drop = True)
+
+        return mapping_dfs
+
     # get splitted unique ids
     static_df = data['unique_id'] \
         .drop_duplicates() \
@@ -292,6 +309,10 @@ def get_static_features(data, dataset_name):
         static_df['store_id'] = static_df['store_id'].astype('category').cat.codes
         static_df['state_id'] = static_df[3]
         static_df['state_id'] = static_df['state_id'].astype('category').cat.codes
+        mapping_dfs = create_mapping_df(
+            static_df, original_column_names = [0, 1, 2, 3, 4], 
+            code_column_names = ['item_id', 'dept_id', 'cat_id', 'store_id', 'state_id']
+        )
         static_df.drop(columns = [0, 1, 2, 3, 4], axis = 1, inplace = True)
 
     elif dataset_name == 'vn1':
@@ -299,12 +320,14 @@ def get_static_features(data, dataset_name):
         static_df['client'] = static_df[0].astype('category').cat.codes
         static_df['warehouse'] = static_df[1].astype('category').cat.codes
         static_df['product'] = static_df[2].astype('category').cat.codes
+        mapping_dfs = create_mapping_df(static_df, [0, 1, 2], ['client', 'warehouse', 'product'])
         static_df.drop(columns = [0, 1, 2], axis = 1, inplace = True)
 
     elif dataset_name == 'm4':
         static_df = pd.read_csv('data/m4/M4-info.csv')[['M4id', 'category']]
         static_df.columns = ['unique_id', 'category']
         static_df['category'] = static_df['category'].astype('category').cat.codes
+        mapping_dfs = None
 
     elif dataset_name == 'hapag_region' or dataset_name == 'hapag':
 
@@ -316,10 +339,14 @@ def get_static_features(data, dataset_name):
         static_df['eqtype'] = static_df[1].astype('category').cat.codes
         static_df['georelated'] = static_df[2].astype('category').cat.codes
         static_df['balance'] = static_df[3].astype('category').cat.codes
+        mapping_dfs = create_mapping_df(static_df, [0, 1, 2, 3], ['geoscope', 'eqtype', 'georelated', 'balance'])
         static_df.drop(columns = [0, 1, 2, 3], axis = 1, inplace = True)
 
     else:
         raise(f'Unknown dataset {dataset_name}')
+
+    if mapping_dfs is not None:
+        save_data(mapping_dfs, ['data', dataset_name], [dataset_name, 'static_features_mapping'], ext = '.csv')
 
     res_df = pd.merge(data, static_df, how = 'left', on = 'unique_id')
 
@@ -580,7 +607,8 @@ def prepare_data(
     features_to_normalize = None,
     features_to_one_hot = None,
     save = True, 
-    ext = '.parquet'):
+    ext = '.parquet'
+):
 
     """Function to prepare saved datasets.
 
