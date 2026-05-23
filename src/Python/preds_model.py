@@ -4,7 +4,7 @@ import os
 from utilities import (
     get_config, configure_logging, create_logger, stop_logger
 )
-from predictions import combine_model_predictions
+from predictions import combine_model_predictions, evaluate_model_predictions
 
 os.environ['NIXTLA_ID_AS_COL'] = '1'
 
@@ -20,4 +20,5 @@ configure_logging(
 )
 logger = create_logger()
 combine_model_predictions(config = config)
+evaluate_model_predictions(config = config)
 stop_logger(logger)
