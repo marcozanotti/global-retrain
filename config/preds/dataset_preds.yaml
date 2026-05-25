@@ -12,11 +12,23 @@ dataset: {
     'ext': '.parquet'
 }
 
+types: ['preds', 'eval', 'time']
+
 model_names: [
-    'ETS',
-    'LinearRegression', 
-    'XGBRegressor', 
-    'LGBMRegressor', 
+    # 'ETS',
+    # 'LinearRegression', 
+    # 'XGBRegressor', 
+    # 'LGBMRegressor', 
     'MLP',
-    'NBEATSx'
+    # 'NBEATSx'
 ]
+
+# model_names_new: null
+model_names_new: {
+    # 'ETS': 'ETS',
+    # 'LinearRegression': 'LR',
+    # 'XGBRegressor': 'XGB',
+    # 'LGBMRegressor': 'LGBM',
+    'MLP': 'MLP_maxsteps50000',
+    # 'NBEATSx': 'NBEATSx'
+}

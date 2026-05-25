@@ -27,12 +27,12 @@ fitting: {
 }
 
 model_names: [
-    'ETS',
-    'LinearRegression', 
-    'XGBRegressor', 
-    'LGBMRegressor', 
+    # 'ETS',
+    # 'LinearRegression', 
+    # 'XGBRegressor', 
+    # 'LGBMRegressor', 
     'MLP',
-    'NBEATSx'
+    # 'NBEATSx'
 ]
 
 evaluation: {

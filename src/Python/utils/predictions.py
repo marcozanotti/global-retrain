@@ -222,7 +222,7 @@ def combine_dataset_predictions(config):
             )
             # if model_names_new is not None: load the combined predictions file and rename the models if specified in the config
             if model_names_new is not None:
-                module_logger.info('Renaming models in the combined predictions file according to the config')
+                module_logger.info('Renaming models in the combined predictions file...')
                 time.sleep(1)
                 preds_df = load_data(
                     path_list = ['results', dataset_name_tmp, freq_tmp, 'preds'],
@@ -255,7 +255,7 @@ def combine_dataset_predictions(config):
             )
             # if model_names_new is not None: load the combined evaluation file and rename the models if specified in the config
             if model_names_new is not None:
-                module_logger.info('Renaming models in the combined evaluation file according to the config')
+                module_logger.info('Renaming models in the combined evaluation file...')
                 time.sleep(1)
                 eval_df = load_data(
                     path_list = ['results', dataset_name_tmp, freq_tmp, 'preds'],
@@ -288,7 +288,7 @@ def combine_dataset_predictions(config):
             )
             # if model_names_new is not None: load the combined time samples file and rename the models if specified in the config
             if model_names_new is not None:
-                module_logger.info('Renaming models in the combined time samples file according to the config')
+                module_logger.info('Renaming models in the combined time file...')
                 time_df = load_data(
                     path_list = ['results', dataset_name_tmp, freq_tmp, 'preds'],
                     name_list = [dataset_name_tmp, freq_tmp, 'time'],
