@@ -42,7 +42,7 @@ model_params: {
     'MLP': {
         'h': 9,
         'input_size': 13,
-        'max_steps': 500,
+        'max_steps': 1000,
         'learning_rate': 0.001,
         'hidden_size': 1024,
         'num_layers': 2,

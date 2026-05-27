@@ -29,6 +29,6 @@ model_names_new: {
     # 'LinearRegression': 'LR',
     # 'XGBRegressor': 'XGB',
     # 'LGBMRegressor': 'LGBM',
-    'MLP': 'MLP_maxsteps50000',
+    'MLP': 'MLP_maxsteps1000',
     # 'NBEATSx': 'NBEATSx'
 }

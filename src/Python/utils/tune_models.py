@@ -94,6 +94,37 @@ def get_best_tuning_results(model_name, results, validation_plan):
 
     return tuning_results_df
 
+def get_full_tuning_results(model_name, results):
+
+    """ Function to extract the full tuning results.
+    
+        Args:
+        model_name: Name of the model.
+        results: Tuning results object.
+
+        Returns:
+        DataFrame containing the full tuning results.
+    """
+
+    model_type = get_model_type(model_name)
+
+    if model_type == 'automl':
+
+        full_results = results[model_name].trials_dataframe()
+        full_results.drop(columns=['user_attrs_config'], inplace=True)
+
+    elif model_type == 'autodl':
+
+        full_results = results.trials_dataframe()
+        full_results.drop(columns=['user_attrs_ALL_PARAMS', 'user_attrs_METRICS'], inplace=True)
+
+    else: 
+        raise ValueError('Not yet implemented.')
+
+    full_results['method'] = model_name
+
+    return full_results
+
 def fit_automl_model(
     train_df, 
     dataset_name,
@@ -159,6 +190,8 @@ def fit_automl_model(
     # X_df = test_df.drop(columns = ['y'] + features['static'])
     # auto_mlf.predict(horizon, level=levels, X_df = X_df)
 
+    time_name = f"{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"
+
     # Extract the best trial information
     tune_res = get_best_tuning_results(
         model_name = model_name,
@@ -172,8 +205,17 @@ def fit_automl_model(
     save_data(
         data = tune_res,
         path_list = ['results', dataset_name, frequency, 'tuning'],
-        name_list = [model_name, f"{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"],
+        name_list = [model_name, time_name],
         ext = '.json'
+    )
+
+    # Extract average loss for each configuration across validation windows
+    full_tune_res = get_full_tuning_results(model_name, results = auto_mlf.results_)
+    save_data(
+        data = full_tune_res,
+        path_list = ['results', dataset_name, frequency, 'tuning'],
+        name_list = [model_name, 'full', time_name],
+        ext = '.parquet'
     )
 
     tot_time = end_time - start_time
@@ -188,6 +230,8 @@ def fit_autodl_model(
     model_name,
     engine,
     valid_window,
+    step_size,
+    valid_loss,
     horizon,
     features,
     intervals
@@ -202,6 +246,8 @@ def fit_autodl_model(
         model_name (str): Name of the model to fit.
         engine: Engine object for fitting the model.
         valid_window (int): Size of the validation window.
+        step_size (int): Step size between each cross validation window.
+        valid_loss (function): Function that takes the validation and train dataframes and produces a float. If None will use the average SMAPE across series.
         horizon (int): Forecasting horizon.
         features (dict): Dictionary containing feature information.
         intervals (list): List of intervals for prediction intervals.
@@ -220,7 +266,6 @@ def fit_autodl_model(
     pred_intervals = get_prediction_intervals(intervals, model_class = 'dl')
 
     # define the fitting times
-    step_size = 1
     n_valid_windows = (valid_window - horizon) // step_size + 1
 
     # define the static features
@@ -242,8 +287,10 @@ def fit_autodl_model(
     )
     end_time = time.time()
 
+    time_name = f"{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"
+
     # Extract the best trial information
-    tune_res = get_best_tuning_results(
+    best_tune_res = get_best_tuning_results(
         model_name = model_name,
         results = engine.models[0].results, 
         validation_plan = {
@@ -253,10 +300,19 @@ def fit_autodl_model(
         }        
     )
     save_data(
-        data = tune_res,
+        data = best_tune_res,
         path_list = ['results', dataset_name, frequency, 'tuning'],
-        name_list = [model_name, f"{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"],
+        name_list = [model_name, time_name],
         ext = '.json'
+    )
+
+    # Extract average loss for each configuration across validation windows
+    full_tune_res = get_full_tuning_results(model_name, results = engine.models[0].results)
+    save_data(
+        data = full_tune_res,
+        path_list = ['results', dataset_name, frequency, 'tuning'],
+        name_list = [model_name, 'full', time_name],
+        ext = '.parquet'
     )
 
     tot_time = end_time - start_time
@@ -312,7 +368,7 @@ def fit_auto_model(config):
     data = data[['unique_id', 'ds', 'y'] + features['static'] + features['xregs']] 
     # split the data into train and test dataframes
     train_df, test_df = split_train_test(data, test_window)
-    del data
+    del data, test_df
 
     for m in model_names:
 
@@ -352,6 +408,8 @@ def fit_auto_model(config):
                 model_name = m,
                 engine = engine_tmp,
                 valid_window = valid_window,
+                step_size = step_size,
+                valid_loss = valid_loss,
                 horizon = horizon,
                 features = features,
                 intervals = intervals

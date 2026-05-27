@@ -1,19 +1,16 @@
 
 # HapagLloyd Project
 
-# TODO: 
-- dashboard with evaluation of forecast errors
-
 # WARN:
 - before running, need to know the structural changes over the test set
 
 # MLP Experiment
-- input_size = 13
-- max_steps = 500, 1000 (20min), 5000 (1hr30min), 10000 (3hr), 20000 (6hr), 50000 (15hr)
+- input_size = 13, 26, 52
+- max_steps = 500 (9min), 1000 (18min), 5000 (1hr30min), 10000 (3hr), 20000 (6hr), 50000 (15hr)
 - learning_rate = 0.001, 0.01, 0.1
 - hidden_size = 1024, 512, 256, 128, 64
 - num_layers = 2, 3
-
+- batch_size = 32, 64
 
 
 

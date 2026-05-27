@@ -53,3 +53,30 @@
 # breaks_df = get_static_features(breaks_df, 'hapag')
 
 # save_data(breaks_df, ['data', 'hapag_region'], ['hapag_breaks_prep'])
+
+
+from neuralforecast.auto import AutoMLP
+import optuna
+import inspect
+
+config = AutoMLP.get_default_config(h = 9, backend="ray") 
+config.keys()
+config['max_steps'].categories
+config['input_size'].categories
+config['learning_rate'].lower
+config['learning_rate'].upper
+config['hidden_size'].categories
+config['num_layers'].lower
+config['num_layers'].upper
+config['batch_size'].categories
+config['scaler_type'].categories
+config['random_seed'].lower
+config['random_seed'].upper
+
+config['step_size'].categories
+config['windows_batch_size'].categories
+
+
+# for optuna
+lines = inspect.getsource(config)
+print(lines)

@@ -170,6 +170,14 @@ def evaluate_model_predictions(config):
             ext = ext
         ) 
 
+        # combine and save time results
+        combine_and_save_files(
+            path_list_to_read = ['results', dataset_name, frequency, m, 'time', 'byretrain'],
+            path_list_to_write = ['results', dataset_name, frequency, m, 'time'],
+            name_list = [dataset_name, frequency, m, 'time'],
+            ext = ext
+        )
+
         del preds_df_m
         gc.collect()
 

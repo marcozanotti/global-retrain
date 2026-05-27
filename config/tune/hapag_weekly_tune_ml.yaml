@@ -26,7 +26,7 @@ fitting: {
 
 model_names: [
     'AutoXGBoost', 
-    'AutoLightGBM'
+    # 'AutoLightGBM'
 ]
 
 model_params: {
