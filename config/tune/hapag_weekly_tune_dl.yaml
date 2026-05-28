@@ -18,7 +18,7 @@ fitting: {
     },
     levels: [50, 60, 70, 80, 90, 95, 99],
     store_in_sample_results: False,
-    n_models: 50,
+    n_models: 2,
     valid_window: 104,
     step_size: 1,
     valid_loss: null
@@ -32,11 +32,11 @@ model_names: [
 model_params: {
     AutoMLP: {
         h: 9,
-        num_samples: 50, # same as n_models, but needed to be specified in the model_params
+        num_samples: 2, # same as n_models, but needed to be specified in the model_params
         loss: SMAPE(),
         time_budget: null,
         config: {
-            max_steps: 500, # "trial.suggest_categorical('max_steps', [500, 1000])",
+            max_steps: 10, # "trial.suggest_categorical('max_steps', [500, 1000])",
             input_size: "trial.suggest_categorical('input_size', [9, 13, 26, 52])",
             learning_rate: "trial.suggest_float('learning_rate', 0.001, 0.1, log=False)",
             hidden_size: "trial.suggest_categorical('hidden_size', [1024, 512, 256, 128, 64])",

@@ -111,18 +111,34 @@ def get_full_tuning_results(model_name, results):
     if model_type == 'automl':
 
         full_results = results[model_name].trials_dataframe()
+        all_params = full_results['user_attrs_config'][0]['model_params']
         full_results.drop(columns=['user_attrs_config'], inplace=True)
 
     elif model_type == 'autodl':
 
         full_results = results.trials_dataframe()
+        all_params = full_results['user_attrs_ALL_PARAMS'][0]
         full_results.drop(columns=['user_attrs_ALL_PARAMS', 'user_attrs_METRICS'], inplace=True)
 
     else: 
         raise ValueError('Not yet implemented.')
 
     full_results['method'] = model_name
+    full_results.drop(columns=['datetime_start', 'datetime_complete', 'state'], inplace=True)
+    full_results.rename(columns={'value': 'loss', 'number': 'trial', 'duration': 'ct'}, inplace=True)
+    full_results['ct'] = full_results['ct'].dt.total_seconds() / 60
+    full_results['ct'] = full_results['ct'].round(2)
+    best_trial = full_results['loss'].idxmin()
+    full_results['best'] = False
+    full_results.loc[best_trial, 'best'] = True
 
+    # add values of all the parameters without trials
+    params_cols = [col for col in full_results.columns if col.startswith('params_')]
+    params_names = [col.replace('params_', '') for col in params_cols]
+    other_params = [col for col in all_params.keys() if col not in params_names and col not in ['stat_exog_list', 'futr_exog_list', 'h', 'loss', 'valid_loss', 'step_size']]
+    for col in other_params:
+        full_results[f'params_{col}'] = all_params[col]
+    
     return full_results
 
 def fit_automl_model(
@@ -369,6 +385,8 @@ def fit_auto_model(config):
     # split the data into train and test dataframes
     train_df, test_df = split_train_test(data, test_window)
     del data, test_df
+
+    # m = model_name = model_names[0]
 
     for m in model_names:
 

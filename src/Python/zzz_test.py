@@ -80,3 +80,14 @@ config['windows_batch_size'].categories
 # for optuna
 lines = inspect.getsource(config)
 print(lines)
+
+
+
+# modify tune
+import sys
+sys.path.insert(0, 'src/Python/utils')
+import pandas as pd
+from utilities import save_data, load_data
+
+full_results = load_data(['results/hapag_region/weekly/tuning/'], ['AutoMLP_full_20260528_144012'])
+save_data(full_results, ['results/hapag_region/weekly/tuning/'], ['AutoMLP_full_20260528_144012'])
