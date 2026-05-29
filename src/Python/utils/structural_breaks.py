@@ -6,7 +6,7 @@ from regimes import BaiPerronTest
 import logging
 module_logger = logging.getLogger('structural_breaks')
 
-def get_breaks(df, nobs = None, max_breaks=5, selection='bic'):
+def get_breaks(df, nobs = None, max_breaks=5, selection='bic', exog=None):
 
     """ Detect structural breaks in time series data using the Bai-Perron test.
         
@@ -34,13 +34,21 @@ def get_breaks(df, nobs = None, max_breaks=5, selection='bic'):
         ds = df_tmp['ds'].values
         y = df_tmp['y'].values
 
+        if exog is not None:
+            exog = df_tmp[exog].values
+
         if nobs is not None: # keep only the last nobs observations
             ds = ds[-nobs:]
             y = y[-nobs:]
+            if exog is not None:
+                exog = exog[-nobs:]
 
         module_logger.info(f'Processing unique_id: {id} with {len(y)} observations ({i+1} of {n_ids})...')
 
-        test = BaiPerronTest(y)
+        if exog is not None:
+            test = BaiPerronTest(y, exog=exog)
+        else:
+            test = BaiPerronTest(y)
         res = test.fit(max_breaks=max_breaks, selection=selection) # 'bic', 'lwz', 'sequential'
         
         break_df = pd.DataFrame({
