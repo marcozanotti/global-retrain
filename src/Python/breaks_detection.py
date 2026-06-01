@@ -15,9 +15,10 @@ data = load_data(['data/hapag_region/'], ['hapag_region_weekly_prep'])
 # data = data[['unique_id', 'ds', 'y', 'xreg']]
 data = data[['unique_id', 'ds', 'y']]
 data['ds'] = pd.to_datetime(data['ds'])
-res = get_breaks(df=data, nobs=208, max_breaks=10, selection='bic', exog=None)
+nobs = 52*10
+res = get_breaks(df=data, nobs=nobs, max_breaks=10, selection='bic', exog=None)
 stop_logger(logger)
 
 data_br = data.merge(res, on=['unique_id', 'ds'], how='left')
 data_br['break'] = data_br['break'].fillna('no break')
-save_data(data_br, path_list=['data/hapag_region/'], name_list=['hapag_region_weekly_breaks_208'])
+save_data(data_br, path_list=['data/hapag_region/'], name_list=[f'hapag_region_weekly_breaks_{nobs}'])
