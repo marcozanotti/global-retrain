@@ -1,3 +1,4 @@
+from pytorch_lightning import trainer
 import sys
 sys.path.insert(0, 'src/Python/utils')
 import os
@@ -16,6 +17,7 @@ from neuralforecast.models import MLP, LSTM, TCN, NBEATSx, NHITS
 from mlforecast.auto import AutoMLForecast, AutoModel, AutoXGBoost, AutoLightGBM
 from neuralforecast.auto import AutoMLP, AutoNBEATSx
 import optuna
+from pytorch_lightning.loggers import CSVLogger
 
 # NOTE: feature and transform functions must be imported to be used with eval('fun_name')
 # from sklearn.preprocessing import FunctionTransformer
@@ -43,12 +45,16 @@ def get_loss_function(loss):
     module_logger.info('Defining loss function...')
 
     if loss is not None:
-        try:
-            fun_tmp = eval(loss)
-        except:
-            fun_tmp = 'error'
-        if fun_tmp != 'error':
-            loss = fun_tmp
+        if loss == 'MAE':
+            loss = MAE()
+        elif loss == 'MSE':
+            loss = MSE()
+        elif loss == 'RMSE':
+            loss = RMSE()
+        elif loss == 'MAPE':
+            loss = MAPE()
+        elif loss == 'SMAPE':
+            loss = SMAPE()
     else:
         loss = MAE()
 
@@ -406,6 +412,8 @@ def set_model(model_name, model_params = None):
 
     module_logger.info('Defining the model...')
     model_type = get_model_type(model_name)
+    # create a copy of the model parameters to avoid modifying the original one
+    model_params = model_params.copy()
     if model_params is None:
         model_params = get_default_model_params(model_name)[model_name]
     module_logger.info(f'Model parameters: {model_params}')
@@ -451,17 +459,25 @@ def set_model(model_name, model_params = None):
 
         if 'loss' in model_params.keys():
             model_params['loss'] = get_loss_function(model_params['loss'])
+        if 'valid_loss' in model_params.keys():
+            model_params['valid_loss'] = get_loss_function(model_params['valid_loss'])
+
+        if 'log_to_csv' in model_params.keys():
+            trainer_kwargs = {"logger": CSVLogger("logs/")}
+            model_params.pop('log_to_csv')
+        else:
+            trainer_kwargs = {}
 
         if model_name == 'MLP':
-            model = [MLP(**model_params)]
+            model = [MLP(**model_params, **trainer_kwargs)]
         elif model_name == 'LSTM':
-            model = [LSTM(**model_params)]
+            model = [LSTM(**model_params, **trainer_kwargs)]
         elif model_name == 'TCN':
-            model = [TCN(**model_params)]
+            model = [TCN(**model_params, **trainer_kwargs)]
         elif model_name == 'NBEATSx':
-            model = [NBEATSx(**model_params)]
+            model = [NBEATSx(**model_params, **trainer_kwargs)]
         elif model_name == 'NHITS':
-            model = [NHITS(**model_params)]
+            model = [NHITS(**model_params, **trainer_kwargs)]
         else:
             raise ValueError(f'Invalid model: {model_name}')
     
@@ -493,6 +509,14 @@ def set_model(model_name, model_params = None):
         model_params['refit_with_val'] = False
         if 'loss' in model_params.keys():
             model_params['loss'] = get_loss_function(model_params['loss'])
+        if 'valid_loss' in model_params.keys():
+            model_params['valid_loss'] = get_loss_function(model_params['valid_loss'])
+        
+        if 'log_to_csv' in model_params.keys():
+            trainer_kwargs = {"logger": CSVLogger("logs/")}
+            model_params.pop('log_to_csv')
+        else:
+            trainer_kwargs = {}
         
         if model_name == 'AutoMLP':
 
@@ -500,11 +524,11 @@ def set_model(model_name, model_params = None):
                 # if no config is provided, we set the default one with the specified horizon and backend
                 autodl_config = AutoMLP.get_default_config(h = h, backend=model_params['backend'])
                 model_params['config'] = autodl_config
-                model = [AutoMLP(**model_params)]
+                model = [AutoMLP(**model_params, **trainer_kwargs)]
             else:
                 automl_config = get_automodel_config(model_params['config'])
                 model_params['config'] = automl_config
-                model = [AutoMLP(**model_params)]
+                model = [AutoMLP(**model_params, **trainer_kwargs)]
 
         elif model_name == 'AutoNBEATSx':
 
@@ -512,11 +536,11 @@ def set_model(model_name, model_params = None):
                 # if no config is provided, we set the default one with the specified horizon and backend
                 autodl_config = AutoNBEATSx.get_default_config(h = h, backend=model_params['backend'])
                 model_params['config'] = autodl_config
-                model = [AutoNBEATSx(**model_params)]
+                model = [AutoNBEATSx(**model_params, **trainer_kwargs)]
             else:
                 automl_config = get_automodel_config(model_params['config'])
                 model_params['config'] = automl_config
-                model = [AutoNBEATSx(**model_params)]
+                model = [AutoNBEATSx(**model_params, **trainer_kwargs)]
 
         else:
             raise ValueError(f'Invalid model: {model_name}')

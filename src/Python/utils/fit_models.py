@@ -779,6 +779,7 @@ def retrain_model(config):
     train_df, test_df = split_train_test(data, test_window)
     del data
 
+    # m = model_name = model_names[0] # NOTE: for testing purposes
     for m in model_names:
 
         module_logger.info('---------------------------- START ----------------------------')
