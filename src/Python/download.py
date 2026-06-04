@@ -77,7 +77,7 @@ data = get_data(
     ext = '.parquet', 
     min_series_length = None, 
     max_series_length = None,
-    samples = 1
+    samples = None
 )
 data.columns.tolist()
 data['unique_id'].nunique()

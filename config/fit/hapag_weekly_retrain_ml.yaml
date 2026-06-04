@@ -35,8 +35,8 @@ fitting: {
 
 model_names: [
     'LinearRegression',
-    'XGBRegressor', 
-    'LGBMRegressor'
+    # 'XGBRegressor', 
+    # 'LGBMRegressor'
 ]
 
 model_params: {

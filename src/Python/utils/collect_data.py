@@ -96,11 +96,14 @@ def download_data(dataset_name, save = True, ext = '.parquet'):
         train_df.columns = [col.replace('Date:', '') for col in train_df.columns]
         train_df = train_df.melt(id_vars = ['unique_id'], var_name = 'ds', value_name = 'y')
         train_df['ds'] = pd.to_datetime(train_df['ds'], format = '%Y-%m-%d')
+        train_df['ds'] = train_df['ds'] + pd.Timedelta(days = 1) # add 1 day to the ds column to change the initial date from sunday to monday
         train_df = train_df.sort_values(['unique_id', 'ds']).reset_index(drop = True)
 
         # split into train and test with last 5 years as test
         test_df = train_df[train_df['ds'] >= '2020-01-01'].copy()
+        test_df = test_df.sort_values(['unique_id', 'ds']).reset_index(drop = True)
         train_df = train_df[train_df['ds'] < '2020-01-01'].copy()
+        train_df = train_df.sort_values(['unique_id', 'ds']).reset_index(drop = True)
 
     else:
 
@@ -440,6 +443,7 @@ def get_xregs_data(path_list, name_list, dataset_name, frequency, ext = '.parque
         xregs_df = xregs_df.melt(id_vars = ['xregs'], var_name = 'ds', value_name = 'value')
         xregs_df = xregs_df.pivot(index = 'ds', columns = 'xregs', values = 'value').reset_index()
         xregs_df['ds'] = pd.to_datetime(xregs_df['ds'], format = '%Y-%m-%d')
+        xregs_df['ds'] = xregs_df['ds'] + pd.Timedelta(days = 1) # add 1 day to the ds column to change the initial date from sunday to monday
         xregs_df = xregs_df.sort_values(['ds']).reset_index(drop = True)
 
         # save xregs mapping dataframe
