@@ -55,6 +55,7 @@
 # save_data(breaks_df, ['data', 'hapag_region'], ['hapag_breaks_prep'])
 
 
+from catboost import metrics
 from neuralforecast.auto import AutoMLP
 import optuna
 import inspect
@@ -218,4 +219,48 @@ static_features = features['static']
 static_df = test_df[['unique_id'] + static_features].drop_duplicates().reset_index(drop = True)
 train_df_tmp = train_df = add_data_features(data = train_df, frequency = frequency, features = features, remove_static = True)
 
-engine.fit(df = train_df_tmp, static_df = static_df, prediction_intervals = pred_intervals, val_size=test_window)
+engine.fit(df = train_df_tmp, static_df = static_df, val_size=test_window)
+
+import pandas as pd
+metrics_df = pd.read_csv('logs/lightning_logs/version_0/metrics.csv')
+
+
+
+
+
+
+from neuralforecast import NeuralForecast
+from neuralforecast.models import MLP
+from neuralforecast.utils import PredictionIntervals
+from neuralforecast.utils import AirPassengersPanel, AirPassengersStatic
+
+Y_train_df = AirPassengersPanel[AirPassengersPanel['ds'] < AirPassengersPanel['ds'].values[-12]].reset_index(drop=True)
+Y_test_df = AirPassengersPanel[AirPassengersPanel['ds'] >= AirPassengersPanel['ds'].values[-12]].reset_index(drop=True)
+futr_df = Y_test_df.drop(columns=["y", "y_[lag12]"])
+
+monitors = ["ptl/val_loss", "valid_loss", "train_loss"]
+
+for monitor in monitors:
+    model = MLP(h=12, input_size=24,
+                stat_exog_list=['airline1'],
+                futr_exog_list=['trend'],
+                hist_exog_list=["y_[lag12]"],
+                val_monitor=monitor,
+                scaler_type='robust',
+                learning_rate=1e-3,
+                max_steps=100,
+                val_check_steps=10,
+                early_stop_patience_steps=2
+                )
+
+    fcst = NeuralForecast(
+        models=[model],
+        freq='ME'
+    )
+    fcst.fit(
+        df=Y_train_df, 
+        static_df=AirPassengersStatic, 
+        val_size=12, 
+        prediction_intervals = PredictionIntervals(n_windows=4, method='conformal_distribution')
+    )
+

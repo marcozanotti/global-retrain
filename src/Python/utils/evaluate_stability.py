@@ -1,4 +1,3 @@
-
 import sys
 sys.path.insert(0, 'src/Python/utils')
 import gc
@@ -8,27 +7,150 @@ from utilities import (
     create_file_path, create_file_name, get_file_name, 
     save_data, load_data, combine_and_save_files
 )
-from evaluate_forecasts import get_metrics, aggregate_data, evaluate_forecasts
+from evaluate_forecasts import get_metrics, aggregate_data, evaluate_forecasts, get_metric_type
 from collect_data import get_data
 
 import logging
 module_logger = logging.getLogger('evaluate_forecasts')
 
+def get_stability_metrics(metric_type = 'point'):
 
-def get_stability_metrics():
-    stab_met = {
-        'bias': 'stability_bias', 
-        'mae': 'mac', 
-        'mase': 'masc',
-        'rmse': 'rmsc',
-        'rmsse': 'rmssc', 
-        'smape': 'smapc',
-        'quantile_loss': 'qc',
-        'mqloss': 'mqc',
-        'scaled_quantile_loss': 'sqc',
-        'scaled_mqloss': 'smqc'
-    }
-    return stab_met    
+    if metric_type == 'point':
+        stab_met = {
+            'bias': 'stab_bias', 
+            'mae': 'mac', 
+            'mase': 'masc',
+            'rmse': 'rmsc',
+            'rmsse': 'rmssc', 
+            'smape': 'smapc'
+        }
+    else:
+        stab_met = {
+            'smape': 'smqpc'
+        }
+    return stab_met  
+
+def evaluate_point_stability(out_sample_0_df, out_sample_1_df, point_metrics_dict, train_df):
+
+    """Function to evaluate the stability of a single point forecast.
+
+    Args:
+        out_sample_0_df (pd.DataFrame): out-of-sample dataframe with forecasts from the first model fit.
+        out_sample_1_df (pd.DataFrame): out-of-sample dataframe with forecasts from the second model fit.
+        point_metrics_dict (dict): dictionary of point metric functions to evaluate.
+        train_df (pd.DataFrame): training dataframe.
+
+    Returns:
+        pd.DataFrame: dataframe with stability metrics for the evaluated point forecast.
+    """
+
+    module_logger.info('Evaluate stability of point forecasts...')
+
+    out_sample_0_df = out_sample_0_df[['unique_id', 'ds', 'fcst']]
+    out_sample_0_df = out_sample_0_df.rename({'fcst': 'y'}, axis = 1)
+    out_sample_0_df = out_sample_0_df.reset_index(drop = True)
+
+    quantile_columns = [col for col in out_sample_1_df.columns if '-lo-' in col or '-hi-' in col]
+    out_sample_1_df = out_sample_1_df.drop(columns = ['y'] + quantile_columns, inplace = False)
+    out_sample_1_df = out_sample_1_df.reset_index(drop = True)
+
+    out_sample_df = out_sample_0_df.merge(out_sample_1_df, how = 'inner', on = ['unique_id', 'ds'])
+    # nobs = out_sample_df.shape[0] / len(out_sample_df['unique_id'].unique())
+    # module_logger.info(f'Evaluation based on {nobs} observations')
+
+    point_metrics = list(point_metrics_dict.values())
+
+    # Temporarily disable logs from evaluate_forecasts
+    logger_ef = logging.getLogger('evaluate_forecasts')
+    _prev_disabled = logger_ef.disabled
+    logger_ef.disabled = True
+    try:
+        stab_point_df = evaluate_forecasts(
+            out_sample_df = out_sample_df,
+            metrics = point_metrics, 
+            train_df = train_df
+        )
+    finally:
+        logger_ef.disabled = _prev_disabled
+
+    stab_point_df.rename(get_stability_metrics('point'), axis = 1, inplace = True)
+
+    return stab_point_df
+
+def evaluate_probabilistic_stability(out_sample_0_df, out_sample_1_df, prob_metrics_dict, levels, train_df):
+
+    """Function to evaluate the stability of probabilistic forecasts.
+
+    Args:
+        out_sample_0_df (pd.DataFrame): out-of-sample dataframe with forecasts from the first model fit.
+        out_sample_1_df (pd.DataFrame): out-of-sample dataframe with forecasts from the second model fit.
+        prob_metrics_dict (dict): dictionary of probabilistic metric functions to evaluate.
+        levels (list): list of quantile levels to evaluate.
+        train_df (pd.DataFrame): training dataframe.
+
+    Returns:
+        pd.DataFrame: dataframe with stability metrics for the evaluated probabilistic forecast.
+    """
+
+    module_logger.info('Evaluate stability of probabilistic forecasts...')
+
+    quantile_columns_0 = [col for col in out_sample_0_df.columns if ('-lo-' in col or '-hi-' in col) and col.split('-')[-1] in [str(l) for l in levels]]
+    quantile_columns_1 = [col for col in out_sample_1_df.columns if ('-lo-' in col or '-hi-' in col) and col.split('-')[-1] in [str(l) for l in levels]]
+    if set(quantile_columns_0) != set(quantile_columns_1):
+        module_logger.error('The quantile columns in the two dataframes are different. Please check the input dataframes.')
+        raise ValueError('The quantile columns in the two dataframes are different. Please check the input dataframes.')
+    
+    stab_prob_df = pd.DataFrame()
+    stab_prob_df['unique_id'] = out_sample_1_df['unique_id'].unique()
+    stab_prob_df['sample'] = out_sample_1_df['sample']
+    stab_prob_df['method'] = out_sample_1_df['method']
+    stab_prob_df['test_window'] = out_sample_1_df['test_window']
+    stab_prob_df['horizon'] = out_sample_1_df['horizon']
+    stab_prob_df['retrain_window'] = out_sample_1_df['retrain_window']
+
+    for col in quantile_columns_0:
+
+        lvl = col.split('-')[-1]
+        lvl_type = col.split('-')[-2]
+
+        out_sample_0_df_tmp = out_sample_0_df[['unique_id', 'ds', col]]
+        out_sample_0_df_tmp = out_sample_0_df_tmp.rename({col: 'y'}, axis = 1)
+        out_sample_0_df_tmp = out_sample_0_df_tmp.reset_index(drop = True)
+
+        out_sample_1_df_tmp = out_sample_1_df.drop(columns = 'fcst', inplace = False)
+        out_sample_1_df_tmp = out_sample_1_df_tmp.rename({col: 'fcst'}, axis = 1)
+        quantile_columns_tmp = [col for col in out_sample_1_df_tmp.columns if '-lo-' in col or '-hi-' in col]
+        out_sample_1_df_tmp = out_sample_1_df_tmp.drop(columns = ['y'] + quantile_columns_tmp, inplace = False)
+        out_sample_1_df_tmp = out_sample_1_df_tmp.reset_index(drop = True)
+
+        out_sample_df_tmp = out_sample_0_df_tmp.merge(out_sample_1_df_tmp, how = 'inner', on = ['unique_id', 'ds'])
+
+        prob_metrics = list(prob_metrics_dict.values())
+
+        # Temporarily disable logs from evaluate_forecasts
+        logger_ef = logging.getLogger('evaluate_forecasts')
+        _prev_disabled = logger_ef.disabled
+        logger_ef.disabled = True
+        try:
+            stab_prob_df_tmp = evaluate_forecasts(
+                out_sample_df = out_sample_df_tmp,
+                metrics = prob_metrics, 
+                train_df = train_df
+            )
+        finally:
+            logger_ef.disabled = _prev_disabled
+
+        stab_prob_df_tmp.rename(get_stability_metrics('prob'), axis = 1, inplace = True)
+        stab_prob_df_tmp = stab_prob_df_tmp.rename({col: f'{col}-{lvl_type}-{lvl}' for col in stab_prob_df_tmp.columns if col in prob_metrics_dict.keys()}, axis = 1)
+        stab_prob_df = stab_prob_df.merge(stab_prob_df_tmp, how = 'left', on = ['unique_id', 'sample', 'method', 'test_window', 'horizon', 'retrain_window'])
+
+        del out_sample_0_df_tmp, out_sample_1_df_tmp, out_sample_df_tmp, stab_prob_df_tmp
+
+    # compute the average stability across quantile levels for each metric
+    for met_col in prob_metrics_dict.keys():
+        stab_prob_df[met_col] = stab_prob_df[[col for col in stab_prob_df.columns if met_col in col]].mean(axis = 1)
+
+    return stab_prob_df
 
 def evaluate_model_stability(config):
 
@@ -56,7 +178,7 @@ def evaluate_model_stability(config):
     model_names = config['model_names']
     # evaluation parameters
     eval_freq = config['evaluation']['evaluation_frequency']
-    metrics = get_metrics(config['evaluation']['metrics'], eval_freq)
+    metrics = config['evaluation']['metrics']
     skip =  config['evaluation']['skip']
     
     # load the dataset
@@ -72,6 +194,17 @@ def evaluate_model_stability(config):
     )
     train_df = train_df[['unique_id', 'ds', 'y']]
 
+    # separate metrics into point and probabilistic metrics into two dictionaries and get the metric functions
+    point_metrics_dict = {}
+    prob_metrics_dict = {}
+    for met in metrics:
+        mt = get_metric_type(met)
+        if mt == 'point':
+            point_metrics_dict[met] = get_metrics([met], eval_freq)[0]
+        else:
+            prob_metrics_dict[met] = get_metrics([met], eval_freq)[0]
+
+    
     for m in model_names:
 
         module_logger.info('---------------------------- START ----------------------------')
@@ -82,7 +215,9 @@ def evaluate_model_stability(config):
             for rs in retrain_scenarios:
 
                 module_logger.info(f'Evaluate predictions for retrain scenario: {rs}')
+
                 stab_df_retrain = pd.DataFrame() 
+
                 file_names_tmp = get_file_name(
                     path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'], 
                     name_list = None,
@@ -92,36 +227,41 @@ def evaluate_model_stability(config):
 
                 for i in range(len(file_names_tmp) - skip):
 
-                    stab0_df_tmp = load_data(
+                    out_sample_0_df = load_data(
                         path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'],
                         name_list = [file_names_tmp[i]],
                         ext = ext
                     )
-                    stab0_df_tmp = stab0_df_tmp[['unique_id', 'ds', 'fcst']]
-                    stab0_df_tmp.rename({'fcst': 'y'}, axis = 1, inplace = True)
-                    stab0_df_tmp.reset_index(drop = True, inplace = True)
-
-                    stab1_df_tmp = load_data(
+                    out_sample_1_df = load_data(
                         path_list = ['results', dataset_name, frequency, m, rs, 'outsample', 'tmp'],
                         name_list = [file_names_tmp[i + skip]],
                         ext = ext
                     )    
-                    stab1_df_tmp.drop('y', axis = 1, inplace = True)            
-                    stab1_df_tmp.reset_index(drop = True, inplace = True)
-                    
-                    stab_df_tmp = stab1_df_tmp.merge(stab0_df_tmp, how = 'inner', on = ['unique_id', 'ds'])
-                    # nobs = stab_df_tmp.shape[0] / len(stab_df_tmp['unique_id'].unique())
-                    # module_logger.info(f'Evaluation based on {nobs} observations')
 
-                    stab_df_tmp = evaluate_forecasts(
-                        out_sample_df = stab_df_tmp,
-                        metrics = metrics, 
-                        train_df = train_df,
-                        levels = levels
+                    # Point stability evaluation
+                    stab_point_df_tmp = evaluate_point_stability(
+                        out_sample_0_df = out_sample_0_df,
+                        out_sample_1_df = out_sample_1_df,
+                        point_metrics_dict = point_metrics_dict,
+                        train_df = train_df
                     )
-                    stab_df_tmp.rename(get_stability_metrics(), axis = 1, inplace = True)
+                    
+                    # Probabilistic stability evaluation
+                    stab_prob_df_tmp = evaluate_probabilistic_stability(
+                        out_sample_0_df = out_sample_0_df,
+                        out_sample_1_df = out_sample_1_df,
+                        prob_metrics_dict = prob_metrics_dict,
+                        levels = levels,
+                        train_df = train_df
+                    )
+
+                    stab_df_tmp = stab_point_df_tmp.merge(
+                        stab_prob_df_tmp, how = 'left', 
+                        on = ['unique_id', 'sample', 'method', 'test_window', 'horizon', 'retrain_window']
+                    )
                     stab_df_retrain = pd.concat([stab_df_retrain, stab_df_tmp], axis = 0)
-                    del stab_df_tmp
+
+                    del out_sample_0_df, out_sample_1_df, stab_point_df_tmp, stab_prob_df_tmp, stab_df_tmp
                     if (i % 10) == 0:
                         gc.collect()
 

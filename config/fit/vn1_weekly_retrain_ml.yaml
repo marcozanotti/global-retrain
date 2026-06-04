@@ -104,3 +104,4 @@ features: {
     'date': ['year', 'quarter', 'month', 'week'],
     'xregs': null
 }
+save_model: False

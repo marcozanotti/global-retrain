@@ -191,16 +191,29 @@ def get_metrics(metric_names, frequency = None):
         metrics.append(partial(rmsse, seasonality = freq))
     if 'smapc' in metric_names:
         metrics.append(smape)
-    if 'qc' in metric_names:
-        metrics.append(quantile_loss)
-    if 'mqc' in metric_names:
-        metrics.append(mqloss)
-    if 'sqc' in metric_names:
-        metrics.append(partial(scaled_quantile_loss, seasonality = freq))
-    if 'smqc' in metric_names:
-        metrics.append(partial(scaled_mqloss, seasonality = freq))
+    if 'smqpc' in metric_names:
+        metrics.append(smape)
 
     return metrics
+
+def get_metric_type(metric_name):
+
+    point = [
+        'bias', 'mae', 'mse', 'rmse', 'mase', 'msse', 'rmsse', 'mape', 'smape',
+        'stab_bias', 'mac', 'masc', 'rmsc', 'rmssc', 'smapc'
+    ]
+    prob = [
+        'ql', 'mql', 'cal', 'cov', 'sql', 'smql', 'scrps',
+        'smqpc'
+    ]
+    if metric_name in point:
+        metric_type = 'point'
+    elif metric_name in prob:
+        metric_type = 'prob'
+    else:
+        raise ValueError(f'Invalid metric name {metric_name}')
+
+    return metric_type
 
 @pf.register_dataframe_method
 def compute_weighted_metrics(eval_df, metric_names, weights = 'auto', out_sample_df = None):
