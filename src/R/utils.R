@@ -278,14 +278,13 @@ compute_relative_metrics <- function(data, type) {
     relative_data <- data |>
       dplyr::left_join(reference_data, by = c("method" = "method_ref")) |>
       dplyr::mutate(
-        stability_bias = abs(stability_bias) / abs(stability_bias_ref),
+        stab_bias = abs(stab_bias) / abs(stab_bias_ref),
         mac = mac / mac_ref,
         masc = masc_ref,
         rmsc = rmsc / rmsc_ref,
         rmssc = rmssc_ref,
         smapc = smapc / smapc_ref,
-        mqc = mqc / mqc_ref,
-        smqc = smqc / smqc_ref
+        smqpc = smqpc / smqpc_ref
       ) |>
       dplyr::select(-dplyr::ends_with("_ref"))
   } else if (type == 'cost') {
@@ -350,8 +349,7 @@ compute_relative_metrics_by_series <- function(data, type) {
         rmsc = rmsc / rmsc_ref,
         rmssc = rmssc_ref,
         smapc = smapc / smapc_ref,
-        mqc = mqc / mqc_ref,
-        smqc = smqc / smqc_ref
+        smqpc = smqpc / smqpc_ref
       ) |>
       dplyr::select(-dplyr::ends_with("_ref"))
   } else if (type == 'cost') {
@@ -2090,7 +2088,7 @@ plot_optimal_retrain_results_combined <- function(
     "RMSSE" = "#003366",
     "SMAPC" = "#FF6961",
     "SMQL" = "#2CA02C",
-    "SMQC" = "#FFD700"
+    "SMQPC" = "#FFD700"
   )
 
   data_plot <- data |>

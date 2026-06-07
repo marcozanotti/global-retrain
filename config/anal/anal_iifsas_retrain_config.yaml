@@ -1,7 +1,7 @@
 analysis: {
     'name': 'iifsas_retrain',
     'types': ['evaluation', 'stability'],
-    'method': 'absolute', # absolute / relative # run twice, one for absolute and one for relative
+    'method': 'relative', # absolute / relative # run twice, one for absolute and one for relative
     'sample_type': 'overlap' # overlap / nooverlap
 }
 
@@ -54,8 +54,8 @@ time_params: {
 }
 
 stability_params: {
-    'metrics': ['smapc', 'smqc'],
-    'outlier_cleaning_metrics': ['smapc', 'smqc'],
+    'metrics': ['smapc', 'smqpc'],
+    'outlier_cleaning_metrics': ['smapc', 'smqpc'],
     'outlier_cleaning_quantiles': [0.000, 0.995]
 }
 
