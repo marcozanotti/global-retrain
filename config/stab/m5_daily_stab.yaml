@@ -1,9 +1,9 @@
 dataset: {
     'dataset_name': 'm5',
     'frequency': 'daily',
-    'min_series_length': 1460, # 1800 for 364 retrain scenario, 1460 for others sf, 730 for ml and dl
+    'min_series_length': 730, # 1800 for 364 retrain scenario, 1460 for others sf, 730 for ml and dl
     'max_series_length': null, 
-    'samples': 1000, # 1000 for sf models, null for ml and dl models
+    'samples': null, # 1000 for sf models, null for ml and dl models
     'ext': '.parquet',
     'seed': 1992
 }
@@ -22,19 +22,19 @@ fitting: {
         364
     ],
     levels: [50, 60, 70, 80, 90, 95, 99],
-    combine_only: False
+    combine_only: True
 }
 
 model_names: [
     'ETS',
-    # 'LinearRegression', 
-    # 'XGBRegressor', 
-    # 'LGBMRegressor', 
-    # 'CatBoostRegressor',
-    # 'MLP',
-    # 'TCN',
-    # 'NBEATSx',
-    # 'NHITS',
+    'LinearRegression', 
+    'XGBRegressor', 
+    'LGBMRegressor', 
+    'CatBoostRegressor',
+    'MLP',
+    'TCN',
+    'NBEATSx',
+    'NHITS',
     # 'EnsembleMean2A',
     # 'EnsembleMean2T',
     # 'EnsembleMean3A',
@@ -46,7 +46,7 @@ model_names: [
 ]
 
 evaluation: {
-    metrics: ['stab_bias', 'mac', 'masc', 'rmsc', 'rmssc', 'smapc', 'mqc', 'smqc'],
+    metrics: ['stab_bias', 'mac', 'masc', 'rmsc', 'rmssc', 'smapc', 'smqpc'],
     skip: 7,
     evaluation_frequency: 'daily', # frequency for masc, rmssc, smqc
 }
