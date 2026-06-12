@@ -1,7 +1,7 @@
 dataset: {
     'dataset_names': [
-        'm5',
-        # 'm4',
+        # 'm5',
+        'm4',
         # 'vn1',
     ],
     'frequencies': [
@@ -13,12 +13,12 @@ dataset: {
 
 model_names: [
     'ETS',
-    #'ARIMA', # no m5
+    'ARIMA', # no m5
     'LinearRegression', 
-    #'RandomForestRegressor', # no m5
+    'RandomForestRegressor', # no m5
     'XGBRegressor', 
     'LGBMRegressor', 
-    'CatBoostRegressor', # no m4
+    # 'CatBoostRegressor', # no m4
     'MLP',
     #'LSTM', # no m4, m5
     'TCN',

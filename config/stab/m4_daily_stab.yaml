@@ -22,19 +22,19 @@ fitting: {
         364
     ],
     levels: [50, 60, 70, 80, 90, 95, 99],
-    combine_only: True
+    combine_only: False
 }
 
 model_names: [
-    'ETS',
-    'ARIMA',
-    'LinearRegression', 
-    'RandomForestRegressor',
-    'XGBRegressor',
-    'LGBMRegressor',
-    'MLP',
-    'TCN',
-    'NBEATSx',
+    # 'ETS',
+    # 'ARIMA',
+    # 'LinearRegression', 
+    # 'RandomForestRegressor',
+    # 'XGBRegressor',
+    # 'LGBMRegressor',
+    # 'MLP',
+    # 'TCN',
+    # 'NBEATSx',
     'NHITS',
     # 'EnsembleMean2A',
     # 'EnsembleMean3A',
@@ -44,6 +44,6 @@ model_names: [
 
 evaluation: {
     metrics: ['stab_bias', 'mac', 'masc', 'rmsc', 'rmssc', 'smapc', 'smqpc'],
-    skip: 7,
+    skip: 1,
     evaluation_frequency: 'daily', # frequency for masc, rmssc, smqc
 }
