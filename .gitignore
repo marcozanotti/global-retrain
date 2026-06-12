@@ -63,3 +63,5 @@ results/
 catboost_info/
 lightning_logs/
 .Rproj.user
+
+.vscode/

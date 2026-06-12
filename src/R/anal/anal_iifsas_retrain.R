@@ -57,7 +57,9 @@ for (i in seq_along(eval_metrics)) {
 			res[[df_nm]][['stability']][['results']][[mod_tps[1]]]$tables[[
 				sm
 			]]$x$data,
-			res[[df_nm]][['stability']][['results']][[mod_tps[2]]]$tables[[sm]]$x$data
+			res[[df_nm]][['stability']][['results']][[mod_tps[2]]]$tables[[
+				sm
+			]]$x$data
 		)
 		cat(paste(df_nms[j], em, "\n\n"))
 		print(xtable::xtable(tab_eval, digits = 3), include.rownames = FALSE)
@@ -119,11 +121,13 @@ for (k in mod_tps) {
 				axis.ticks.x = ggplot2::element_blank()
 			))) /
 		((eval_res2$plots[["scaled_mqloss"]] + ggplot2::labs(title = NULL)) +
-			(stab_res2$plots[["smqc"]] + ggplot2::labs(title = NULL))) +
+			(stab_res2$plots[["smqpc"]] + ggplot2::labs(title = NULL))) +
 		patchwork::plot_layout(guides = "collect") &
 		patchwork::plot_annotation(
 			'ETS - M5',
-			theme = ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+			theme = ggplot2::theme(
+				plot.title = ggplot2::element_text(hjust = 0.5)
+			)
 		) &
 		ggplot2::theme(legend.position = "none") &
 		ggplot2::scale_color_manual(values = c("#3b3b3b"))
@@ -210,7 +214,11 @@ for (k in mod_tps[2]) {
 	stab_res3 <- res[[df_nms[3]]][['stability']][['results']][[k]]
 	for (i in seq_along(eval_metrics)) {
 		em <- eval_metrics[i]
-		em_nm <- toupper(gsub("_", " ", ifelse(em == "scaled_mqloss", "smql", em)))
+		em_nm <- toupper(gsub(
+			"_",
+			" ",
+			ifelse(em == "scaled_mqloss", "smql", em)
+		))
 		sm <- stab_metrics[i]
 		sm_nm <- toupper(gsub("_", " ", sm))
 		d1_nm <- stringr::str_replace_all(toupper(df_nms[1]), "_.*", "")
@@ -284,7 +292,6 @@ opt_freq <- analyze_optimal_frequency_combined(config, adjust = 2)
 	patchwork::plot_layout(guides = "collect") &
 	ggplot2::theme(legend.position = "bottom")
 
-
 ((opt_freq$m4_daily$SF[[1]]$overall + ggplot2::labs(x = NULL)) +
 	(opt_freq$m4_daily$SF[[2]]$overall + ggplot2::labs(x = NULL))) /
 	((opt_freq$m5_daily$SF[[1]]$overall + ggplot2::labs(x = NULL)) +
@@ -306,3 +313,76 @@ opt_freq <- analyze_optimal_frequency_combined(config, adjust = 2)
 			ggplot2::labs(title = NULL, y = NULL))) +
 	patchwork::plot_layout(guides = "collect") &
 	ggplot2::theme(legend.position = "bottom")
+
+
+# =========================================================================
+### CHECK INTERMITTENT SERIES ---------------------------------------------
+# =========================================================================
+
+m5 <- load_data(list('data/m5/'), list('m5_daily_prep')) |> as_tibble()
+
+inter <- m5 |>
+	dplyr::select(unique_id, y) |>
+	group_by(unique_id) |>
+	summarise(
+		n_zero = sum(y == 0),
+		n_total = n(),
+		perc_zero = n_zero / n_total
+	)
+inter |> arrange(desc(perc_zero)) |> View()
+
+ids_less_25 <- inter |> filter(perc_zero <= 0.25) |> pull(unique_id)
+length(ids_less_25)
+
+ids_more_75 <- inter |> filter(perc_zero >= 0.75) |> pull(unique_id)
+length(ids_more_75)
+
+
+# =========================================================================
+### CHECK RESULTS FOR EACH QUANTILE ---------------------------------------
+# =========================================================================
+path_list <- list('results/m4/daily/stability/')
+name_list <- list('m4_daily_stab')
+path_list <- list('results/m5/daily/stability/')
+name_list <- list('m5_daily_stab')
+path_list <- list('results/vn1/weekly/stability/')
+name_list <- list('vn1_weekly_stab')
+
+res <- load_data(path_list, name_list) |> as_tibble()
+
+metrics <- c(
+	'smqpc',
+	'smqpc-lo-99',
+	'smqpc-lo-95',
+	'smqpc-lo-90',
+	'smqpc-lo-80',
+	'smqpc-lo-70',
+	'smqpc-lo-60',
+	'smqpc-lo-50',
+	'smqpc-hi-50',
+	'smqpc-hi-60',
+	'smqpc-hi-70',
+	'smqpc-hi-80',
+	'smqpc-hi-90',
+	'smqpc-hi-95',
+	'smqpc-hi-99'
+)
+
+res_agg <- res |>
+	# dplyr::filter(unique_id %in% ids_less_25) |>
+	# dplyr::filter(unique_id %in% ids_more_75) |>
+	aggregate_data(
+		group_columns = c('method', 'retrain_window'),
+		drop_columns = c('unique_id', 'test_window', 'horizon'),
+		function_name = 'mean',
+		adjust_metrics = TRUE
+	)
+res_agg_rel <- compute_relative_metrics(res_agg, type = 'stability')
+
+res_agg |>
+	dplyr::select(method, retrain_window, all_of(metrics)) |>
+	View()
+
+res_agg_rel |>
+	dplyr::select(method, retrain_window, all_of(metrics)) |>
+	View()

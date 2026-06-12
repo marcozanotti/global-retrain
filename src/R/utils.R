@@ -284,7 +284,21 @@ compute_relative_metrics <- function(data, type) {
         rmsc = rmsc / rmsc_ref,
         rmssc = rmssc_ref,
         smapc = smapc / smapc_ref,
-        smqpc = smqpc / smqpc_ref
+        smqpc = smqpc / smqpc_ref,
+        `smqpc-lo-99` = `smqpc-lo-99` / `smqpc-lo-99_ref`,
+        `smqpc-lo-95` = `smqpc-lo-95` / `smqpc-lo-95_ref`,
+        `smqpc-lo-90` = `smqpc-lo-90` / `smqpc-lo-90_ref`,
+        `smqpc-lo-80` = `smqpc-lo-80` / `smqpc-lo-80_ref`,
+        `smqpc-lo-70` = `smqpc-lo-70` / `smqpc-lo-70_ref`,
+        `smqpc-lo-60` = `smqpc-lo-60` / `smqpc-lo-60_ref`,
+        `smqpc-lo-50` = `smqpc-lo-50` / `smqpc-lo-50_ref`,
+        `smqpc-hi-50` = `smqpc-hi-50` / `smqpc-hi-50_ref`,
+        `smqpc-hi-60` = `smqpc-hi-60` / `smqpc-hi-60_ref`,
+        `smqpc-hi-70` = `smqpc-hi-70` / `smqpc-hi-70_ref`,
+        `smqpc-hi-80` = `smqpc-hi-80` / `smqpc-hi-80_ref`,
+        `smqpc-hi-90` = `smqpc-hi-90` / `smqpc-hi-90_ref`,
+        `smqpc-hi-95` = `smqpc-hi-95` / `smqpc-hi-95_ref`,
+        `smqpc-hi-99` = `smqpc-hi-99` / `smqpc-hi-99_ref`
       ) |>
       dplyr::select(-dplyr::ends_with("_ref"))
   } else if (type == 'cost') {
