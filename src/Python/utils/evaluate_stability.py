@@ -26,7 +26,8 @@ def get_stability_metrics(metric_type = 'point'):
         }
     else:
         stab_met = {
-            'smape': 'smqpc'
+            'smape': 'smqpc',
+            'rmsse': 'rmssqc'
         }
     return stab_met  
 

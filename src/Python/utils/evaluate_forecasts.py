@@ -193,6 +193,8 @@ def get_metrics(metric_names, frequency = None):
         metrics.append(smape)
     if 'smqpc' in metric_names:
         metrics.append(smape)
+    if 'rmssqc' in metric_names:
+        metrics.append(partial(rmsse, seasonality = freq))
 
     return metrics
 
@@ -204,7 +206,7 @@ def get_metric_type(metric_name):
     ]
     prob = [
         'ql', 'mql', 'cal', 'cov', 'sql', 'smql', 'scrps',
-        'smqpc'
+        'smqpc', 'rmssqc'
     ]
     if metric_name in point:
         metric_type = 'point'
