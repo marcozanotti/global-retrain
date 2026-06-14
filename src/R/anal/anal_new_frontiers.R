@@ -127,6 +127,35 @@ for (k in mod_tps) {
 	)
 }
 
+for (k in mod_tps) {
+	cost_res2 <- res[[df_nms[2]]][['cost']][['results']][[k]]
+	cost_res3 <- res[[df_nms[3]]][['cost']][['results']][[k]]
+	cm1 <- cost_metrics[1]
+	print(
+		((cost_res2$plots[[cm1]] +
+			ggplot2::guides(col = FALSE) +
+			ggplot2::labs(title = 'Daily')) +
+			(cost_res3$plots[[cm1]] +
+				ggplot2::labs(title = 'Weekly'))) +
+			patchwork::plot_layout(guides = "collect") &
+			ggplot2::theme(legend.position = "bottom")
+	)
+}
+
+for (k in mod_tps) {
+	cost_res2 <- res[[df_nms[2]]][['cost']][['results']][[k]]
+	cost_res3 <- res[[df_nms[3]]][['cost']][['results']][[k]]
+	cm2 <- cost_metrics[2]
+	print(
+		((cost_res2$plots[[cm2]] +
+			ggplot2::guides(col = FALSE) +
+			ggplot2::labs(title = 'Daily')) +
+			(cost_res3$plots[[cm2]] + ggplot2::labs(title = 'Weekly'))) +
+			patchwork::plot_layout(guides = "collect") &
+			ggplot2::theme(legend.position = "bottom")
+	)
+}
+
 
 # =========================================================================
 # * Environment -----------------------------------------------------------
