@@ -10,8 +10,8 @@ os.environ['NIXTLA_ID_AS_COL'] = '1'
 
 
 # config = get_config('config/stab/vn1_weekly_stab.yaml')
-config = get_config('config/stab/m4_daily_stab.yaml')
-# config = get_config('config/stab/m5_daily_stab.yaml')
+# config = get_config('config/stab/m4_daily_stab.yaml')
+config = get_config('config/stab/m5_daily_stab.yaml')
 configure_logging(
     config_file = 'config/log_config.yaml', 
     name_list = [

@@ -31,7 +31,7 @@ def get_stability_metrics(metric_type = 'point'):
         }
     return stab_met  
 
-def evaluate_point_stability(out_sample_0_df, out_sample_1_df, point_metrics_dict, train_df):
+def evaluate_point_stability(out_sample_0_df, out_sample_1_df, point_metrics_dict, train_df = None):
 
     """Function to evaluate the stability of a single point forecast.
 
@@ -78,7 +78,7 @@ def evaluate_point_stability(out_sample_0_df, out_sample_1_df, point_metrics_dic
 
     return stab_point_df
 
-def evaluate_probabilistic_stability(out_sample_0_df, out_sample_1_df, prob_metrics_dict, levels, train_df):
+def evaluate_probabilistic_stability(out_sample_0_df, out_sample_1_df, prob_metrics_dict, levels, train_df = None):
 
     """Function to evaluate the stability of probabilistic forecasts.
 
@@ -185,15 +185,15 @@ def evaluate_model_stability(config):
     # load the dataset
     if samples is not None:
         np.random.seed(seed)
-    train_df = get_data(
-        path_list = ['data', dataset_name],
-        name_list = [dataset_name, frequency, 'prep'],
-        ext = '.parquet',
-        min_series_length = min_series_length,
-        max_series_length = max_series_length,
-        samples = samples
-    )
-    train_df = train_df[['unique_id', 'ds', 'y']]
+    # train_df = get_data(
+    #     path_list = ['data', dataset_name],
+    #     name_list = [dataset_name, frequency, 'prep'],
+    #     ext = '.parquet',
+    #     min_series_length = min_series_length,
+    #     max_series_length = max_series_length,
+    #     samples = samples
+    # )
+    # train_df = train_df[['unique_id', 'ds', 'y']]
 
     # separate metrics into point and probabilistic metrics into two dictionaries and get the metric functions
     point_metrics_dict = {}
@@ -244,7 +244,7 @@ def evaluate_model_stability(config):
                         out_sample_0_df = out_sample_0_df,
                         out_sample_1_df = out_sample_1_df,
                         point_metrics_dict = point_metrics_dict,
-                        train_df = train_df
+                        # train_df = train_df
                     )
                     
                     # Probabilistic stability evaluation
@@ -253,7 +253,7 @@ def evaluate_model_stability(config):
                         out_sample_1_df = out_sample_1_df,
                         prob_metrics_dict = prob_metrics_dict,
                         levels = levels,
-                        train_df = train_df
+                        # train_df = train_df
                     )
 
                     stab_df_tmp = stab_point_df_tmp.merge(

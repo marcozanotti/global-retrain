@@ -43,7 +43,7 @@ model_names: [
 ]
 
 evaluation: {
-    metrics: ['stab_bias', 'mac', 'masc', 'rmsc', 'rmssc', 'smapc', 'smqpc'],
+    metrics: ['smapc', 'smqpc'],
     skip: 1,
     evaluation_frequency: 'daily', # frequency for masc, rmssc, smqc
 }
