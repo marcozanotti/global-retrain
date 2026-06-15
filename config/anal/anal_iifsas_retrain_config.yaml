@@ -1,7 +1,7 @@
 analysis: {
     'name': 'iifsas_retrain',
     'types': ['evaluation', 'stability'],
-    'method': 'relative', # absolute / relative # run twice, one for absolute and one for relative
+    'method': 'absolute', # absolute / relative # run twice, one for absolute and one for relative
     'sample_type': 'overlap' # overlap / nooverlap
 }
 

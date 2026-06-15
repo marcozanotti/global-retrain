@@ -17,9 +17,8 @@ reticulate::source_python('src/Python/utils/utilities.py')
 # Load & prepare data -----------------------------------------------------
 
 # run twice, one for absolute and one for relative
-analysis_file_name <- 'docs/iifsas_retrain/absolute_evalstab_overlap_20260607_090231.RData'
-analysis_file_name <- 'docs/iifsas_retrain/relative_evalstab_overlap_20260607_115100.RData'
-analysis_file_name <- 'docs/iifsas_retrain/relative_evalstab_overlap_20260613_074601.RData'
+analysis_file_name <- 'docs/iifsas_retrain/absolute_evalstab_overlap_20260614_092806.RData'
+analysis_file_name <- 'docs/iifsas_retrain/relative_evalstab_overlap_20260614_092002.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results
@@ -134,6 +133,7 @@ for (k in mod_tps) {
 		ggplot2::scale_color_manual(values = c("#3b3b3b"))
 }
 
+# 900x500
 # for ISF2026 presentation
 for (k in mod_tps) {
 	eval_res1 <- res[[df_nms[1]]][['evaluation']][['results']][[k]]
@@ -168,6 +168,7 @@ for (k in mod_tps) {
 
 # ** Tests -----------------------------------------------------------------
 
+# 1000x700
 # for SF models
 for (k in mod_tps[1]) {
 	for (nm in df_nms) {
@@ -205,6 +206,7 @@ for (k in mod_tps[1]) {
 	}
 }
 
+# 750x650
 # for ML_DL models
 for (k in mod_tps[2]) {
 	eval_res1 <- res[[df_nms[1]]][['evaluation']][['results']][[k]]
@@ -299,19 +301,6 @@ opt_freq <- analyze_optimal_frequency_combined(config, adjust = 2)
 		(opt_freq$m5_daily$SF[[2]]$overall + ggplot2::labs(x = NULL))) /
 	(opt_freq$vn1_weekly$SF[[1]]$overall +
 		opt_freq$vn1_weekly$SF[[2]]$overall) +
-	patchwork::plot_layout(guides = "collect") &
-	ggplot2::theme(legend.position = "bottom")
-
-# for ISF2026 presentation
-((opt_freq$m4_daily$ML_DL[[1]]$overall + ggplot2::labs(x = NULL)) +
-	(opt_freq$m5_daily$ML_DL[[1]]$overall + ggplot2::labs(x = NULL, y = NULL)) +
-	(opt_freq$vn1_weekly$ML_DL[[1]]$overall +
-		ggplot2::labs(x = NULL, y = NULL))) /
-	((opt_freq$m4_daily$ML_DL[[2]]$overall + ggplot2::labs(title = NULL)) +
-		(opt_freq$m5_daily$ML_DL[[2]]$overall +
-			ggplot2::labs(title = NULL, y = NULL)) +
-		(opt_freq$vn1_weekly$ML_DL[[2]]$overall +
-			ggplot2::labs(title = NULL, y = NULL))) +
 	patchwork::plot_layout(guides = "collect") &
 	ggplot2::theme(legend.position = "bottom")
 
