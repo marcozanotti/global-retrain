@@ -55,11 +55,41 @@
 # save_data(breaks_df, ['data', 'hapag_region'], ['hapag_breaks_prep'])
 
 
-from catboost import metrics
-from neuralforecast.auto import AutoMLP
-import optuna
-import inspect
+# Default Config ----------------------------------------------------------------
 
+# AutoXGBoost
+from mlforecast.auto import xgboost_space
+xgboost_space # ctrl + click to see the default config
+return {
+        "n_estimators": trial.suggest_int("n_estimators", 20, 1000),
+        "max_depth": trial.suggest_int("max_depth", 1, 10),
+        "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.2, log=True),
+        "subsample": trial.suggest_float("subsample", 0.1, 1.0),
+        "colsample_bytree": trial.suggest_float("colsample_bytree", 0.1, 1.0),
+        "reg_lambda": trial.suggest_float("reg_lambda", 1e-8, 1.0, log=True),
+        "reg_alpha": trial.suggest_float("reg_alpha", 1e-8, 1.0, log=True),
+        "min_child_weight": trial.suggest_int("min_child_weight", 2, 10),
+}
+
+# AutoLightGBM
+from mlforecast.auto import lightgbm_space
+lightgbm_space # ctrl + click to see the default config
+return {
+        "bagging_freq": 1,
+        "learning_rate": 0.05,
+        "verbosity": -1,
+        "n_estimators": trial.suggest_int("n_estimators", 20, 1000, log=True),
+        "lambda_l1": trial.suggest_float("lambda_l1", 1e-8, 10.0, log=True),
+        "lambda_l2": trial.suggest_float("lambda_l2", 1e-8, 10.0, log=True),
+        "num_leaves": trial.suggest_int("num_leaves", 2, 4096, log=True),
+        "feature_fraction": trial.suggest_float("feature_fraction", 0.5, 1.0),
+        "bagging_fraction": trial.suggest_float("bagging_fraction", 0.5, 1.0),
+        "objective": trial.suggest_categorical("objective", ["l1", "l2"]),
+}
+
+
+# AutoMLP
+from neuralforecast.auto import AutoMLP
 config = AutoMLP.get_default_config(h = 9, backend="ray") 
 config.keys()
 config['max_steps'].categories
@@ -77,11 +107,25 @@ config['random_seed'].upper
 config['step_size'].categories
 config['windows_batch_size'].categories
 
+# AutoNBEATS
+from neuralforecast.auto import AutoNBEATS
+config = AutoNBEATS.get_default_config(h = 9, backend="ray")
+config.keys()
+config['max_steps'].categories
+config['input_size'].categories
+config['learning_rate'].lower
+config['learning_rate'].upper
+config['scaler_type'].categories
+config['batch_size'].categories
+config['windows_batch_size'].categories
+config['random_seed'].lower
+config['random_seed'].upper
+config['step_size'].categories
+
 
 # for optuna
 lines = inspect.getsource(config)
 print(lines)
-
 
 
 # modify tune
@@ -95,7 +139,9 @@ save_data(full_results, ['results/hapag_region/weekly/tuning/'], ['AutoMLP_full_
 
 
 
-# Log MLP
+
+
+# Log MLP --------------------------------------------------------------------------
 
 import sys
 sys.path.insert(0, 'src/Python/utils')
@@ -223,44 +269,4 @@ engine.fit(df = train_df_tmp, static_df = static_df, val_size=test_window)
 
 import pandas as pd
 metrics_df = pd.read_csv('logs/lightning_logs/version_0/metrics.csv')
-
-
-
-
-
-
-from neuralforecast import NeuralForecast
-from neuralforecast.models import MLP
-from neuralforecast.utils import PredictionIntervals
-from neuralforecast.utils import AirPassengersPanel, AirPassengersStatic
-
-Y_train_df = AirPassengersPanel[AirPassengersPanel['ds'] < AirPassengersPanel['ds'].values[-12]].reset_index(drop=True)
-Y_test_df = AirPassengersPanel[AirPassengersPanel['ds'] >= AirPassengersPanel['ds'].values[-12]].reset_index(drop=True)
-futr_df = Y_test_df.drop(columns=["y", "y_[lag12]"])
-
-monitors = ["ptl/val_loss", "valid_loss", "train_loss"]
-
-for monitor in monitors:
-    model = MLP(h=12, input_size=24,
-                stat_exog_list=['airline1'],
-                futr_exog_list=['trend'],
-                hist_exog_list=["y_[lag12]"],
-                val_monitor=monitor,
-                scaler_type='robust',
-                learning_rate=1e-3,
-                max_steps=100,
-                val_check_steps=10,
-                early_stop_patience_steps=2
-                )
-
-    fcst = NeuralForecast(
-        models=[model],
-        freq='ME'
-    )
-    fcst.fit(
-        df=Y_train_df, 
-        static_df=AirPassengersStatic, 
-        val_size=12, 
-        prediction_intervals = PredictionIntervals(n_windows=4, method='conformal_distribution')
-    )
 
