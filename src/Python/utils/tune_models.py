@@ -137,7 +137,10 @@ def get_full_tuning_results(model_name, results):
     params_names = [col.replace('params_', '') for col in params_cols]
     other_params = [col for col in all_params.keys() if col not in params_names and col not in ['stat_exog_list', 'futr_exog_list', 'h', 'loss', 'valid_loss', 'step_size']]
     for col in other_params:
-        full_results[f'params_{col}'] = all_params[col]
+        prm = all_params[col]
+        if isinstance(prm, (list, dict)): # if prm list or dict convert to string to avoid issues when saving to parquet
+            prm = str(prm)
+        full_results[f'params_{col}'] = prm
     
     return full_results
 
