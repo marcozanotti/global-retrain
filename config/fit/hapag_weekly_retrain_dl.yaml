@@ -24,13 +24,12 @@ fitting: {
         # 52,
         104
     ],
-    'intervals': null,
-    # {
-    #     'h': 9,
-    #     'n_windows': 4,
-    #     'method': 'conformal_distribution'
-    # },
-    levels: null, # [50, 60, 70, 80, 90, 95, 99],
+    'intervals': {
+        'h': 9,
+        'n_windows': 4,
+        'method': 'conformal_distribution'
+    },
+    levels: [50, 60, 70, 80, 90, 95, 99],
     store_in_sample_results: False
 }
 
@@ -44,7 +43,7 @@ model_params: {
         'h': 9,
         'loss': 'SMAPE',
         'input_size': 13,
-        'max_steps': 10000,
+        'max_steps': 1000,
         'learning_rate': 0.001,
         'hidden_size': 1024,
         'num_layers': 2,
