@@ -21,7 +21,7 @@ fitting: {
 }
 
 model_names: [
-    'AutoMLP', 
+    #'AutoMLP', 
     'AutoNBEATSx'
 ]
 

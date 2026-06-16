@@ -65,3 +65,5 @@ lightning_logs/
 .Rproj.user
 
 .vscode/
+
+logs/
