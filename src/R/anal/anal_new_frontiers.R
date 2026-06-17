@@ -222,3 +222,28 @@ p_weekly <- cost_data_weekly |>
 	ggplot2::theme(legend.position = "none")
 
 p <- p_daily + p_weekly + patchwork::plot_layout(guides = "collect")
+
+
+# =========================================================================
+# * ISF 2026 --------------------------------------------------------------
+# =========================================================================
+
+# 700x400
+for (k in mod_tps) {
+	df_nm <- df_nms[2]
+	time_resx <- res[[df_nm]][['time']][['results']][[k]]
+	cost_resx <- res[[df_nm]][['cost']][['results']][[k]]
+	tm <- time_metrics[1]
+	cm1 <- cost_metrics[1]
+	cm2 <- cost_metrics[2]
+	print(
+		(time_resx$plots[[tm]] +
+			ggplot2::labs(title = 'Relative Computing Time', y = '') +
+			ggplot2::guides(col = FALSE)) +
+			(cost_resx$plots[[cm1]] +
+				ggplot2::labs(title = 'Absolute Costs ($)', y = '')) +
+			(cost_resx$plots[[cm2]] + ggplot2::labs(title = 'Savings (%)', y = '')) +
+			patchwork::plot_layout(guides = "collect") &
+			ggplot2::theme(legend.position = "bottom")
+	)
+}

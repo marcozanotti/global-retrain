@@ -166,6 +166,23 @@ for (k in mod_tps) {
 	}
 }
 
+# 700x400
+for (k in mod_tps) {
+	df_nm <- df_nms[2]
+	eval_resx <- res[[df_nm]][['evaluation']][['results']][[k]]
+	stab_resx <- res[[df_nm]][['stability']][['results']][[k]]
+	for (i in seq_along(eval_metrics)) {
+		em <- eval_metrics[i]
+		sm <- stab_metrics[i]
+		print(
+			(eval_resx$plots[[em]] + ggplot2::guides(col = FALSE)) +
+				(stab_resx$plots[[sm]]) +
+				patchwork::plot_layout(guides = "collect") &
+				ggplot2::theme(legend.position = "bottom")
+		)
+	}
+}
+
 # ** Tests -----------------------------------------------------------------
 
 # 1000x700
