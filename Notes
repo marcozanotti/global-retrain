@@ -13,3 +13,6 @@
 - valutare il save e load dei modelli ad ogni fitting
 - aggiungere encoding per categorical variables
 https://nixtlaverse.nixtla.io/mlforecast/docs/how-to-guides/sklearn_pipelines.html
+
+
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH

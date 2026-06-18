@@ -11,26 +11,23 @@ from predictions import combine_model_predictions, evaluate_model_predictions, c
 os.environ['NIXTLA_ID_AS_COL'] = '1'
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
-
-config_retrain = get_config('config/fit/hapag_weekly_retrain_dl.yaml')
-config_preds_eval = get_config('config/preds/hapag_weekly_preds.yaml')
-config_combine_preds = get_config('config/preds/dataset_preds.yaml')
-
 configure_logging(
     config_file = 'config/log_config.yaml', 
-    name_list = [
-        config_retrain['dataset']['dataset_name'], 
-        config_retrain['dataset']['frequency'], 
-        'experiment', 'dl'
-    ]
+    name_list = ['hapag_region', 'weekly', 'experiment']
 )
-
 logger = create_logger()
 
 logging.getLogger('pytorch_lightning.utilities').setLevel(logging.ERROR)
 logging.getLogger('lightning_fabric.utilities').setLevel(logging.ERROR)
 
-retrain_model(config = config_retrain)
+config_retrain_ml = get_config('config/fit/hapag_weekly_retrain_ml.yaml')
+retrain_model(config = config_retrain_ml)
+
+# config_retrain_dl = get_config('config/fit/hapag_weekly_retrain_dl.yaml')
+# retrain_model(config = config_retrain_dl)
+
+config_preds_eval = get_config('config/preds/hapag_weekly_preds.yaml')
+config_combine_preds = get_config('config/preds/dataset_preds.yaml')
 
 combine_model_predictions(config = config_preds_eval)
 evaluate_model_predictions(config = config_preds_eval)

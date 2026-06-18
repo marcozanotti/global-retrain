@@ -2,7 +2,7 @@ dataset: {
     dataset_name: 'hapag_region',
     frequency: 'weekly',
     min_series_length: null,
-    max_series_length: null,
+    max_series_length: 728, # 14 years of weekly data
     samples: null,
     ext: '.parquet',
     seed: 1992
@@ -35,8 +35,8 @@ fitting: {
 
 model_names: [
     'LinearRegression',
-    # 'XGBRegressor', 
-    # 'LGBMRegressor'
+    'XGBRegressor', 
+    'LGBMRegressor'
 ]
 
 model_params: {
@@ -44,41 +44,45 @@ model_params: {
     'XGBRegressor': {
         'objective': 'reg:squarederror',
         'booster': 'gbtree',
-        'n_estimators': 1000,
-        'learning_rate': 0.03,
-        'max_leaves': 64,
-        'subsample': 0.85,
-        'colsample_bytree': 0.85,
         'eval_metric': 'rmse',
         'n_jobs': -1,
-        'device': 'cpu'
+        'device': 'cpu',
+        'verbosity': 0,
+        'n_estimators': 964,
+        'max_depth': 7,
+        'max_leaves': 131,
+        'learning_rate': 0.0070176116,
+        'subsample': 0.8476494747,
+        'colsample_bytree': 0.377150477,
+        'reg_lambda': 0.0000002092,
+        'reg_alpha': 0.0000012893,
+        'min_child_weight': 8
     },
     'LGBMRegressor': {
-        'objective': 'regression',
+        'objective': 'l2',
         'boosting_type': 'gbdt',
-        'n_estimators': 1000,
-        'learning_rate': 0.03,
-        'num_leaves': 64,
-        'min_child_samples': 52,
-        'subsample': 0.85,
-        'subsample_freq': 1,
-        'colsample_bytree': 0.85,
+        'bagging_freq': 1,
         'metric': 'rmse',
         'boost_from_average': False,
         'n_jobs': -1,
         'device': 'cpu',
         'force_row_wise': True,
-        'verbosity': -1
+        'verbosity': -1,
+        'n_estimators': 554,
+        'learning_rate': 0.0097359861,
+        'lambda_l1': 0.0350867787,
+        'lambda_l2': 0.0340336684,
+        'num_leaves': 95,
+        'feature_fraction': 0.8650704058,
+        'bagging_fraction': 0.5317517952
     }
 }
 
 target_transforms: [LocalRobustScaler(scale='mad')]
 
 features: {
-    'static': [
-        # 'geoscope', 'eqtype', 'georelated', 'balance'
-    ],
-    'lags': [1, 2, 3, 4, 9, 13],
+    'static': [],
+    'lags': [1, 2, 3, 4, 9, 13, 18],
     'lag_transforms': {
         1: [RollingMean(9), RollingMean(13)],
         4: [RollingMean(9), RollingMean(13)],

@@ -32,6 +32,7 @@ model_params: {
         eval_metric: 'rmse',
         n_jobs: -1,
         device: 'cpu',
+        verbosity: 0,
         n_estimators: "trial.suggest_int('n_estimators', 100, 1000)",
         max_depth: "trial.suggest_int('max_depth', 1, 10)",
         max_leaves: "trial.suggest_int('max_leaves', 2, 256)",
@@ -43,7 +44,6 @@ model_params: {
         min_child_weight: "trial.suggest_int('min_child_weight', 2, 10)"
     },
     AutoLightGBM: {
-        objective: 'regression',
         boosting_type: 'gbdt',
         bagging_freq: 1,
         metric: 'RMSE',
@@ -52,14 +52,14 @@ model_params: {
         device: 'cpu',
         force_row_wise: True,
         verbosity: -1,
+        objective: "trial.suggest_categorical('objective', ['l1', 'l2'])",
         n_estimators: "trial.suggest_int('n_estimators', 100, 1000)",
         learning_rate: "trial.suggest_float('learning_rate', 1e-3, 0.2, log=True)",
         lambda_l1: "trial.suggest_float('lambda_l1', 1e-8, 10.0, log=True)",
         lambda_l2: "trial.suggest_float('lambda_l2', 1e-8, 10.0, log=True)",
         num_leaves: "trial.suggest_int('num_leaves', 2, 4096, log=True)",
         feature_fraction: "trial.suggest_float('feature_fraction', 0.5, 1.0)",
-        bagging_fraction: "trial.suggest_float('bagging_fraction', 0.5, 1.0)",
-        objective: "trial.suggest_categorical('objective', ['l1', 'l2'])"
+        bagging_fraction: "trial.suggest_float('bagging_fraction', 0.5, 1.0)"
     }
 }
 
@@ -67,11 +67,12 @@ target_transforms: [LocalRobustScaler(scale='mad')]
 
 features: {
     static: [],
-    lags: [1, 2, 3, 4, 9, 13, 26, 52],
+    lags: [1, 2, 3, 4, 9, 13, 18],
     lag_transforms: {
-                1: [RollingMean(2), RollingMean(4)],
-                4: [RollingMean(4)]
-            },
+        1: [RollingMean(9), RollingMean(13)],
+        4: [RollingMean(9), RollingMean(13)],
+        9: [RollingMean(13)]
+    },
     date: [],
     xregs: [
         'xreg01', 'xreg02', 'xreg03', 'xreg04', 'xreg05', 'xreg06', 'xreg07', 'xreg08', 'xreg09', 'xreg10',

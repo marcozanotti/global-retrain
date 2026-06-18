@@ -16,19 +16,19 @@ types: ['preds', 'eval', 'time']
 
 model_names: [
     # 'ETS',
-    # 'LinearRegression', 
-    # 'XGBRegressor', 
-    # 'LGBMRegressor', 
+    'LinearRegression', 
+    'XGBRegressor', 
+    'LGBMRegressor', 
     'MLP',
-    # 'NBEATSx'
+    'NBEATSx'
 ]
 
 # model_names_new: null
 model_names_new: {
     # 'ETS': 'ETS',
-    # 'LinearRegression': 'LR',
-    # 'XGBRegressor': 'XGB',
-    # 'LGBMRegressor': 'LGBM',
-    'MLP': 'MLP_maxsteps1000_earlystop',
-    # 'NBEATSx': 'NBEATSx'
+    'LinearRegression': 'LR',
+    'XGBRegressor': 'XGB_opt',
+    'LGBMRegressor': 'LGBM_opt',
+    'MLP': 'MLP_opt',
+    'NBEATSx': 'NBEATSx_opt'
 }
