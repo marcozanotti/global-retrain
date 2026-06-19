@@ -1,7 +1,16 @@
-
-# HapagLloyd Project
-
-
+# Hapag-Lloyd Project
+- runnare con tmux ets, lr, mlp, nbeatsx, xgb, lgbm
+- identify series with and without breaks
+- create a new analysis with the two groups (w/ and w/o breaks)
+- create a new analysis with pre and post break optimal retraining frequency
+-- 1. unire tutte le prediction di un modello e retrain scenario (es. LR - 52) (gia' lo fa preds)
+-- 2. calcolare il fcst medio per unique_id e ds (quindi si ottiene un dataset di 104 fcst (test set) x 657 (n series))
+-- 3. unire i dataset di retraining scenario diversi (104*657*11 = 751608 per ciascun modello)
+-- 3.5 valutare se creare un dataset unico con tutti i modelli (751608 * 6 = 4509648)
+-- 4. aggiungere l'informazione sui break alla ds
+-- 5. calcolare la performance pre e post break
+-- 6. calcolare l'optimal retraining frequency per ogni serie e modello pre e post break (capire come per series con >1 break)
+-- pensare a tutto questo con global models ha senso?
 
 
 # NOTE:
