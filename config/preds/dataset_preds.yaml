@@ -12,7 +12,7 @@ dataset: {
     'ext': '.parquet'
 }
 
-types: ['preds', 'eval', 'time']
+types: ['preds'] # , 'eval', 'time'
 
 model_names: [
     'ETS',
@@ -23,12 +23,12 @@ model_names: [
     'NBEATSx'
 ]
 
-# model_names_new: null
-model_names_new: {
-    'ETS': 'ETS',
-    'LinearRegression': 'LR',
-    'XGBRegressor': 'XGBoost',
-    'LGBMRegressor': 'LGBM',
-    'MLP': 'MLP',
-    'NBEATSx': 'NBEATSx'
-}
+model_names_new: null
+# model_names_new: {
+#     'ETS': 'ETS',
+#     'LinearRegression': 'LR',
+#     'XGBRegressor': 'XGBoost',
+#     'LGBMRegressor': 'LGBM',
+#     'MLP': 'MLP',
+#     'NBEATSx': 'NBEATSx'
+# }

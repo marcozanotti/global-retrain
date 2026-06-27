@@ -20,5 +20,5 @@ configure_logging(
 )
 logger = create_logger()
 combine_model_predictions(config = config)
-evaluate_model_predictions(config = config)
+# evaluate_model_predictions(config = config)
 stop_logger(logger)
