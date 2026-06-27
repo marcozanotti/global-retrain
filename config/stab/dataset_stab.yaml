@@ -1,12 +1,13 @@
 dataset: {
     'dataset_names': [
-        'm5',
+        # 'm5',
         # 'm4',
         # 'vn1',
+        'hapag_region'
     ],
     'frequencies': [
-        'daily', 
-        # 'weekly'
+        # 'daily', 
+        'weekly'
     ],
     'ext': '.parquet'
 }
@@ -18,12 +19,12 @@ model_names: [
     # 'RandomForestRegressor', # no m5
     'XGBRegressor', 
     'LGBMRegressor', 
-    'CatBoostRegressor', # no m4
+    # 'CatBoostRegressor', # no m4
     'MLP',
     # 'LSTM', # no m4, m5
-    'TCN',
+    # 'TCN',
     'NBEATSx',
-    'NHITS',
+    # 'NHITS',
     # 'EnsembleMean2A',
     # 'EnsembleMean2T',
     # 'EnsembleMean3A',

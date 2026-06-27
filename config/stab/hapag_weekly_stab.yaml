@@ -2,8 +2,8 @@ dataset: {
     'dataset_name': 'hapag_region',
     'frequency': 'weekly',
     'min_series_length': null,
-    'max_series_length': 728, # 14 years of weekly data 
-    'samples': null, 
+    'max_series_length': 728, # 14 years of weekly data
+    'samples': null,
     'ext': '.parquet',
     'seed': 1992
 }
@@ -19,7 +19,7 @@ fitting: {
         10,
         13,
         26,
-        52,
+        52, 
         104
     ],
     levels: [50, 60, 70, 80, 90, 95, 99],
@@ -28,17 +28,15 @@ fitting: {
 
 model_names: [
     'ETS',
-    'LinearRegression', 
+    'LinearRegression',  
     'XGBRegressor', 
-    # 'LGBMRegressor', 
-    # 'MLP',
-    # 'NBEATSx'
+    'LGBMRegressor',
+    'MLP',
+    'NBEATSx'
 ]
 
 evaluation: {
-    metrics: ['bias', 'mae', 'mse', 'rmse', 'mase', 'msse', 'rmsse', 'mape', 'smape', 'mql', 'smql'],
-    evaluation_frequency: 'yearly', 
-    evaluation_sample_type: 'overlap',
-    weighted_metrics: ['mape'],
-    weights: 'auto'
+    metrics: ['smapc', 'smqpc'],
+    skip: 1,
+    evaluation_frequency: 'yearly', # frequency for masc, rmssc
 }
