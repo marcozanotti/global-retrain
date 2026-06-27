@@ -1,0 +1,88 @@
+analysis: {
+    'name': 'drift_retrain',
+    'types': ['evaluation', 'stability', 'time', 'cost'],
+    'method': 'absolute', # absolute / relative # run twice, one for absolute and one for relative
+    'sample_type': 'overlap' # overlap / nooverlap
+}
+
+dataset: {
+    'dataset_names': ['hapag_region'],
+    'frequencies': ['weekly'],
+    'ext': '.parquet'
+}
+
+models: {
+    'types': [['SF'], ['ML', 'DL']], # ML and DL together
+    'model_names': [
+        'ETS',
+        'LinearRegression', 
+        'XGBRegressor',
+        'LGBMRegressor', 
+        'MLP',
+        'TCN',
+        'NBEATSx'
+    ],
+    'model_names_abbr': [
+        'ETS',
+        'LR', 
+        'XGBoost', 
+        'LGBM',
+        'MLP',
+        'TCN',
+        'NBEATSx'
+    ]
+}
+
+evaluation_params: {
+    'metrics': ['rmsse', 'scaled_mqloss'],
+    'outlier_cleaning_metrics': ['rmsse', 'scaled_mqloss'],
+    'outlier_cleaning_quantiles': [0.000, 1]
+}
+
+time_params: {
+    'metrics': ['total_sample_time']
+}
+
+stability_params: {
+    'metrics': ['smapc', 'smqpc'],
+    'outlier_cleaning_metrics': ['smapc', 'smqpc'],
+    'outlier_cleaning_quantiles': [0.000, 1]
+}
+
+cost_params: {
+    'metrics': ['cost', 'savings', 'savings_perc'],
+    'time_var': 'total_sample_time',
+    'n_skus': 130000,
+    'cost_datasets_n_skus': [
+        'hapag_region_weekly': 657
+    ],
+    'cost_per_hour': [1, 3.5], # cost of machines for SF models first
+    'adjust_time_for_sf': True # adjust value with value / 1000 * cost_datasets_n_skus
+}
+
+grey_list: [
+    'A_40HT_A_E',
+    'A_40HT_A_I',
+    'A_40HT_E_E',
+    'A_40HT_N_I',
+    'A_40HT_S_I',
+    'A_40HT_Z_I',
+    'E_40HT_A_I',
+    'E_40HT_N_E',
+    'E_40HT_N_I',
+    'E_40HT_Z_E',
+    'L_40HT_S_I',
+    'M_40HT_S_I',
+    'M_40HT_Z_E',
+    'M_40HT_Z_I',
+    'N_40HT_A_E',
+    'N_40HT_E_E',
+    'N_40HT_E_I',
+    'N_40HT_Z_I',
+    'S_40HT_A_E',
+    'S_40HT_L_E',
+    'S_40HT_M_E',
+    'S_40HT_N_E',
+    'S_40HT_Z_E'
+]
+
