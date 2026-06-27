@@ -291,6 +291,15 @@ def evaluate_forecasts(
     samples = list(out_sample_df['sample'].unique())
     # n_samples = len(samples)
 
+    # WARN: added check for a bug in model naming solved via setting the alias: 'model_name' in the fit config file.
+    # check if column names contains 'Autofcst' then rename it to 'fcst', 'fcst-lo-level' and 'fcst-hi-level'
+    if 'Autofcst' in out_sample_df.columns:
+        out_sample_df.rename(columns = {'Autofcst': 'fcst'}, inplace = True)
+        if levels is not None:
+            for l in levels:
+                out_sample_df.rename(columns = {f'Autofcst-lo-{l}': f'fcst-lo-{l}'}, inplace = True)
+                out_sample_df.rename(columns = {f'Autofcst-hi-{l}': f'fcst-hi-{l}'}, inplace = True)
+
     eval_df = pd.DataFrame()
 
     for s in samples:

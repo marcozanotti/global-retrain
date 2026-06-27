@@ -44,7 +44,7 @@ model_params: {
     'Naive': {},
     'SeasonalNaive': {'season_length': 52},
     'WindowAverage': {'window_size': 52},
-    'ETS': {'season_length': 52, 'model': 'ZZZ'}
+    'ETS': {'season_length': 52, 'model': 'ZZZ', alias: 'ETS'}
 }
 
 target_transforms: null
