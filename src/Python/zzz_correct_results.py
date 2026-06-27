@@ -5,7 +5,7 @@
 
 import sys
 sys.path.insert(0, 'src/Python/utils')
-from src.Python.utils.utilities import load_data, save_data, get_file_name
+from utilities import load_data, save_data, get_file_name
 
 dataset_name = 'hapag_region'
 frequency = 'weekly'
