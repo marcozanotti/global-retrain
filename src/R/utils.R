@@ -1,5 +1,9 @@
 get_retrain_ids <- function(test_window, horizon, retrain_window = 1) {
-  res = seq.int(from = 0, to = (test_window - horizon + 1), by = retrain_window)
+  res <- seq.int(
+    from = 0,
+    to = (test_window - horizon + 1),
+    by = retrain_window
+  )
   return(res)
 }
 
@@ -28,7 +32,7 @@ aggregate_data <- function(
   function_name = 'median',
   adjust_metrics = False
 ) {
-  data_agg = data
+  data_agg <- data
 
   if (!is.null(drop_columns)) {
     data_agg <- data_agg |>
@@ -46,11 +50,11 @@ aggregate_data <- function(
 
   if (adjust_metrics) {
     if ('mse' %in% names(data_agg)) {
-      data_agg[['rmse']] = sqrt(data_agg[['mse']])
+      data_agg[['rmse']] <- sqrt(data_agg[['mse']])
     }
 
     if ('msse' %in% names(data_agg)) {
-      data_agg[['rmsse']] = sqrt(data_agg[['msse']])
+      data_agg[['rmsse']] <- sqrt(data_agg[['msse']])
     }
 
     if ('total_fit_time' %in% names(data_agg)) {
@@ -69,7 +73,7 @@ aggregate_data <- function(
           total_fit_time <- c(total_fit_time, agg_fun(tot_fit_time_tmp))
         }
       }
-      data_agg[['total_fit_time']] = total_fit_time
+      data_agg[['total_fit_time']] <- total_fit_time
       data_agg <- data_agg |>
         dplyr::mutate(
           total_fit_time = ifelse(
@@ -255,7 +259,7 @@ compute_relative_metrics <- function(data, type) {
         rmsse = rmsse / rmsse_ref,
         mqloss = mqloss / mqloss_ref,
         scaled_mqloss = scaled_mqloss / scaled_mqloss_ref,
-        scaled_crps = scaled_crps / scaled_crps_ref
+        # scaled_crps = scaled_crps / scaled_crps_ref
         # coverage_level50 = coverage_level50 / coverage_level50_ref,
         # coverage_level60 = coverage_level60 / coverage_level60_ref,
         # coverage_level70 = coverage_level70 / coverage_level70_ref,
@@ -278,11 +282,11 @@ compute_relative_metrics <- function(data, type) {
     relative_data <- data |>
       dplyr::left_join(reference_data, by = c("method" = "method_ref")) |>
       dplyr::mutate(
-        stab_bias = abs(stab_bias) / abs(stab_bias_ref),
-        mac = mac / mac_ref,
-        masc = masc_ref,
-        rmsc = rmsc / rmsc_ref,
-        rmssc = rmssc_ref,
+        # stab_bias = abs(stab_bias) / abs(stab_bias_ref),
+        # mac = mac / mac_ref,
+        # masc = masc_ref,
+        # rmsc = rmsc / rmsc_ref,
+        # rmssc = rmssc_ref,
         smapc = smapc / smapc_ref,
         smqpc = smqpc / smqpc_ref,
         `smqpc-lo-99` = `smqpc-lo-99` / `smqpc-lo-99_ref`,
@@ -1162,7 +1166,7 @@ analyze_results <- function(config) {
   dataset_names <- config$dataset$dataset_names
   frequencies <- config$dataset$frequencies
   dataset_names_full <- paste(dataset_names, frequencies, sep = "_")
-  retrain_scenarios <- purrr::map(frequencies, get_retrain_scenarios) |>
+  retrain_scenarios <- purrr::map(dataset_names, get_retrain_scenarios) |>
     purrr::set_names(dataset_names_full)
   ext <- config$dataset$ext
   # model config
@@ -1186,6 +1190,9 @@ analyze_results <- function(config) {
     config$cost_params$cost_datasets_n_skus
   ))
   adjust_time_for_sf <- config$cost_params$adjust_time_for_sf
+  n_skus_sf <- config$cost_params$n_skus_sf
+  n_cores <- config$cost_params$n_cores
+  exclude_series <- config$exclude_series
 
   # final analysis names
   data_types <- c('data', 'results')
@@ -1198,10 +1205,11 @@ analyze_results <- function(config) {
     final_analyses
   )
 
-  for (dn in dataset_names_full) {
+  for (i in seq_along(dataset_names)) {
+    dn <- dataset_names_full[i]
     cat(paste0("*************** Analysing ", dn, " ***************\n"))
-    dataset_name_tmp <- unlist(strsplit(dn, "_"))[1]
-    freq_tmp <- unlist(strsplit(dn, "_"))[2]
+    dataset_name_tmp <- dataset_names[i]
+    freq_tmp <- frequencies[i]
     retrain_scn_tmp <- retrain_scenarios[[dn]]
 
     for (at in analysis_types) {
@@ -1209,7 +1217,7 @@ analyze_results <- function(config) {
 
       if (at == "evaluation") {
         cat("Loading and preparing the evaluation data...\n")
-        anal_df_tmp = load_data(
+        anal_df_tmp <- load_data(
           path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
           name_list = c(
             dataset_name_tmp,
@@ -1219,14 +1227,23 @@ analyze_results <- function(config) {
           ),
           ext = ext
         ) |>
-          tibble::as_tibble() |>
+          tibble::as_tibble()
+        if (!is.null(exclude_series)) {
+          cat("Excluding series from the analysis...\n")
+          anal_df_tmp <- anal_df_tmp |>
+            dplyr::filter(!unique_id %in% exclude_series)
+        }
+        anal_df_tmp <- anal_df_tmp |>
           dplyr::filter(retrain_window %in% retrain_scn_tmp) |>
           dplyr::filter(method %in% model_names) |>
-          recode_data(model_type_levels, model_names_abbr) |>
-          clean_outliers(
-            .metric = eval_outlier_cleaning_metrics,
-            q = eval_outlier_cleaning_quantiles
-          )
+          recode_data(model_type_levels, model_names_abbr)
+        if (!is.null(eval_outlier_cleaning_metrics)) {
+          anal_df_tmp <- anal_df_tmp |>
+            clean_outliers(
+              .metric = eval_outlier_cleaning_metrics,
+              q = eval_outlier_cleaning_quantiles
+            )
+        }
         anal_df_agg_tmp <- anal_df_tmp |>
           aggregate_data(
             group_columns = c('type', 'method', 'retrain_window'),
@@ -1238,7 +1255,7 @@ analyze_results <- function(config) {
         anal_metrics <- eval_metrics
       } else if (at == "time") {
         cat("Loading and preparing the time data...\n")
-        anal_df_tmp = load_data(
+        anal_df_tmp <- load_data(
           path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
           name_list = c(dataset_name_tmp, freq_tmp, 'time'),
           ext = ext
@@ -1250,19 +1267,17 @@ analyze_results <- function(config) {
         if (adjust_time_for_sf) {
           cat("Adjusting time data for local models...\n")
           cost_dataset_n_skus_tmp <- cost_datasets_n_skus[[dn]]
-          sf_n_skus <- 1000 # number of time series used in sf experiments
-          n_cores <- 16 # number of cores
           anal_df_tmp <- anal_df_tmp |>
             dplyr::mutate(
               total_fit_time = ifelse(
                 type == 'SF',
-                total_fit_time / sf_n_skus * cost_dataset_n_skus_tmp / n_cores,
+                total_fit_time / n_skus_sf * cost_dataset_n_skus_tmp / n_cores,
                 total_fit_time
               ),
               total_predict_time = ifelse(
                 type == 'SF',
                 total_predict_time /
-                  sf_n_skus *
+                  n_skus_sf *
                   cost_dataset_n_skus_tmp /
                   n_cores,
                 total_predict_time
@@ -1270,7 +1285,7 @@ analyze_results <- function(config) {
               total_sample_time = ifelse(
                 type == 'SF',
                 total_sample_time /
-                  sf_n_skus *
+                  n_skus_sf *
                   cost_dataset_n_skus_tmp /
                   n_cores,
                 total_sample_time
@@ -1288,20 +1303,29 @@ analyze_results <- function(config) {
         anal_metrics <- time_metrics
       } else if (at == "stability") {
         cat("Loading and preparing the stability data...\n")
-        anal_df_tmp = load_data(
+        anal_df_tmp <- load_data(
           path_list = c('results', dataset_name_tmp, freq_tmp, 'stability'),
           name_list = c(dataset_name_tmp, freq_tmp, 'stab'),
           ext = ext
         ) |>
-          tibble::as_tibble() |>
+          tibble::as_tibble()
+        if (!is.null(exclude_series)) {
+          cat("Excluding series from the analysis...\n")
+          anal_df_tmp <- anal_df_tmp |>
+            dplyr::filter(!unique_id %in% exclude_series)
+        }
+        anal_df_tmp <- anal_df_tmp |>
           dplyr::filter(retrain_window %in% retrain_scn_tmp) |>
           dplyr::filter(method %in% model_names) |>
           recode_data(model_type_levels, model_names_abbr) |>
-          clean_outliers(
-            .metric = stab_outlier_cleaning_metrics,
-            q = stab_outlier_cleaning_quantiles
-          ) |>
           dplyr::filter(type != 'ENSTIME') # remove ensemble time from stability analysis
+        if (!is.null(stab_outlier_cleaning_metrics)) {
+          anal_df_tmp <- anal_df_tmp |>
+            clean_outliers(
+              .metric = stab_outlier_cleaning_metrics,
+              q = stab_outlier_cleaning_quantiles
+            )
+        }
         anal_df_agg_tmp <- anal_df_tmp |>
           aggregate_data(
             group_columns = c('type', 'method', 'retrain_window'),
@@ -1315,7 +1339,7 @@ analyze_results <- function(config) {
         cat("Loading and preparing the time data for cost analysis...\n")
         cost_dataset_n_skus_tmp <- cost_datasets_n_skus[[dn]]
 
-        anal_df_tmp = load_data(
+        anal_df_tmp <- load_data(
           path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
           name_list = c(dataset_name_tmp, freq_tmp, 'time'),
           ext = ext
@@ -1326,19 +1350,17 @@ analyze_results <- function(config) {
           recode_data(model_type_levels, model_names_abbr)
         if (adjust_time_for_sf) {
           cat("Adjusting time data for local models...\n")
-          sf_n_skus <- 1000 # number of time series used in sf experiments
-          n_cores <- 16 # number of cores
           anal_df_tmp <- anal_df_tmp |>
             dplyr::mutate(
               total_fit_time = ifelse(
                 type == 'SF',
-                total_fit_time / sf_n_skus * cost_dataset_n_skus_tmp / n_cores,
+                total_fit_time / n_skus_sf * cost_dataset_n_skus_tmp / n_cores,
                 total_fit_time
               ),
               total_predict_time = ifelse(
                 type == 'SF',
                 total_predict_time /
-                  sf_n_skus *
+                  n_skus_sf *
                   cost_dataset_n_skus_tmp /
                   n_cores,
                 total_predict_time
@@ -1346,7 +1368,7 @@ analyze_results <- function(config) {
               total_sample_time = ifelse(
                 type == 'SF',
                 total_sample_time /
-                  sf_n_skus *
+                  n_skus_sf *
                   cost_dataset_n_skus_tmp /
                   n_cores,
                 total_sample_time
@@ -1637,7 +1659,7 @@ analyze_optimal_frequency <- function(config, adjust = 1) {
   dataset_names <- config$dataset$dataset_names
   frequencies <- config$dataset$frequencies
   dataset_names_full <- paste(dataset_names, frequencies, sep = "_")
-  retrain_scenarios <- purrr::map(frequencies, get_retrain_scenarios) |>
+  retrain_scenarios <- purrr::map(dataset_names, get_retrain_scenarios) |>
     purrr::set_names(dataset_names_full)
   ext <- config$dataset$ext
   # model config
@@ -1652,6 +1674,8 @@ analyze_optimal_frequency <- function(config, adjust = 1) {
   stab_metrics <- config$stability_params$metrics
   stab_outlier_cleaning_metrics <- config$stability_params$outlier_cleaning_metrics
   stab_outlier_cleaning_quantiles <- config$stability_params$outlier_cleaning_quantiles
+  # exclude series config
+  exclude_series <- config$exclude_series
 
   # final analysis names
   data_types <- c('results')
@@ -1664,10 +1688,11 @@ analyze_optimal_frequency <- function(config, adjust = 1) {
     final_analyses
   )
 
-  for (dn in dataset_names_full) {
+  for (i in seq_along(dataset_names_full)) {
+    dn <- dataset_names_full[i]
     cat(paste0("*************** Analysing ", dn, " ***************\n"))
-    dataset_name_tmp <- unlist(strsplit(dn, "_"))[1]
-    freq_tmp <- unlist(strsplit(dn, "_"))[2]
+    dataset_name_tmp <- dataset_names[i]
+    freq_tmp <- frequencies[i]
     retrain_scn_tmp <- retrain_scenarios[[dn]]
 
     for (at in analysis_types) {
@@ -1675,7 +1700,7 @@ analyze_optimal_frequency <- function(config, adjust = 1) {
 
       if (at == "evaluation") {
         cat("Loading and preparing the evaluation data...\n")
-        anal_df_tmp = load_data(
+        anal_df_tmp <- load_data(
           path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
           name_list = c(
             dataset_name_tmp,
@@ -1685,32 +1710,50 @@ analyze_optimal_frequency <- function(config, adjust = 1) {
           ),
           ext = ext
         ) |>
-          tibble::as_tibble() |>
+          tibble::as_tibble()
+        if (!is.null(exclude_series)) {
+          cat("Excluding series from the analysis...\n")
+          anal_df_tmp <- anal_df_tmp |>
+            dplyr::filter(!unique_id %in% exclude_series)
+        }
+        anal_df_tmp <- anal_df_tmp |>
           dplyr::filter(retrain_window %in% retrain_scn_tmp) |>
           dplyr::filter(method %in% model_names) |>
-          recode_data(model_type_levels, model_names_abbr) |>
-          clean_outliers(
-            .metric = eval_outlier_cleaning_metrics,
-            q = eval_outlier_cleaning_quantiles
-          )
+          recode_data(model_type_levels, model_names_abbr)
+        if (!is.null(eval_outlier_cleaning_metrics)) {
+          anal_df_tmp <- anal_df_tmp |>
+            clean_outliers(
+              .metric = eval_outlier_cleaning_metrics,
+              q = eval_outlier_cleaning_quantiles
+            )
+        }
         # set the metrics to be used
         anal_metrics <- eval_metrics
       } else if (at == "stability") {
         cat("Loading and preparing the stability data...\n")
-        anal_df_tmp = load_data(
+        anal_df_tmp <- load_data(
           path_list = c('results', dataset_name_tmp, freq_tmp, 'stability'),
           name_list = c(dataset_name_tmp, freq_tmp, 'stab'),
           ext = ext
         ) |>
-          tibble::as_tibble() |>
+          tibble::as_tibble()
+        if (!is.null(exclude_series)) {
+          cat("Excluding series from the analysis...\n")
+          anal_df_tmp <- anal_df_tmp |>
+            dplyr::filter(!unique_id %in% exclude_series)
+        }
+        anal_df_tmp <- anal_df_tmp |>
           dplyr::filter(retrain_window %in% retrain_scn_tmp) |>
           dplyr::filter(method %in% model_names) |>
           recode_data(model_type_levels, model_names_abbr) |>
-          clean_outliers(
-            .metric = stab_outlier_cleaning_metrics,
-            q = stab_outlier_cleaning_quantiles
-          ) |>
           dplyr::filter(type != 'ENSTIME') # remove ensemble time from stability analysis
+        if (!is.null(stab_outlier_cleaning_metrics)) {
+          anal_df_tmp <- anal_df_tmp |>
+            clean_outliers(
+              .metric = stab_outlier_cleaning_metrics,
+              q = stab_outlier_cleaning_quantiles
+            )
+        }
         # set the metrics to be used
         anal_metrics <- stab_metrics
       } else if (at == "time" | at == "cost") {
@@ -1756,14 +1799,14 @@ analyze_optimal_frequency <- function(config, adjust = 1) {
 
           anal_plot[[am]] <- list(
             "overall" = plot_optimal_retrain_results(
-              anal_df_mt_optimal_tmp,
+              data = anal_df_mt_optimal_tmp,
               metric = am,
               title = toupper(dataset_name_tmp),
               overall_only = TRUE,
               adjust = adjust
             ),
             "bymethod" = plot_optimal_retrain_results(
-              anal_df_mt_optimal_tmp,
+              data = anal_df_mt_optimal_tmp,
               metric = am,
               title = toupper(dataset_name_tmp),
               overall_only = FALSE,
@@ -1848,8 +1891,8 @@ plot_optimal_retrain_results <- function(
     brks <- c(7, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360)
     lim <- c(1, 365)
   } else {
-    brks <- c(1, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52)
-    lim <- c(1, 53)
+    brks <- c(1, 4, 8, 12, 16, 24, 32, 40, 48, 52, 60, 68, 76, 84, 92, 100, 104)
+    lim <- c(1, 105) # WARN: breaking changes depending on the dataset frequency (weekly vs. monthly)
   }
 
   if (overall_only) {
@@ -1917,7 +1960,7 @@ analyze_optimal_frequency_combined <- function(config, adjust = 1) {
   dataset_names <- config$dataset$dataset_names
   frequencies <- config$dataset$frequencies
   dataset_names_full <- paste(dataset_names, frequencies, sep = "_")
-  retrain_scenarios <- purrr::map(frequencies, get_retrain_scenarios) |>
+  retrain_scenarios <- purrr::map(dataset_names, get_retrain_scenarios) |>
     purrr::set_names(dataset_names_full)
   ext <- config$dataset$ext
   # model config
@@ -1933,6 +1976,7 @@ analyze_optimal_frequency_combined <- function(config, adjust = 1) {
   stab_metrics <- config$stability_params$metrics
   stab_outlier_cleaning_metrics <- config$stability_params$outlier_cleaning_metrics
   stab_outlier_cleaning_quantiles <- config$stability_params$outlier_cleaning_quantiles
+  exclude_series <- config$exclude_series
 
   # final analysis names
   cols_to_keep <- c(
@@ -1946,42 +1990,60 @@ analyze_optimal_frequency_combined <- function(config, adjust = 1) {
   analysis_results <- vector("list", length(dataset_names_full)) |>
     purrr::set_names(dataset_names_full)
 
-  for (dn in dataset_names_full) {
+  for (i in seq_along(dataset_names_full)) {
+    dn <- dataset_names_full[i]
     cat(paste0("*************** Analysing ", dn, " ***************\n"))
-    dataset_name_tmp <- unlist(strsplit(dn, "_"))[1]
-    freq_tmp <- unlist(strsplit(dn, "_"))[2]
+    dataset_name_tmp <- dataset_names[i]
+    freq_tmp <- frequencies[i]
     retrain_scn_tmp <- retrain_scenarios[[dn]]
 
     cat("Loading and preparing the evaluation data...\n")
-    eval_df_tmp = load_data(
+    eval_df_tmp <- load_data(
       path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
       name_list = c(dataset_name_tmp, freq_tmp, 'eval', analysis_sample_type),
       ext = ext
     ) |>
-      tibble::as_tibble() |>
+      tibble::as_tibble()
+    if (!is.null(exclude_series)) {
+      cat("Excluding series from the analysis...\n")
+      eval_df_tmp <- eval_df_tmp |>
+        dplyr::filter(!unique_id %in% exclude_series)
+    }
+    eval_df_tmp <- eval_df_tmp |>
       dplyr::filter(retrain_window %in% retrain_scn_tmp) |>
       dplyr::filter(method %in% model_names) |>
-      recode_data(model_type_levels, model_names_abbr) |>
-      clean_outliers(
-        .metric = eval_outlier_cleaning_metrics,
-        q = eval_outlier_cleaning_quantiles
-      )
-
+      recode_data(model_type_levels, model_names_abbr)
+    if (!is.null(eval_outlier_cleaning_metrics)) {
+      eval_df_tmp <- eval_df_tmp |>
+        clean_outliers(
+          .metric = eval_outlier_cleaning_metrics,
+          q = eval_outlier_cleaning_quantiles
+        )
+    }
     cat("Loading and preparing the stability data...\n")
-    stab_df_tmp = load_data(
+    stab_df_tmp <- load_data(
       path_list = c('results', dataset_name_tmp, freq_tmp, 'stability'),
       name_list = c(dataset_name_tmp, freq_tmp, 'stab'),
       ext = ext
     ) |>
-      tibble::as_tibble() |>
+      tibble::as_tibble()
+    if (!is.null(exclude_series)) {
+      cat("Excluding series from the analysis...\n")
+      stab_df_tmp <- stab_df_tmp |>
+        dplyr::filter(!unique_id %in% exclude_series)
+    }
+    stab_df_tmp <- stab_df_tmp |>
       dplyr::filter(retrain_window %in% retrain_scn_tmp) |>
       dplyr::filter(method %in% model_names) |>
       recode_data(model_type_levels, model_names_abbr) |>
-      clean_outliers(
-        .metric = stab_outlier_cleaning_metrics,
-        q = stab_outlier_cleaning_quantiles
-      ) |>
       dplyr::filter(type != 'ENSTIME') # remove ensemble time from stability analysis
+    if (!is.null(stab_outlier_cleaning_metrics)) {
+      stab_df_tmp <- stab_df_tmp |>
+        clean_outliers(
+          .metric = stab_outlier_cleaning_metrics,
+          q = stab_outlier_cleaning_quantiles
+        )
+    }
 
     anal_df_tmp <- dplyr::bind_rows(
       eval_df_tmp |>
