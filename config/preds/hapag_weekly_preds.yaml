@@ -40,5 +40,6 @@ evaluation: {
     evaluation_frequency: 'yearly', 
     evaluation_sample_type: 'overlap',
     weighted_metrics: ['mape'],
-    weights: 'auto'
+    weights: 'auto',
+    aggregate_results: False # False = keep evaluation results by sample, True = aggregate evaluation results by method, test_window, horizon, retrain_window, unique_id
 }

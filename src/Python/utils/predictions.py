@@ -109,6 +109,7 @@ def evaluate_model_predictions(config):
     eval_sample_type = config['evaluation']['evaluation_sample_type']
     weighted_metrics = config['evaluation']['weighted_metrics']
     weights = config['evaluation']['weights']
+    aggregate_results = config['evaluation']['aggregate_results']
 
     # load the dataset
     if samples is not None:
@@ -151,14 +152,18 @@ def evaluate_model_predictions(config):
                 weighted_metrics = weighted_metrics,
                 weights = weights
             )
-            eval_df_agg_tmp = aggregate_data(
-                data = eval_df_tmp,
-                group_columns = ['method', 'test_window', 'horizon', 'retrain_window', 'unique_id'],
-                drop_columns = ['sample'],
-                function_name = 'mean',
-                adjust_metrics = True
-            )
 
+            if aggregate_results:
+                eval_df_agg_tmp = aggregate_data(
+                    data = eval_df_tmp,
+                    group_columns = ['method', 'test_window', 'horizon', 'retrain_window', 'unique_id'],
+                    drop_columns = ['sample'],
+                    function_name = 'mean',
+                    adjust_metrics = True
+                )
+            else:
+                eval_df_agg_tmp = eval_df_tmp
+            
             eval_df_m = pd.concat([eval_df_m, eval_df_agg_tmp], axis = 0)
             del preds_df_rs, eval_df_tmp, eval_df_agg_tmp
             gc.collect()
@@ -348,6 +353,7 @@ def evaluate_dataset_predictions(config):
     eval_sample_type = config['evaluation']['evaluation_sample_type']
     weighted_metrics = config['evaluation']['weighted_metrics']
     weights = config['evaluation']['weights']
+    aggregate_results = config['evaluation']['aggregate_results']
 
     # load the dataset
     if samples is not None:
@@ -393,13 +399,16 @@ def evaluate_dataset_predictions(config):
                 weighted_metrics = weighted_metrics,
                 weights = weights
             )
-            eval_df_agg_tmp = aggregate_data(
-                data = eval_df_tmp,
-                group_columns = ['method', 'test_window', 'horizon', 'retrain_window', 'unique_id'],
-                drop_columns = ['sample'],
-                function_name = 'mean',
-                adjust_metrics = True
-            )
+            if aggregate_results:
+                eval_df_agg_tmp = aggregate_data(
+                    data = eval_df_tmp,
+                    group_columns = ['method', 'test_window', 'horizon', 'retrain_window', 'unique_id'],
+                    drop_columns = ['sample'],
+                    function_name = 'mean',
+                    adjust_metrics = True
+                )
+            else:
+                eval_df_agg_tmp = eval_df_tmp
 
             eval_df = pd.concat([eval_df, eval_df_agg_tmp], axis = 0)
             del preds_df_tmp, eval_df_tmp, eval_df_agg_tmp
