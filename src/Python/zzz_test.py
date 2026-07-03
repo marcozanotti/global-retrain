@@ -274,9 +274,34 @@ metrics_df = pd.read_csv('logs/lightning_logs/version_0/metrics.csv')
 
 
 ####
+# import sys
+# sys.path.insert(0, 'src/Python/utils')
+# import pandas as pd
+# from utilities import load_data
+
+# preds_df = load_data(['results/hapag_region/weekly/preds/'], ['hapag_region_weekly_preds'])
+# eval_df = load_data(['results/hapag_region/weekly/preds/'], ['hapag_region_weekly_preds_eval_overlap'])
+
+
 import sys
 sys.path.insert(0, 'src/Python/utils')
-import pandas as pd
-from utilities import load_data
+import os
+from utilities import (
+    get_config, configure_logging, create_logger, stop_logger
+)
+from predictions import evaluate_dataset_predictions
 
-preds_df = load_data(['results/hapag_region/weekly/preds/'], ['hapag_region_weekly_preds'])
+os.environ['NIXTLA_ID_AS_COL'] = '1'
+
+config = get_config('config/preds/hapag_weekly_preds.yaml')
+configure_logging(
+    config_file = 'config/log_config.yaml', 
+    name_list = [
+        config['dataset']['dataset_name'], 
+        config['dataset']['frequency'], 
+        'predictions'
+    ]
+)
+logger = create_logger()
+evaluate_dataset_predictions(config = config)
+stop_logger(logger)
