@@ -92,6 +92,15 @@ def download_data(dataset_name, save = True, ext = '.parquet'):
         train_df = pd.read_csv('data/hapag_region/hapag_region.csv', header = 1, sep = ';', quotechar = '"')
         train_df = train_df[:-1] # drop last row with ###EndofFile### value
         train_df['unique_id'] = train_df['Name'].str.replace(';', '_')
+
+        unique_id_mapping = train_df[['unique_id', 'ABC', 'XYZ']].drop_duplicates()
+        save_data(
+            data = unique_id_mapping, 
+            path_list = ['data', dataset_name], 
+            name_list = [dataset_name, 'unique_id_mapping'],
+            ext = '.csv'
+        )
+
         train_df = train_df[['unique_id'] + [col for col in train_df.columns if 'Date:' in col]]
         train_df.columns = [col.replace('Date:', '') for col in train_df.columns]
         train_df = train_df.melt(id_vars = ['unique_id'], var_name = 'ds', value_name = 'y')
