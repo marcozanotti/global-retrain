@@ -238,7 +238,33 @@ dt_table <- function(
   return(res)
 }
 
-compute_relative_metrics <- function(data, type) {
+compute_relative_metrics <- function(data, type, group_col = NULL) {
+  if (is.null(group_col)) {
+    reference_data <- data |>
+      dplyr::group_by(method) |>
+      dplyr::slice_min(retrain_window) |>
+      dplyr::ungroup() |>
+      dplyr::select(-dplyr::any_of(c('type', 'retrain_window'))) |>
+      dplyr::rename_with(~ stringr::str_c(.x, "_ref"))
+    relative_data <- data |>
+      dplyr::left_join(
+        reference_data,
+        by = c("method" = "method_ref")
+      )
+  } else {
+    reference_data <- data |>
+      dplyr::group_by(method, .data[[group_col]]) |>
+      dplyr::slice_min(retrain_window) |>
+      dplyr::ungroup() |>
+      dplyr::select(-dplyr::any_of(c('type', 'retrain_window'))) |>
+      dplyr::rename_with(~ stringr::str_c(.x, "_ref"))
+    relative_data <- data |>
+      dplyr::left_join(
+        reference_data,
+        by = c("method" = "method_ref", "group" = "group_ref")
+      )
+  }
+
   reference_data <- data |>
     dplyr::group_by(method) |>
     dplyr::slice_min(retrain_window) |>
@@ -247,8 +273,7 @@ compute_relative_metrics <- function(data, type) {
     dplyr::rename_with(~ stringr::str_c(.x, "_ref"))
 
   if (type == 'evaluation') {
-    relative_data <- data |>
-      dplyr::left_join(reference_data, by = c("method" = "method_ref")) |>
+    relative_data <- relative_data |>
       dplyr::mutate(
         bias = abs(bias) / abs(bias_ref),
         mae = mae / mae_ref,
@@ -270,8 +295,7 @@ compute_relative_metrics <- function(data, type) {
       ) |>
       dplyr::select(-dplyr::ends_with("_ref"))
   } else if (type == 'time') {
-    relative_data <- data |>
-      dplyr::left_join(reference_data, by = c("method" = "method_ref")) |>
+    relative_data <- relative_data |>
       dplyr::mutate(
         total_fit_time = total_fit_time / total_fit_time_ref,
         total_predict_time = total_predict_time / total_predict_time_ref,
@@ -279,8 +303,7 @@ compute_relative_metrics <- function(data, type) {
       ) |>
       dplyr::select(-dplyr::ends_with("_ref"))
   } else if (type == 'stability') {
-    relative_data <- data |>
-      dplyr::left_join(reference_data, by = c("method" = "method_ref")) |>
+    relative_data <- relative_data |>
       dplyr::mutate(
         # stab_bias = abs(stab_bias) / abs(stab_bias_ref),
         # mac = mac / mac_ref,
@@ -306,8 +329,7 @@ compute_relative_metrics <- function(data, type) {
       ) |>
       dplyr::select(-dplyr::ends_with("_ref"))
   } else if (type == 'cost') {
-    relative_data <- data |>
-      dplyr::left_join(reference_data, by = c("method" = "method_ref")) |>
+    relative_data <- relative_data |>
       dplyr::mutate(
         cost_perc = cost / cost_ref * 100,
         savings = cost_ref - cost,
@@ -391,14 +413,31 @@ table_retrain_results <- function(
   metric,
   title = "",
   digits = 2,
-  format = 'numeric'
+  format = 'numeric',
+  group_col = NULL
 ) {
   cat("Creating table...\n")
-  tab <- data |>
-    dplyr::select(dplyr::all_of(c('method', 'retrain_window', metric))) |>
-    tidyr::pivot_wider(names_from = 'retrain_window', values_from = metric) |>
-    dplyr::rename_with(stringr::str_to_title) |>
-    dt_table(title = title, caption = '', digits = digits, format = format)
+  if (is.null(group_col)) {
+    tab <- data |>
+      dplyr::select(dplyr::all_of(c('method', 'retrain_window', metric))) |>
+      tidyr::pivot_wider(names_from = 'retrain_window', values_from = metric) |>
+      dplyr::rename_with(stringr::str_to_title) |>
+      dt_table(title = title, caption = '', digits = digits, format = format)
+  } else {
+    tab <- data |>
+      dplyr::select(dplyr::all_of(c(
+        'method',
+        'retrain_window',
+        metric,
+        group_col
+      ))) |>
+      tidyr::pivot_wider(
+        names_from = 'retrain_window',
+        values_from = metric
+      ) |>
+      dplyr::rename_with(stringr::str_to_title) |>
+      dt_table(title = title, caption = '', digits = digits, format = format)
+  }
   return(tab)
 }
 
@@ -411,7 +450,8 @@ plot_retrain_results <- function(
   metric_label = "",
   title = "",
   smooth = FALSE,
-  add_average = FALSE
+  add_average = FALSE,
+  group_col = NULL
 ) {
   cat("Creating plot...\n")
 
@@ -495,12 +535,29 @@ plot_retrain_results <- function(
       ggplot2::geom_line(linewidth = 1)
   }
 
+  if (!is.null(group_col)) {
+    g <- g +
+      ggplot2::facet_wrap(
+        ggplot2::vars(.data[[group_col]]),
+        scales = 'fixed',
+        ncol = 2
+      )
+  }
+
   if (add_average) {
-    data_ave <- data_plot |>
-      dplyr::group_by(retrain_window) |>
-      dplyr::summarise('average' = mean(.data[[metric]]), .groups = 'drop') |>
-      dplyr::mutate(method = 'Average', .before = 1) |>
-      purrr::set_names(c('method', 'retrain_window', metric))
+    if (is.null(group_col)) {
+      data_ave <- data_plot |>
+        dplyr::group_by(retrain_window) |>
+        dplyr::summarise('average' = mean(.data[[metric]]), .groups = 'drop') |>
+        dplyr::mutate(method = 'Average', .before = 1) |>
+        purrr::set_names(c('method', 'retrain_window', metric))
+    } else {
+      data_ave <- data_plot |>
+        dplyr::group_by(retrain_window, .data[[group_col]]) |>
+        dplyr::summarise('average' = mean(.data[[metric]]), .groups = 'drop') |>
+        dplyr::mutate(method = 'Average', .before = 1) |>
+        purrr::set_names(c('method', 'retrain_window', group_col, metric))
+    }
 
     if (smooth) {
       g <- g +
@@ -554,124 +611,254 @@ test_differences <- function(
   .metric,
   by = 'retrain_window',
   .method = NULL,
-  .retrain_window = NULL
+  .retrain_window = NULL,
+  group_col = NULL
 ) {
-  if (by == 'retrain_window') {
-    if (is.null(.method)) {
-      .method <- unique(data$method)[1]
-    }
-    data_test <- data |> dplyr::filter(method == .method)
-    n_data <- nrow(data_test)
-    min_n_series <- min(table(data_test$retrain_window))
-    n_scn <- length(unique(data_test$retrain_window))
+  if (is.null(group_col)) {
+    if (by == 'retrain_window') {
+      if (is.null(.method)) {
+        .method <- unique(data$method)[1]
+      }
+      data_test <- data |> dplyr::filter(method == .method)
+      n_data <- nrow(data_test)
+      min_n_series <- min(table(data_test$retrain_window))
+      n_scn <- length(unique(data_test$retrain_window))
 
-    if (n_data == 0 | n_scn <= 1 | min_n_series <= 1) {
-      cat(paste0(
-        "No differences to test: ",
-        n_data,
-        " rows, ",
-        n_scn,
-        " scenarios, and ",
-        min_n_series,
-        " min n. series.\n"
-      ))
-      return(NULL)
+      if (n_data == 0 | n_scn <= 1 | min_n_series <= 1) {
+        cat(paste0(
+          "No differences to test: ",
+          n_data,
+          " rows, ",
+          n_scn,
+          " scenarios, and ",
+          min_n_series,
+          " min n. series.\n"
+        ))
+        return(NULL)
+      } else {
+        cat(paste0(
+          "Testing differences in ",
+          .metric,
+          " for method ",
+          .method,
+          "...\n"
+        ))
+        data_test <- data_test |>
+          dplyr::group_by(retrain_window) |>
+          dplyr::slice_sample(n = min_n_series) |> # obtain homogenous samples for each retrain window
+          dplyr::ungroup() |>
+          dplyr::select(dplyr::all_of(c('retrain_window', .metric))) |>
+          dplyr::mutate(id = rep(1:min_n_series, n_scn), .before = 1) |>
+          tidyr::pivot_wider(
+            names_from = 'retrain_window',
+            values_from = .metric
+          ) |>
+          dplyr::select(-id) |>
+          as.matrix()
+
+        test_res <- greybox::rmcb(
+          data = data_test,
+          level = 0.95,
+          outplot = "none"
+        )
+        data_test <- tibble::tibble(
+          'method' = as.character(.method),
+          'retrain_window' = as.integer(names(test_res$mean)),
+          'metric' = .metric,
+          'mean' = test_res$mean,
+          'lower' = test_res$interval[, 1],
+          'upper' = test_res$interval[, 2],
+          'pvalue' = test_res$p.value
+        )
+      }
+    } else if (by == 'method') {
+      if (is.null(.retrain_window)) {
+        .retrain_window <- min(data$retrain_window)
+      }
+      data_test <- data |> dplyr::filter(retrain_window == .retrain_window)
+      n_data <- nrow(data_test)
+      min_n_series <- min(table(as.character(data_test$method)))
+      n_met <- length(unique(data_test$method))
+
+      if (n_data == 0 | n_met <= 1 | min_n_series <= 1) {
+        cat(paste0(
+          "No differences to test: ",
+          n_data,
+          " rows, ",
+          n_met,
+          " methods, and ",
+          min_n_series,
+          " min n. series.\n"
+        ))
+        return(NULL)
+      } else {
+        cat(paste0(
+          "Testing differences in ",
+          .metric,
+          " for retrain window ",
+          .retrain_window,
+          "...\n"
+        ))
+        data_test <- data_test |>
+          dplyr::group_by(method) |>
+          dplyr::slice_sample(n = min_n_series) |> # obtain homogenous samples for each retrain window
+          dplyr::ungroup() |>
+          dplyr::select(dplyr::all_of(c('method', .metric))) |>
+          dplyr::mutate(id = rep(1:min_n_series, n_met), .before = 1) |>
+          tidyr::pivot_wider(names_from = 'method', values_from = .metric) |>
+          dplyr::select(-id) |>
+          as.matrix()
+
+        test_res <- greybox::rmcb(
+          data = data_test,
+          level = 0.95,
+          outplot = "none"
+        )
+        data_test <- tibble::tibble(
+          'method' = as.character(names(test_res$mean)),
+          'retrain_window' = as.integer(.retrain_window),
+          'metric' = .metric,
+          'mean' = test_res$mean,
+          'lower' = test_res$interval[, 1],
+          'upper' = test_res$interval[, 2],
+          'pvalue' = test_res$p.value
+        )
+      }
     } else {
-      cat(paste0(
-        "Testing differences in ",
-        .metric,
-        " for method ",
-        .method,
-        "...\n"
-      ))
-      data_test <- data_test |>
-        dplyr::group_by(retrain_window) |>
-        dplyr::slice_sample(n = min_n_series) |> # obtain homogenous samples for each retrain window
-        dplyr::ungroup() |>
-        dplyr::select(dplyr::all_of(c('retrain_window', .metric))) |>
-        dplyr::mutate(id = rep(1:min_n_series, n_scn), .before = 1) |>
-        tidyr::pivot_wider(
-          names_from = 'retrain_window',
-          values_from = .metric
-        ) |>
-        dplyr::select(-id) |>
-        as.matrix()
-
-      test_res <- greybox::rmcb(
-        data = data_test,
-        level = 0.95,
-        outplot = "none"
-      )
-      data_test <- tibble::tibble(
-        'method' = as.character(.method),
-        'retrain_window' = as.integer(names(test_res$mean)),
-        'metric' = .metric,
-        'mean' = test_res$mean,
-        'lower' = test_res$interval[, 1],
-        'upper' = test_res$interval[, 2],
-        'pvalue' = test_res$p.value
-      )
-
-      return(data_test)
-    }
-  } else if (by == 'method') {
-    if (is.null(.retrain_window)) {
-      .retrain_window <- min(data$retrain_window)
-    }
-    data_test <- data |> dplyr::filter(retrain_window == .retrain_window)
-    n_data <- nrow(data_test)
-    min_n_series <- min(table(as.character(data_test$method)))
-    n_met <- length(unique(data_test$method))
-
-    if (n_data == 0 | n_met <= 1 | min_n_series <= 1) {
-      cat(paste0(
-        "No differences to test: ",
-        n_data,
-        " rows, ",
-        n_met,
-        " methods, and ",
-        min_n_series,
-        " min n. series.\n"
-      ))
-      return(NULL)
-    } else {
-      cat(paste0(
-        "Testing differences in ",
-        .metric,
-        " for retrain window ",
-        .retrain_window,
-        "...\n"
-      ))
-      data_test <- data_test |>
-        dplyr::group_by(method) |>
-        dplyr::slice_sample(n = min_n_series) |> # obtain homogenous samples for each retrain window
-        dplyr::ungroup() |>
-        dplyr::select(dplyr::all_of(c('method', .metric))) |>
-        dplyr::mutate(id = rep(1:min_n_series, n_met), .before = 1) |>
-        tidyr::pivot_wider(names_from = 'method', values_from = .metric) |>
-        dplyr::select(-id) |>
-        as.matrix()
-
-      test_res <- greybox::rmcb(
-        data = data_test,
-        level = 0.95,
-        outplot = "none"
-      )
-      data_test <- tibble::tibble(
-        'method' = as.character(names(test_res$mean)),
-        'retrain_window' = as.integer(.retrain_window),
-        'metric' = .metric,
-        'mean' = test_res$mean,
-        'lower' = test_res$interval[, 1],
-        'upper' = test_res$interval[, 2],
-        'pvalue' = test_res$p.value
-      )
-
-      return(data_test)
+      stop(paste0('Unknown by ', by))
     }
   } else {
-    stop(paste0('Unknown by ', by))
+    lvl <- unique(data[[group_col]])
+    data_test <- tibble::tibble()
+    for (l in lvl) {
+      if (by == 'retrain_window') {
+        if (is.null(.method)) {
+          .method <- unique(data$method)[1]
+        }
+        data_test_group <- data |>
+          dplyr::filter(method == .method, .data[[group_col]] == l)
+        n_data <- nrow(data_test_group)
+        min_n_series <- min(table(data_test_group$retrain_window))
+        n_scn <- length(unique(data_test_group$retrain_window))
+
+        if (n_data == 0 | n_scn <= 1 | min_n_series <= 1) {
+          cat(paste0(
+            "No differences to test: ",
+            n_data,
+            " rows, ",
+            n_scn,
+            " scenarios, and ",
+            min_n_series,
+            " min n. series.\n"
+          ))
+          return(NULL)
+        } else {
+          cat(paste0(
+            "Testing differences in ",
+            .metric,
+            " for method ",
+            .method,
+            " and group ",
+            l,
+            "...\n"
+          ))
+          data_test_group <- data_test_group |>
+            dplyr::group_by(retrain_window) |>
+            dplyr::slice_sample(n = min_n_series) |> # obtain homogenous samples for each retrain window
+            dplyr::ungroup() |>
+            dplyr::select(dplyr::all_of(c('retrain_window', .metric))) |>
+            dplyr::mutate(id = rep(1:min_n_series, n_scn), .before = 1) |>
+            tidyr::pivot_wider(
+              names_from = 'retrain_window',
+              values_from = .metric
+            ) |>
+            dplyr::select(-id) |>
+            as.matrix()
+
+          test_res <- greybox::rmcb(
+            data = data_test_group,
+            level = 0.95,
+            outplot = "none"
+          )
+          data_test_group <- tibble::tibble(
+            'method' = as.character(.method),
+            'retrain_window' = as.integer(names(test_res$mean)),
+            'group' = l,
+            'metric' = .metric,
+            'mean' = test_res$mean,
+            'lower' = test_res$interval[, 1],
+            'upper' = test_res$interval[, 2],
+            'pvalue' = test_res$p.value
+          )
+          data_test <- dplyr::bind_rows(data_test, data_test_group)
+        }
+      } else if (by == 'method') {
+        if (is.null(.retrain_window)) {
+          .retrain_window <- min(data$retrain_window)
+        }
+        data_test_group <- data |>
+          dplyr::filter(
+            retrain_window == .retrain_window,
+            .data[[group_col]] == l
+          )
+        n_data <- nrow(data_test_group)
+        min_n_series <- min(table(as.character(data_test_group$method)))
+        n_met <- length(unique(data_test_group$method))
+
+        if (n_data == 0 | n_met <= 1 | min_n_series <= 1) {
+          cat(paste0(
+            "No differences to test: ",
+            n_data,
+            " rows, ",
+            n_met,
+            " methods, and ",
+            min_n_series,
+            " min n. series.\n"
+          ))
+          return(NULL)
+        } else {
+          cat(paste0(
+            "Testing differences in ",
+            .metric,
+            " for retrain window ",
+            .retrain_window,
+            " and group ",
+            l,
+            "...\n"
+          ))
+          data_test_group <- data_test_group |>
+            dplyr::group_by(method) |>
+            dplyr::slice_sample(n = min_n_series) |> # obtain homogenous samples for each retrain window
+            dplyr::ungroup() |>
+            dplyr::select(dplyr::all_of(c('method', .metric))) |>
+            dplyr::mutate(id = rep(1:min_n_series, n_met), .before = 1) |>
+            tidyr::pivot_wider(names_from = 'method', values_from = .metric) |>
+            dplyr::select(-id) |>
+            as.matrix()
+
+          test_res <- greybox::rmcb(
+            data = data_test_group,
+            level = 0.95,
+            outplot = "none"
+          )
+          data_test_group <- tibble::tibble(
+            'method' = as.character(names(test_res$mean)),
+            'retrain_window' = as.integer(.retrain_window),
+            'group' = l,
+            'metric' = .metric,
+            'mean' = test_res$mean,
+            'lower' = test_res$interval[, 1],
+            'upper' = test_res$interval[, 2],
+            'pvalue' = test_res$p.value
+          )
+          data_test <- dplyr::bind_rows(data_test, data_test_group)
+        }
+      } else {
+        stop(paste0('Unknown by ', by))
+      }
+    }
   }
+  return(data_test)
 }
 
 extract_significance <- function(p_value) {
@@ -1649,7 +1836,7 @@ plot_scatter_results <- function(
   return(g)
 }
 
-analyze_optimal_frequency <- function(config, adjust = 1) {
+analyze_optimal_frequency <- function(config, adjust = 1, group_names = NULL) {
   # analysis config
   analysis_name <- config$analysis$name
   analysis_types <- config$analysis$types
@@ -1677,6 +1864,12 @@ analyze_optimal_frequency <- function(config, adjust = 1) {
   # exclude series config
   exclude_series <- config$exclude_series
 
+  if (!is.null(group_names)) {
+    if (!all(group_names %in% c('ABC', 'XYZ', 'breaks', 'breaks_multi'))) {
+      stop(paste0("Unknown group name: ", paste(group_names, collapse = ", ")))
+    }
+  }
+
   # final analysis names
   data_types <- c('results')
   final_analyses <- c('plots')
@@ -1694,6 +1887,79 @@ analyze_optimal_frequency <- function(config, adjust = 1) {
     dataset_name_tmp <- dataset_names[i]
     freq_tmp <- frequencies[i]
     retrain_scn_tmp <- retrain_scenarios[[dn]]
+
+    if (!is.null(group_names)) {
+      unique_id_df <- load_data(
+        path_list = c('data', dataset_name_tmp),
+        name_list = c(dataset_name_tmp, 'unique_id_mapping'),
+        ext = '.csv'
+      ) |>
+        tibble::as_tibble()
+      breaks_df <- load_data(
+        path_list = c('results', dataset_name_tmp, freq_tmp, 'breaks'),
+        name_list = c(dataset_name_tmp, freq_tmp, 'breaks'),
+        ext = '.parquet'
+      ) |>
+        tibble::as_tibble()
+      if (!is.null(exclude_series)) {
+        cat("Excluding series from the analysis...\n")
+        unique_id_df <- unique_id_df |>
+          dplyr::filter(!unique_id %in% exclude_series)
+        breaks_df <- breaks_df |>
+          dplyr::filter(!unique_id %in% exclude_series)
+      }
+      # if sample is >= 0 then the series has a break in the test set
+      unique_id_w_breaks_in_test <- breaks_df |>
+        dplyr::filter(sample >= 0) |>
+        dplyr::pull(unique_id) |>
+        unique()
+      unique_id_w_1_break_in_test <- breaks_df |>
+        dplyr::filter(sample >= 0) |>
+        dplyr::group_by(unique_id) |>
+        dplyr::summarise(n_breaks = dplyr::n()) |>
+        dplyr::filter(n_breaks == 1) |>
+        dplyr::pull(unique_id) |>
+        unique()
+      unique_id_w_2p_breaks_in_test <- breaks_df |>
+        dplyr::filter(sample >= 0) |>
+        dplyr::group_by(unique_id) |>
+        dplyr::summarise(n_breaks = dplyr::n()) |>
+        dplyr::filter(n_breaks >= 2) |>
+        dplyr::pull(unique_id) |>
+        unique()
+      unique_id_no_breaks_in_test <- unique_id_df |>
+        dplyr::filter(!unique_id %in% unique_id_w_breaks_in_test) |>
+        dplyr::pull(unique_id) |>
+        unique()
+      # add groups to uunique_id_df
+      groups_df <- unique_id_df |>
+        dplyr::mutate(
+          ABC = factor(ABC, levels = c("A", "B", "C")),
+          XYZ = factor(XYZ, levels = c("X", "Y", "Z")),
+          breaks = ifelse(
+            unique_id %in% unique_id_w_breaks_in_test,
+            "Breaks",
+            "No breaks"
+          ) |>
+            factor(levels = c("No breaks", "Breaks")),
+          breaks_multi = case_when(
+            unique_id %in% unique_id_no_breaks_in_test ~ "No breaks",
+            unique_id %in% unique_id_w_1_break_in_test ~ "One break",
+            unique_id %in% unique_id_w_2p_breaks_in_test ~ "Two or more breaks"
+          ) |>
+            factor(levels = c("No breaks", "One break", "Two or more breaks"))
+        ) |>
+        dplyr::select(dplyr::all_of(c('unique_id', group_names)))
+      if (length(group_names) > 1) {
+        groups_df <- groups_df |>
+          tidyr::unite("group", dplyr::all_of(group_names), sep = " - ") |>
+          dplyr::mutate(group = factor(group)) |>
+          dplyr::select(dplyr::all_of(c('unique_id', 'group')))
+      } else {
+        groups_df <- groups_df |>
+          purrr::set_names(c('unique_id', 'group'))
+      }
+    }
 
     for (at in analysis_types) {
       cat(paste0("--- [ Analysis: ", at, " ] ---\n"))
@@ -1762,6 +2028,9 @@ analyze_optimal_frequency <- function(config, adjust = 1) {
         stop(paste0("Unknown analysis type: ", at))
       }
 
+      anal_df_tmp <- anal_df_tmp |>
+        dplyr::inner_join(groups_df, by = 'unique_id')
+
       for (mt in model_types) {
         cat(paste0(
           "--- [ Model Types: ",
@@ -1784,35 +2053,70 @@ analyze_optimal_frequency <- function(config, adjust = 1) {
           ))
           tp_par <- get_table_plot_params(am, analysis_method)
 
-          anal_df_mt_optimal_tmp <- anal_df_mt_tmp |>
-            dplyr::select(dplyr::all_of(c(
-              'type',
-              'method',
-              'retrain_window',
-              'unique_id',
-              am
-            ))) |>
-            dplyr::group_by(type, method, unique_id) |>
-            dplyr::arrange(type, method, unique_id, .data[[am]]) |>
-            dplyr::slice_head(n = 1) |>
-            dplyr::ungroup()
+          if (is.null(group_names)) {
+            anal_df_mt_optimal_tmp <- anal_df_mt_tmp |>
+              dplyr::select(dplyr::all_of(c(
+                'type',
+                'method',
+                'retrain_window',
+                'unique_id',
+                am
+              ))) |>
+              dplyr::group_by(type, method, unique_id) |>
+              dplyr::arrange(type, method, unique_id, .data[[am]]) |>
+              dplyr::slice_head(n = 1) |>
+              dplyr::ungroup()
 
-          anal_plot[[am]] <- list(
-            "overall" = plot_optimal_retrain_results(
-              data = anal_df_mt_optimal_tmp,
-              metric = am,
-              title = toupper(dataset_name_tmp),
-              overall_only = TRUE,
-              adjust = adjust
-            ),
-            "bymethod" = plot_optimal_retrain_results(
-              data = anal_df_mt_optimal_tmp,
-              metric = am,
-              title = toupper(dataset_name_tmp),
-              overall_only = FALSE,
-              adjust = adjust
+            anal_plot[[am]] <- list(
+              "overall" = plot_optimal_retrain_results(
+                data = anal_df_mt_optimal_tmp,
+                metric = am,
+                title = toupper(dataset_name_tmp),
+                overall_only = TRUE,
+                adjust = adjust
+              ),
+              "bymethod" = plot_optimal_retrain_results(
+                data = anal_df_mt_optimal_tmp,
+                metric = am,
+                title = toupper(dataset_name_tmp),
+                overall_only = FALSE,
+                adjust = adjust
+              )
             )
-          )
+          } else {
+            anal_df_mt_optimal_tmp <- anal_df_mt_tmp |>
+              dplyr::select(dplyr::all_of(c(
+                'type',
+                'method',
+                'retrain_window',
+                'unique_id',
+                'group',
+                am
+              ))) |>
+              dplyr::group_by(type, method, group, unique_id) |>
+              dplyr::arrange(type, method, group, unique_id, .data[[am]]) |>
+              dplyr::slice_head(n = 1) |>
+              dplyr::ungroup()
+
+            anal_plot[[am]] <- list(
+              "overall" = plot_optimal_retrain_results(
+                data = anal_df_mt_optimal_tmp,
+                metric = am,
+                title = toupper(dataset_name_tmp),
+                overall_only = TRUE,
+                adjust = adjust,
+                group_col = 'group'
+              ),
+              "bymethod" = plot_optimal_retrain_results(
+                data = anal_df_mt_optimal_tmp,
+                metric = am,
+                title = toupper(dataset_name_tmp),
+                overall_only = FALSE,
+                adjust = adjust,
+                group_col = 'group'
+              )
+            )
+          }
         }
 
         # store results
@@ -1833,7 +2137,8 @@ plot_optimal_retrain_results <- function(
   metric,
   title = "",
   overall_only = TRUE,
-  adjust = 1
+  adjust = 1,
+  group_col = NULL
 ) {
   cat("Creating plot...\n")
 
@@ -1895,26 +2200,71 @@ plot_optimal_retrain_results <- function(
     lim <- c(1, 105) # WARN: breaking changes depending on the dataset frequency (weekly vs. monthly)
   }
 
-  if (overall_only) {
-    data_plot <- data_plot |>
-      dplyr::mutate(type = 'Overall', method = 'Overall')
-    g <- data_plot |>
-      ggplot2::ggplot(
-        ggplot2::aes(
-          x = .data[['retrain_window']],
-          y = ggplot2::after_stat(scaled)
+  if (is.null(group_col)) {
+    if (overall_only) {
+      data_plot <- data_plot |>
+        dplyr::mutate(type = 'Overall', method = 'Overall')
+      g <- data_plot |>
+        ggplot2::ggplot(
+          ggplot2::aes(
+            x = .data[['retrain_window']],
+            y = ggplot2::after_stat(scaled)
+          )
         )
-      )
-    g <- g + ggplot2::geom_density(adjust = adjust)
+      g <- g + ggplot2::geom_density(adjust = adjust)
+    } else {
+      g <- data_plot |>
+        ggplot2::ggplot(
+          ggplot2::aes(
+            x = .data[['retrain_window']],
+            y = ggplot2::after_stat(scaled),
+            color = .data[['method']],
+            linetype = .data[['type']],
+            group = .data[['method']],
+            key_glyph = "line"
+          )
+        )
+      g <- g +
+        ggplot2::geom_density(adjust = adjust, show.legend = FALSE) +
+        ggplot2::stat_density(
+          geom = "line",
+          position = "identity",
+          adjust = adjust
+        )
+    }
+
+    g <- g +
+      ggplot2::scale_x_continuous(breaks = brks, limits = lim) +
+      ggplot2::scale_color_manual(values = colors_lbls) +
+      ggplot2::labs(
+        title = title,
+        x = 'Retrain Scenario (r)',
+        y = 'Density',
+        color = 'Method',
+        linetype = 'Method Type',
+        group = 'Method'
+      ) +
+      ggplot2::theme_minimal() +
+      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+
+    if (!overall_only) {
+      g <- g +
+        ggplot2::facet_wrap(. ~ method, scales = 'free_x', ncol = 2) +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45))
+    }
   } else {
+    if (overall_only) {
+      data_plot <- data_plot |>
+        dplyr::mutate(type = 'Overall', method = 'Overall')
+    }
+
     g <- data_plot |>
       ggplot2::ggplot(
         ggplot2::aes(
           x = .data[['retrain_window']],
           y = ggplot2::after_stat(scaled),
-          color = .data[['method']],
-          linetype = .data[['type']],
-          group = .data[['method']],
+          color = .data[[group_col]],
+          group = .data[[group_col]],
           key_glyph = "line"
         )
       )
@@ -1925,26 +2275,25 @@ plot_optimal_retrain_results <- function(
         position = "identity",
         adjust = adjust
       )
-  }
 
-  g <- g +
-    ggplot2::scale_x_continuous(breaks = brks, limits = lim) +
-    ggplot2::scale_color_manual(values = colors_lbls) +
-    ggplot2::labs(
-      title = title,
-      x = 'Retrain Scenario (r)',
-      y = 'Density',
-      color = 'Method',
-      linetype = 'Method Type',
-      group = 'Method'
-    ) +
-    ggplot2::theme_minimal() +
-    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
-
-  if (!overall_only) {
     g <- g +
-      ggplot2::facet_wrap(. ~ method, scales = 'free_x', ncol = 2) +
-      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45))
+      ggplot2::scale_x_continuous(breaks = brks, limits = lim) +
+      # ggplot2::scale_color_manual(values = colors_lbls) +
+      ggplot2::labs(
+        title = title,
+        x = 'Retrain Scenario (r)',
+        y = 'Density',
+        color = 'Group',
+        group = 'Group'
+      ) +
+      ggplot2::theme_minimal() +
+      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+
+    if (!overall_only) {
+      g <- g +
+        ggplot2::facet_wrap(. ~ method, scales = 'free_x', ncol = 2) +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45))
+    }
   }
 
   return(g)
@@ -2222,4 +2571,309 @@ plot_optimal_retrain_results_combined <- function(
   }
 
   return(g)
+}
+
+analyze_groups <- function(config, group_names = 'breaks') {
+  # analysis config
+  analysis_name <- config$analysis$name
+  analysis_types <- config$analysis$types[
+    config$analysis$types %in% c('evaluation', 'stability')
+  ]
+  analysis_method <- config$analysis$method
+  analysis_sample_type <- config$analysis$sample_type
+  # dataset config
+  dataset_names <- config$dataset$dataset_names
+  frequencies <- config$dataset$frequencies
+  dataset_names_full <- paste(dataset_names, frequencies, sep = "_")
+  retrain_scenarios <- purrr::map(dataset_names, get_retrain_scenarios) |>
+    purrr::set_names(dataset_names_full)
+  ext <- config$dataset$ext
+  # model config
+  model_types <- config$models$types
+  model_names <- config$models$model_names
+  model_names_abbr <- config$models$model_names_abbr
+  model_type_levels <- unlist(model_types) # c('SF', 'ML', 'DL', 'ENSACC', 'ENSTIME')
+  # evaluation, and stability config
+  eval_metrics <- config$evaluation_params$metrics
+  eval_outlier_cleaning_metrics <- config$evaluation_params$outlier_cleaning_metrics
+  eval_outlier_cleaning_quantiles <- config$evaluation_params$outlier_cleaning_quantiles
+  stab_metrics <- config$stability_params$metrics
+  stab_outlier_cleaning_metrics <- config$stability_params$outlier_cleaning_metrics
+  stab_outlier_cleaning_quantiles <- config$stability_params$outlier_cleaning_quantiles
+  # exclude series config
+  exclude_series <- config$exclude_series
+
+  if (!all(group_names %in% c('ABC', 'XYZ', 'breaks', 'breaks_multi'))) {
+    stop(paste0("Unknown group name: ", paste(group_names, collapse = ", ")))
+  }
+
+  # final analysis names
+  data_types <- c('results')
+  final_analyses <- c('tables', 'plots', 'tests')
+  analysis_results <- create_results_list(
+    dataset_names_full,
+    analysis_types,
+    data_types,
+    model_types,
+    final_analyses
+  )
+
+  for (i in seq_along(dataset_names_full)) {
+    dn <- dataset_names_full[i]
+    cat(paste0("*************** Analysing ", dn, " ***************\n"))
+    dataset_name_tmp <- dataset_names[i]
+    freq_tmp <- frequencies[i]
+    retrain_scn_tmp <- retrain_scenarios[[dn]]
+
+    unique_id_df <- load_data(
+      path_list = c('data', dataset_name_tmp),
+      name_list = c(dataset_name_tmp, 'unique_id_mapping'),
+      ext = '.csv'
+    ) |>
+      tibble::as_tibble()
+    breaks_df <- load_data(
+      path_list = c('results', dataset_name_tmp, freq_tmp, 'breaks'),
+      name_list = c(dataset_name_tmp, freq_tmp, 'breaks'),
+      ext = '.parquet'
+    ) |>
+      tibble::as_tibble()
+    if (!is.null(exclude_series)) {
+      cat("Excluding series from the analysis...\n")
+      unique_id_df <- unique_id_df |>
+        dplyr::filter(!unique_id %in% exclude_series)
+      breaks_df <- breaks_df |>
+        dplyr::filter(!unique_id %in% exclude_series)
+    }
+    # if sample is >= 0 then the series has a break in the test set
+    unique_id_w_breaks_in_test <- breaks_df |>
+      dplyr::filter(sample >= 0) |>
+      dplyr::pull(unique_id) |>
+      unique()
+    unique_id_w_1_break_in_test <- breaks_df |>
+      dplyr::filter(sample >= 0) |>
+      dplyr::group_by(unique_id) |>
+      dplyr::summarise(n_breaks = dplyr::n()) |>
+      dplyr::filter(n_breaks == 1) |>
+      dplyr::pull(unique_id) |>
+      unique()
+    unique_id_w_2p_breaks_in_test <- breaks_df |>
+      dplyr::filter(sample >= 0) |>
+      dplyr::group_by(unique_id) |>
+      dplyr::summarise(n_breaks = dplyr::n()) |>
+      dplyr::filter(n_breaks >= 2) |>
+      dplyr::pull(unique_id) |>
+      unique()
+    unique_id_no_breaks_in_test <- unique_id_df |>
+      dplyr::filter(!unique_id %in% unique_id_w_breaks_in_test) |>
+      dplyr::pull(unique_id) |>
+      unique()
+    # add groups to uunique_id_df
+    groups_df <- unique_id_df |>
+      dplyr::mutate(
+        ABC = factor(ABC, levels = c("A", "B", "C")),
+        XYZ = factor(XYZ, levels = c("X", "Y", "Z")),
+        breaks = ifelse(
+          unique_id %in% unique_id_w_breaks_in_test,
+          "Breaks",
+          "No breaks"
+        ) |>
+          factor(levels = c("No breaks", "Breaks")),
+        breaks_multi = case_when(
+          unique_id %in% unique_id_no_breaks_in_test ~ "No breaks",
+          unique_id %in% unique_id_w_1_break_in_test ~ "One break",
+          unique_id %in% unique_id_w_2p_breaks_in_test ~ "Two or more breaks"
+        ) |>
+          factor(levels = c("No breaks", "One break", "Two or more breaks"))
+      ) |>
+      dplyr::select(dplyr::all_of(c('unique_id', group_names)))
+    if (length(group_names) > 1) {
+      groups_df <- groups_df |>
+        tidyr::unite("group", dplyr::all_of(group_names), sep = " - ") |>
+        dplyr::mutate(group = factor(group)) |>
+        dplyr::select(dplyr::all_of(c('unique_id', 'group')))
+    } else {
+      groups_df <- groups_df |>
+        purrr::set_names(c('unique_id', 'group'))
+    }
+
+    for (at in analysis_types) {
+      cat(paste0("--- [ Analysis: ", at, " ] ---\n"))
+
+      if (at == "evaluation") {
+        cat("Loading and preparing the evaluation data...\n")
+        anal_df_tmp <- load_data(
+          path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
+          name_list = c(
+            dataset_name_tmp,
+            freq_tmp,
+            'eval',
+            analysis_sample_type
+          ),
+          ext = ext
+        ) |>
+          tibble::as_tibble()
+        if (!is.null(exclude_series)) {
+          cat("Excluding series from the analysis...\n")
+          anal_df_tmp <- anal_df_tmp |>
+            dplyr::filter(!unique_id %in% exclude_series)
+        }
+        anal_df_tmp <- anal_df_tmp |>
+          dplyr::filter(retrain_window %in% retrain_scn_tmp) |>
+          dplyr::filter(method %in% model_names) |>
+          recode_data(model_type_levels, model_names_abbr)
+        if (!is.null(eval_outlier_cleaning_metrics)) {
+          anal_df_tmp <- anal_df_tmp |>
+            clean_outliers(
+              .metric = eval_outlier_cleaning_metrics,
+              q = eval_outlier_cleaning_quantiles
+            )
+        }
+        # set the metrics to be used
+        anal_metrics <- eval_metrics
+      } else if (at == "stability") {
+        cat("Loading and preparing the stability data...\n")
+        anal_df_tmp <- load_data(
+          path_list = c('results', dataset_name_tmp, freq_tmp, 'stability'),
+          name_list = c(dataset_name_tmp, freq_tmp, 'stab'),
+          ext = ext
+        ) |>
+          tibble::as_tibble()
+        if (!is.null(exclude_series)) {
+          cat("Excluding series from the analysis...\n")
+          anal_df_tmp <- anal_df_tmp |>
+            dplyr::filter(!unique_id %in% exclude_series)
+        }
+        anal_df_tmp <- anal_df_tmp |>
+          dplyr::filter(retrain_window %in% retrain_scn_tmp) |>
+          dplyr::filter(method %in% model_names) |>
+          recode_data(model_type_levels, model_names_abbr) |>
+          dplyr::filter(type != 'ENSTIME') # remove ensemble time from stability analysis
+        if (!is.null(stab_outlier_cleaning_metrics)) {
+          anal_df_tmp <- anal_df_tmp |>
+            clean_outliers(
+              .metric = stab_outlier_cleaning_metrics,
+              q = stab_outlier_cleaning_quantiles
+            )
+        }
+        # set the metrics to be used
+        anal_metrics <- stab_metrics
+      } else if (at == "time" | at == "cost") {
+        next
+      } else {
+        stop(paste0("Unknown analysis type: ", at))
+      }
+
+      anal_df_tmp <- anal_df_tmp |>
+        dplyr::inner_join(groups_df, by = 'unique_id')
+      anal_df_agg_tmp <- anal_df_tmp |>
+        aggregate_data(
+          group_columns = c('type', 'method', 'retrain_window', 'group'),
+          drop_columns = c('unique_id', 'test_window', 'horizon'),
+          function_name = 'sum',
+          adjust_metrics = TRUE
+        )
+
+      # absolute or relative analysis
+      if (analysis_method == 'relative' & at != 'cost') {
+        cat("Compute relative metrics...\n")
+        anal_df_agg_tmp <- compute_relative_metrics(
+          data = anal_df_agg_tmp,
+          type = at,
+          group_col = 'group'
+        )
+      }
+
+      # store data of the analysis
+      analysis_results[[dn]][[at]][['data']] <- anal_df_agg_tmp
+
+      for (mt in model_types) {
+        cat(paste0(
+          "--- [ Model Types: ",
+          paste0(mt, collapse = ", "),
+          " ] ---\n"
+        ))
+        # filter datasets
+        anal_df_mt_tmp <- anal_df_tmp |> dplyr::filter(type %in% mt)
+        anal_df_agg_mt_tmp <- anal_df_agg_tmp |> dplyr::filter(type %in% mt)
+        model_names_abbr_mt_tmp <- unique(as.character(anal_df_mt_tmp$method))
+
+        # analysis tables, plots and tests
+        anal_tab <- anal_plot <- anal_test <- vector(
+          "list",
+          length(anal_metrics)
+        ) |>
+          purrr::set_names(anal_metrics)
+
+        for (am in anal_metrics) {
+          cat(paste0(
+            "Creating evaluation table, plot and tests for ",
+            toupper(am),
+            "...\n"
+          ))
+          tp_par <- get_table_plot_params(am, analysis_method)
+
+          anal_tab[[am]] <- table_retrain_results(
+            data = anal_df_agg_mt_tmp,
+            metric = am,
+            title = toupper(paste(dataset_name_tmp, '-', tp_par$label)),
+            digits = tp_par$digits,
+            format = tp_par$format,
+            group_col = 'group'
+          )
+
+          anal_plot[[am]] <- plot_retrain_results(
+            data = anal_df_agg_mt_tmp,
+            metric = am,
+            scaling_fun = tp_par$scaling_fun,
+            metric_label = tp_par$label,
+            title = toupper(dataset_name_tmp),
+            add_average = tp_par$add_average,
+            group_col = 'group'
+          )
+
+          anal_test[[am]] <- dplyr::bind_rows(
+            model_names_abbr_mt_tmp |>
+              purrr::map(
+                ~ test_differences(
+                  data = anal_df_mt_tmp,
+                  .metric = am,
+                  by = "retrain_window",
+                  .method = .x,
+                  group_col = 'group'
+                )
+              ) |>
+              dplyr::bind_rows() |>
+              dplyr::mutate("testing" = "retrain_window", .before = 1),
+            retrain_scn_tmp |>
+              purrr::map(
+                ~ test_differences(
+                  data = anal_df_mt_tmp,
+                  .metric = am,
+                  by = "method",
+                  .retrain_window = .x,
+                  group_col = 'group'
+                )
+              ) |>
+              dplyr::bind_rows() |>
+              dplyr::mutate("testing" = "method", .before = 1)
+          )
+        }
+
+        # store results
+        mt_name <- paste0(mt, collapse = "_")
+        analysis_results[[dn]][[at]][['results']][[mt_name]][[
+          'tables'
+        ]] <- anal_tab
+        analysis_results[[dn]][[at]][['results']][[mt_name]][[
+          'plots'
+        ]] <- anal_plot
+        analysis_results[[dn]][[at]][['results']][[mt_name]][[
+          'tests'
+        ]] <- anal_test
+      }
+    }
+  }
+
+  cat("Done!\n")
+  return(invisible(analysis_results))
 }

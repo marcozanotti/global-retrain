@@ -320,3 +320,151 @@ em2_lbl <- toupper(gsub(
 		em2
 	]][['overall']] +
 		ggplot2::labs(title = em2_lbl))
+
+
+# =========================================================================
+# * Analysis by Groups ----------------------------------------------------
+# =========================================================================
+
+config <- get_config('config/anal/anal_drift_retrain_config.yaml')
+group_names <- c('breaks') # group_name %in% c('ABC', 'XYZ', 'breaks', 'breaks_multi')
+group_res <- analyze_groups(config, group_names = group_names)
+lvl <- group_res[[df_nm]][['evaluation']][['data']][['group']] |> unique()
+
+# ** Tables ---------------------------------------------------------------
+for (l in lvl) {
+	for (i in seq_along(eval_metrics)) {
+		em <- eval_metrics[i]
+		tab_eval <- dplyr::bind_rows(
+			group_res[[df_nm]][['evaluation']][['results']][[mod_tps[1]]]$tables[[
+				em
+			]]$x$data,
+			group_res[[df_nm]][['evaluation']][['results']][[mod_tps[2]]]$tables[[
+				em
+			]]$x$data
+		)
+		tab_eval <- tab_eval |>
+			dplyr::filter(Group == l) |>
+			dplyr::select(-Group)
+		cat(paste(df_nm, em, l, "\n\n"))
+		print(xtable::xtable(tab_eval, digits = 3), include.rownames = FALSE)
+	}
+}
+
+# ** Plots -----------------------------------------------------------------
+for (k in mod_tps) {
+	eval_res <- group_res[[df_nm]][['evaluation']][['results']][[k]]
+	em1 <- eval_metrics[1]
+	em2 <- eval_metrics[2]
+	print(
+		(eval_res$plots[[em1]] + ggplot2::labs(title = NULL)) /
+			(eval_res$plots[[em2]] + ggplot2::labs(title = NULL)) +
+			patchwork::plot_layout(guides = "collect") &
+			ggplot2::theme(legend.position = "bottom")
+	)
+}
+
+# ** Tests -----------------------------------------------------------------
+
+# 1000x700 horizontal
+for (l in lvl) {
+	cat(paste("Group:", l, "\n"))
+	for (k in mod_tps) {
+		eval_res <- group_res[[df_nm]][['evaluation']][['results']][[k]]
+		em1 <- eval_metrics[1]
+		em1_lbl <- toupper(gsub(
+			"_",
+			" ",
+			ifelse(em1 == "scaled_mqloss", "smql", em1)
+		))
+		em2 <- eval_metrics[2]
+		em2_lbl <- toupper(gsub(
+			"_",
+			" ",
+			ifelse(em2 == "scaled_mqloss", "smql", em2)
+		))
+		ge1 <- plot_test_results_facet(
+			data = eval_res$tests[[em1]] |> dplyr::filter(group == l),
+			.metric = em1,
+			by = "retrain_window",
+			metric_label = em1_lbl,
+			title = paste(em1_lbl, "- Nemenyi Test")
+		)
+		ge2 <- plot_test_results_facet(
+			data = eval_res$tests[[em2]] |> dplyr::filter(group == l),
+			.metric = em2,
+			by = "retrain_window",
+			metric_label = em2_lbl,
+			title = paste(em2_lbl, "- Nemenyi Test")
+		)
+		if (k == "SF") {
+			g <- ge1 / ge2
+			print(g)
+		} else {
+			print(ge1)
+			print(ge2)
+		}
+	}
+}
+
+
+# =========================================================================
+# * Optimal Retraining Scenario by Groups ---------------------------------
+# =========================================================================
+
+config <- get_config('config/anal/anal_drift_retrain_config.yaml')
+group_names <- c('ABC', 'breaks') # group_name %in% c('ABC', 'XYZ', 'breaks', 'breaks_multi')
+opt_freq_groups <- analyze_optimal_frequency(
+	config,
+	adjust = 2,
+	group_names = group_names
+)
+
+em1 <- eval_metrics[1]
+em1_lbl <- toupper(gsub(
+	"_",
+	" ",
+	ifelse(em1 == "scaled_mqloss", "smql", em1)
+))
+em2 <- eval_metrics[2]
+em2_lbl <- toupper(gsub(
+	"_",
+	" ",
+	ifelse(em2 == "scaled_mqloss", "smql", em2)
+))
+
+# SF
+((opt_freq_groups[[df_nm]][['evaluation']][['results']][[mod_tps[1]]][[
+	'plots'
+]][[
+	em1
+]][[
+	'overall'
+]] +
+	ggplot2::labs(title = em1_lbl)) +
+	(opt_freq_groups[[df_nm]][['evaluation']][['results']][[mod_tps[1]]][[
+		'plots'
+	]][[
+		em2
+	]][['overall']] +
+		ggplot2::labs(title = em2_lbl))) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
+
+# ML_DL
+((opt_freq_groups[[df_nm]][['evaluation']][['results']][[mod_tps[2]]][[
+	'plots'
+]][[
+	em1
+]][[
+	'overall'
+]] +
+	ggplot2::labs(title = em1_lbl)) +
+	(opt_freq_groups[[df_nm]][['evaluation']][['results']][[mod_tps[2]]][[
+		'plots'
+	]][[
+		em2
+	]][['overall']] +
+		ggplot2::labs(title = em2_lbl))) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
