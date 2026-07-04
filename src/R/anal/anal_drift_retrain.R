@@ -327,7 +327,7 @@ em2_lbl <- toupper(gsub(
 # =========================================================================
 
 config <- get_config('config/anal/anal_drift_retrain_config.yaml')
-group_names <- c('breaks') # group_name %in% c('ABC', 'XYZ', 'breaks', 'breaks_multi')
+group_names <- c('breaks') # c('ABC', 'XYZ', 'breaks', 'breaks_multi', 'ABC - breaks')
 group_res <- analyze_groups(config, group_names = group_names)
 lvl <- group_res[[df_nm]][['evaluation']][['data']][['group']] |> unique()
 

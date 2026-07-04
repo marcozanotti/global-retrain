@@ -1,0 +1,139 @@
+{
+    "model_name": "AutoXGBoost",
+    "validation_plan": {
+        "valid_size": 104,
+        "n_valid_windows": 96,
+        "step_size": 1
+    },
+    "best_loss": 0.1705580299,
+    "best_params": {
+        "objective": "reg:squarederror",
+        "booster": "gbtree",
+        "eval_metric": "rmse",
+        "n_jobs": -1,
+        "device": "cpu",
+        "verbosity": 0,
+        "n_estimators": 964,
+        "max_depth": 7,
+        "max_leaves": 131,
+        "learning_rate": 0.0070176116,
+        "subsample": 0.8476494747,
+        "colsample_bytree": 0.377150477,
+        "reg_lambda": 0.0000002092,
+        "reg_alpha": 0.0000012893,
+        "min_child_weight": 8
+    },
+    "dist_params": {
+        "n_estimators": {
+            "high": 1000,
+            "log": false,
+            "low": 100,
+            "step": 1
+        },
+        "max_depth": {
+            "high": 10,
+            "log": false,
+            "low": 1,
+            "step": 1
+        },
+        "max_leaves": {
+            "high": 256,
+            "log": false,
+            "low": 2,
+            "step": 1
+        },
+        "learning_rate": {
+            "high": 0.2,
+            "log": true,
+            "low": 0.001,
+            "step": null
+        },
+        "subsample": {
+            "high": 1.0,
+            "log": false,
+            "low": 0.1,
+            "step": null
+        },
+        "colsample_bytree": {
+            "high": 1.0,
+            "log": false,
+            "low": 0.1,
+            "step": null
+        },
+        "reg_lambda": {
+            "high": 1.0,
+            "log": true,
+            "low": 0.00000001,
+            "step": null
+        },
+        "reg_alpha": {
+            "high": 1.0,
+            "log": true,
+            "low": 0.00000001,
+            "step": null
+        },
+        "min_child_weight": {
+            "high": 10,
+            "log": false,
+            "low": 2,
+            "step": 1
+        }
+    },
+    "init_params": {
+        "target_transforms": [
+            "LocalRobustScaler"
+        ],
+        "lags": [
+            1,
+            2,
+            3,
+            4,
+            9,
+            13,
+            18
+        ],
+        "lag_transforms": {
+            "1": [
+                {
+                    "global_": false,
+                    "groupby": null,
+                    "min_samples": null,
+                    "window_size": 9
+                },
+                {
+                    "global_": false,
+                    "groupby": null,
+                    "min_samples": null,
+                    "window_size": 13
+                }
+            ],
+            "4": [
+                {
+                    "global_": false,
+                    "groupby": null,
+                    "min_samples": null,
+                    "window_size": 9
+                },
+                {
+                    "global_": false,
+                    "groupby": null,
+                    "min_samples": null,
+                    "window_size": 13
+                }
+            ],
+            "9": [
+                {
+                    "global_": false,
+                    "groupby": null,
+                    "min_samples": null,
+                    "window_size": 13
+                }
+            ]
+        },
+        "date_features": [],
+        "num_threads": 12
+    },
+    "fit_params": {
+        "static_features": []
+    }
+}

@@ -1,0 +1,134 @@
+{
+    "model_name": "AutoLightGBM",
+    "validation_plan": {
+        "valid_size": 104,
+        "n_valid_windows": 96,
+        "step_size": 1
+    },
+    "best_loss": 0.1710972128,
+    "best_params": {
+        "objective": "l2",
+        "boosting_type": "gbdt",
+        "bagging_freq": 1,
+        "metric": "RMSE",
+        "boost_from_average": false,
+        "n_jobs": -1,
+        "device": "cpu",
+        "force_row_wise": true,
+        "verbosity": -1,
+        "n_estimators": 554,
+        "learning_rate": 0.0097359861,
+        "lambda_l1": 0.0350867787,
+        "lambda_l2": 0.0340336684,
+        "num_leaves": 95,
+        "feature_fraction": 0.8650704058,
+        "bagging_fraction": 0.5317517952
+    },
+    "dist_params": {
+        "objective": {
+            "choices": [
+                "l1",
+                "l2"
+            ]
+        },
+        "n_estimators": {
+            "high": 1000,
+            "log": false,
+            "low": 100,
+            "step": 1
+        },
+        "learning_rate": {
+            "high": 0.2,
+            "log": true,
+            "low": 0.001,
+            "step": null
+        },
+        "lambda_l1": {
+            "high": 10.0,
+            "log": true,
+            "low": 0.00000001,
+            "step": null
+        },
+        "lambda_l2": {
+            "high": 10.0,
+            "log": true,
+            "low": 0.00000001,
+            "step": null
+        },
+        "num_leaves": {
+            "high": 4096,
+            "log": true,
+            "low": 2,
+            "step": 1
+        },
+        "feature_fraction": {
+            "high": 1.0,
+            "log": false,
+            "low": 0.5,
+            "step": null
+        },
+        "bagging_fraction": {
+            "high": 1.0,
+            "log": false,
+            "low": 0.5,
+            "step": null
+        }
+    },
+    "init_params": {
+        "target_transforms": [
+            "LocalRobustScaler"
+        ],
+        "lags": [
+            1,
+            2,
+            3,
+            4,
+            9,
+            13,
+            18
+        ],
+        "lag_transforms": {
+            "1": [
+                {
+                    "global_": false,
+                    "groupby": null,
+                    "min_samples": null,
+                    "window_size": 9
+                },
+                {
+                    "global_": false,
+                    "groupby": null,
+                    "min_samples": null,
+                    "window_size": 13
+                }
+            ],
+            "4": [
+                {
+                    "global_": false,
+                    "groupby": null,
+                    "min_samples": null,
+                    "window_size": 9
+                },
+                {
+                    "global_": false,
+                    "groupby": null,
+                    "min_samples": null,
+                    "window_size": 13
+                }
+            ],
+            "9": [
+                {
+                    "global_": false,
+                    "groupby": null,
+                    "min_samples": null,
+                    "window_size": 13
+                }
+            ]
+        },
+        "date_features": [],
+        "num_threads": 12
+    },
+    "fit_params": {
+        "static_features": []
+    }
+}

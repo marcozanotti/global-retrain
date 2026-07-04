@@ -1864,11 +1864,11 @@ analyze_optimal_frequency <- function(config, adjust = 1, group_names = NULL) {
   # exclude series config
   exclude_series <- config$exclude_series
 
-  if (!is.null(group_names)) {
-    if (!all(group_names %in% c('ABC', 'XYZ', 'breaks', 'breaks_multi'))) {
-      stop(paste0("Unknown group name: ", paste(group_names, collapse = ", ")))
-    }
-  }
+  # if (!is.null(group_names)) {
+  #   if (!all(group_names %in% c('ABC', 'XYZ', 'breaks', 'breaks_multi'))) {
+  #     stop(paste0("Unknown group name: ", paste(group_names, collapse = ", ")))
+  #   }
+  # }
 
   # final analysis names
   data_types <- c('results')
@@ -2577,7 +2577,8 @@ analyze_groups <- function(config, group_names = 'breaks') {
   # analysis config
   analysis_name <- config$analysis$name
   analysis_types <- config$analysis$types[
-    config$analysis$types %in% c('evaluation', 'stability')
+    config$analysis$types %in%
+      c('evaluation', 'stability', 'evaluation_prepost')
   ]
   analysis_method <- config$analysis$method
   analysis_sample_type <- config$analysis$sample_type
@@ -2603,9 +2604,9 @@ analyze_groups <- function(config, group_names = 'breaks') {
   # exclude series config
   exclude_series <- config$exclude_series
 
-  if (!all(group_names %in% c('ABC', 'XYZ', 'breaks', 'breaks_multi'))) {
-    stop(paste0("Unknown group name: ", paste(group_names, collapse = ", ")))
-  }
+  # if (!all(group_names %in% c('ABC', 'XYZ', 'breaks', 'breaks_multi'))) {
+  #   stop(paste0("Unknown group name: ", paste(group_names, collapse = ", ")))
+  # }
 
   # final analysis names
   data_types <- c('results')
@@ -2757,19 +2758,90 @@ analyze_groups <- function(config, group_names = 'breaks') {
         }
         # set the metrics to be used
         anal_metrics <- stab_metrics
+      } else if (at == "evaluation_prepost") {
+        cat("Loading and preparing the pre-post evaluation data...\n")
+        anal_df_tmp <- load_data(
+          path_list = c('results', dataset_name_tmp, freq_tmp, 'preds'),
+          name_list = c(
+            dataset_name_tmp,
+            freq_tmp,
+            'preds',
+            'eval',
+            analysis_sample_type
+          ),
+          ext = ext
+        ) |>
+          tibble::as_tibble()
+        if (!is.null(exclude_series)) {
+          cat("Excluding series from the analysis...\n")
+          anal_df_tmp <- anal_df_tmp |>
+            dplyr::filter(!unique_id %in% exclude_series)
+        }
+        anal_df_tmp <- anal_df_tmp |>
+          dplyr::filter(retrain_window %in% retrain_scn_tmp) |>
+          dplyr::filter(method %in% model_names) |>
+          recode_data(model_type_levels, model_names_abbr)
+        if (!is.null(eval_outlier_cleaning_metrics)) {
+          anal_df_tmp <- anal_df_tmp |>
+            clean_outliers(
+              .metric = eval_outlier_cleaning_metrics,
+              q = eval_outlier_cleaning_quantiles
+            )
+        }
+        # set the metrics to be used
+        anal_metrics <- eval_metrics
       } else if (at == "time" | at == "cost") {
         next
       } else {
         stop(paste0("Unknown analysis type: ", at))
       }
 
-      anal_df_tmp <- anal_df_tmp |>
-        dplyr::inner_join(groups_df, by = 'unique_id')
+      if (at == "evaluation_prepost") {
+        test_breaks_df <- breaks_df |>
+          dplyr::filter(sample >= 0) |>
+          dplyr::group_by(unique_id) |>
+          dplyr::arrange(sample) |>
+          dplyr::mutate(group = seq_len(dplyr::n())) |>
+          dplyr::ungroup() |>
+          dplyr::select(unique_id, sample, group)
+        anal_df_tmp <- anal_df_tmp |>
+          dplyr::filter(!unique_id %in% unique_id_no_breaks_in_test) |>
+          dplyr::left_join(test_breaks_df, by = c('unique_id', 'sample')) |>
+          dplyr::group_by(
+            unique_id,
+            type,
+            method,
+            test_window,
+            horizon,
+            retrain_window
+          ) |>
+          tidyr::fill(group, .direction = "down") |>
+          dplyr::mutate(group = ifelse(is.na(group), 0, group)) |>
+          dplyr::ungroup()
+        anal_df_tmp <- anal_df_tmp |>
+          aggregate_data(
+            group_columns = c(
+              'unique_id',
+              'type',
+              'method',
+              'test_window',
+              'horizon',
+              'retrain_window',
+              'group'
+            ),
+            drop_columns = c('sample'),
+            function_name = 'mean',
+            adjust_metrics = TRUE
+          )
+      } else {
+        anal_df_tmp <- anal_df_tmp |>
+          dplyr::inner_join(groups_df, by = 'unique_id')
+      }
       anal_df_agg_tmp <- anal_df_tmp |>
         aggregate_data(
           group_columns = c('type', 'method', 'retrain_window', 'group'),
           drop_columns = c('unique_id', 'test_window', 'horizon'),
-          function_name = 'sum',
+          function_name = 'mean',
           adjust_metrics = TRUE
         )
 

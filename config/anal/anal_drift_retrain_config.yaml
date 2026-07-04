@@ -1,7 +1,13 @@
 analysis: {
     'name': 'drift_retrain',
-    'types': ['evaluation', 'time', 'cost'],
-    'method': 'relative', # absolute / relative # run twice, one for absolute and one for relative
+    'types': [
+        # 'evaluation', 
+        'evaluation_prepost',
+        # 'stability', 
+        # 'time', 
+        # 'cost'
+    ],
+    'method': 'absolute', # absolute / relative # run twice, one for absolute and one for relative
     'sample_type': 'overlap' # overlap / nooverlap
 }
 
