@@ -327,21 +327,19 @@ em2_lbl <- toupper(gsub(
 # =========================================================================
 
 config <- get_config('config/anal/anal_drift_retrain_config.yaml')
-group_names <- c('breaks') # c('ABC', 'XYZ', 'breaks', 'breaks_multi', 'ABC - breaks')
+analysis <- 'evaluation_prepost' # 'evaluation', 'stability', 'evaluation_prepost'
+group_names <- c('breaks') # 'ABC', 'XYZ', 'breaks', 'breaks_multi', if c('ABC', 'breaks') then cartesian product
 group_res <- analyze_groups(config, group_names = group_names)
-lvl <- group_res[[df_nm]][['evaluation']][['data']][['group']] |> unique()
+anal_res <- group_res[[df_nm]][[analysis]][['results']]
+lvl <- group_res[[df_nm]][[analysis]][['data']][['group']] |> unique()
 
 # ** Tables ---------------------------------------------------------------
 for (l in lvl) {
 	for (i in seq_along(eval_metrics)) {
 		em <- eval_metrics[i]
 		tab_eval <- dplyr::bind_rows(
-			group_res[[df_nm]][['evaluation']][['results']][[mod_tps[1]]]$tables[[
-				em
-			]]$x$data,
-			group_res[[df_nm]][['evaluation']][['results']][[mod_tps[2]]]$tables[[
-				em
-			]]$x$data
+			anal_res[[mod_tps[1]]]$tables[[em]]$x$data,
+			anal_res[[mod_tps[2]]]$tables[[em]]$x$data
 		)
 		tab_eval <- tab_eval |>
 			dplyr::filter(Group == l) |>
@@ -353,7 +351,7 @@ for (l in lvl) {
 
 # ** Plots -----------------------------------------------------------------
 for (k in mod_tps) {
-	eval_res <- group_res[[df_nm]][['evaluation']][['results']][[k]]
+	eval_res <- anal_res[[k]]
 	em1 <- eval_metrics[1]
 	em2 <- eval_metrics[2]
 	print(
@@ -370,7 +368,7 @@ for (k in mod_tps) {
 for (l in lvl) {
 	cat(paste("Group:", l, "\n"))
 	for (k in mod_tps) {
-		eval_res <- group_res[[df_nm]][['evaluation']][['results']][[k]]
+		eval_res <- anal_res[[k]]
 		em1 <- eval_metrics[1]
 		em1_lbl <- toupper(gsub(
 			"_",
@@ -413,12 +411,14 @@ for (l in lvl) {
 # =========================================================================
 
 config <- get_config('config/anal/anal_drift_retrain_config.yaml')
-group_names <- c('ABC', 'breaks') # group_name %in% c('ABC', 'XYZ', 'breaks', 'breaks_multi')
+analysis <- 'evaluation_prepost' # 'evaluation', 'stability', 'evaluation_prepost'
+group_names <- c('breaks') # 'ABC', 'XYZ', 'breaks', 'breaks_multi', if c('ABC', 'breaks') then cartesian product
 opt_freq_groups <- analyze_optimal_frequency(
 	config,
 	adjust = 2,
 	group_names = group_names
 )
+opt_res <- opt_freq_groups[[df_nm]][[analysis]][['results']]
 
 em1 <- eval_metrics[1]
 em1_lbl <- toupper(gsub(
@@ -434,37 +434,17 @@ em2_lbl <- toupper(gsub(
 ))
 
 # SF
-((opt_freq_groups[[df_nm]][['evaluation']][['results']][[mod_tps[1]]][[
-	'plots'
-]][[
-	em1
-]][[
-	'overall'
-]] +
+((opt_res[[mod_tps[1]]][['plots']][[em1]][['overall']] +
 	ggplot2::labs(title = em1_lbl)) +
-	(opt_freq_groups[[df_nm]][['evaluation']][['results']][[mod_tps[1]]][[
-		'plots'
-	]][[
-		em2
-	]][['overall']] +
+	(opt_res[[mod_tps[1]]][['plots']][[em2]][['overall']] +
 		ggplot2::labs(title = em2_lbl))) +
 	patchwork::plot_layout(guides = "collect") &
 	ggplot2::theme(legend.position = "bottom")
 
 # ML_DL
-((opt_freq_groups[[df_nm]][['evaluation']][['results']][[mod_tps[2]]][[
-	'plots'
-]][[
-	em1
-]][[
-	'overall'
-]] +
+((opt_res[[mod_tps[2]]][['plots']][[em1]][['overall']] +
 	ggplot2::labs(title = em1_lbl)) +
-	(opt_freq_groups[[df_nm]][['evaluation']][['results']][[mod_tps[2]]][[
-		'plots'
-	]][[
-		em2
-	]][['overall']] +
+	(opt_res[[mod_tps[2]]][['plots']][[em2]][['overall']] +
 		ggplot2::labs(title = em2_lbl))) +
 	patchwork::plot_layout(guides = "collect") &
 	ggplot2::theme(legend.position = "bottom")
