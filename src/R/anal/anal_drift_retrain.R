@@ -297,6 +297,65 @@ em2_lbl <- toupper(gsub(
 
 
 # =========================================================================
+# * Pareto Accuracy-Cost --------------------------------------------------
+# =========================================================================
+
+metrics <- c('rmsse', 'cost', 'scaled_mqloss')
+
+acc_data <- res[[df_nm]][['evaluation']]$data
+cost_data <- res[[df_nm]][['cost']]$data
+pareto_data <- dplyr::left_join(
+	acc_data,
+	cost_data,
+	by = c('type', 'method', 'retrain_window')
+) |>
+	dplyr::mutate(retrain_window = as.factor(retrain_window)) |>
+	dplyr::select(type, method, retrain_window, dplyr::all_of(metrics)) |>
+	dplyr::group_by(method) |>
+	dplyr::mutate(
+		dplyr::across(
+			cost,
+			~ (.x - min(.x)) / (max(.x) - min(.x)) * 100
+		)
+	) |>
+	dplyr::ungroup()
+
+metrics_plot <- c('scaled_mqloss', 'cost')
+params <- purrr::map(metrics_plot, ~ get_table_plot_params(.x, 'absolute'))
+names(params) <- c('x', 'y')
+
+pareto_data |>
+	ggplot2::ggplot(
+		ggplot2::aes(
+			x = .data[[metrics_plot[1]]],
+			y = .data[[metrics_plot[2]]],
+			# color = .data[['retrain_window']]
+		)
+	) +
+	ggplot2::geom_point() +
+	ggrepel::geom_text_repel(
+		ggplot2::aes(label = .data[['retrain_window']]),
+		col = 'black',
+		vjust = -0.25
+	) +
+	# ggplot2::scale_x_continuous(labels = params$x$scaling_fun) +
+	# ggplot2::scale_y_continuous(labels = params$y$scaling_fun) +
+	# ggplot2::scale_color_manual(values = colors_lbls_2) +
+	ggplot2::labs(
+		title = paste0('Pareto Frontier: ', params$x$label, ' - Cost'),
+		x = params$x$label,
+		y = 'Normalized Cost'
+	) +
+	ggplot2::theme_bw() +
+	ggplot2::theme(
+		plot.title = ggplot2::element_text(hjust = 0.5),
+		legend.position = "bottom",
+		axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)
+	) +
+	ggplot2::facet_wrap(~method, ncol = 2, scales = "fixed")
+
+
+# =========================================================================
 # * Analysis by Groups ----------------------------------------------------
 # =========================================================================
 

@@ -1805,7 +1805,7 @@ plot_scatter_results <- function(
       ggplot2::aes(
         x = .data[[metrics[1]]],
         y = .data[[metrics[2]]],
-        col = .data[['type']]
+        color = .data[['type']]
       )
     )
 
