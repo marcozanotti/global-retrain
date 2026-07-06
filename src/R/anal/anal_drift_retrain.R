@@ -20,8 +20,8 @@ reticulate::source_python('src/Python/utils/utilities.py')
 analysis_file_name <- 'docs/drift_retrain/absolute_evalstab_overlap_20260705_092948.RData'
 analysis_file_name <- 'docs/drift_retrain/relative_evalstab_overlap_20260705_093024.RData'
 
-analysis_file_name <- 'docs/drift_retrain/absolute_evalstab_overlap_20260706_114749.RData'
-analysis_file_name <- 'docs/drift_retrain/relative_evalstab_overlap_20260706_114655.RData'
+analysis_file_name <- 'docs/drift_retrain/absolute_evalstabtimecost_overlap_20260706_170326.RData'
+analysis_file_name <- 'docs/drift_retrain/relative_evalstabtimecost_overlap_20260706_170406.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results
@@ -117,60 +117,7 @@ for (k in mod_tps) {
 
 
 # =========================================================================
-# * Time ------------------------------------------------------------------
-# =========================================================================
-
-# ** Tables ---------------------------------------------------------------
-for (i in seq_along(time_metrics)) {
-	tm <- time_metrics[i]
-	tab_time <- dplyr::bind_rows(
-		res[[df_nm]][['time']][['results']][[mod_tps[1]]]$tables[[tm]]$x$data,
-		res[[df_nm]][['time']][['results']][[mod_tps[2]]]$tables[[tm]]$x$data
-	)
-	cat(paste(df_nm, tm, "\n\n"))
-	print(xtable::xtable(tab_time, digits = 3), include.rownames = FALSE)
-}
-
-# ** Plots -----------------------------------------------------------------
-for (k in mod_tps) {
-	time_res <- res[[df_nm]][['time']][['results']][[k]]
-	tm <- time_metrics[1]
-	print(time_res$plots[[tm]] + ggplot2::labs(title = NULL))
-}
-
-
-# =========================================================================
-# * Cost ------------------------------------------------------------------
-# =========================================================================
-
-# ** Tables ---------------------------------------------------------------
-for (i in seq_along(cost_metrics)) {
-	cm <- cost_metrics[i]
-	tab_cost <- dplyr::bind_rows(
-		res[[df_nm]][['cost']][['results']][[mod_tps[1]]]$tables[[cm]]$x$data,
-		res[[df_nm]][['cost']][['results']][[mod_tps[2]]]$tables[[cm]]$x$data
-	)
-	cat(paste(df_nm, cm, "\n\n"))
-	print(xtable::xtable(tab_cost, digits = 3), include.rownames = FALSE)
-}
-
-# ** Plots -----------------------------------------------------------------
-cost_res1 <- res[[df_nm]][['cost']][['results']][[mod_tps[1]]]
-cost_res2 <- res[[df_nm]][['cost']][['results']][[mod_tps[2]]]
-
-(cost_res1$plots[['cost']] + ggplot2::labs(title = NULL)) +
-	(cost_res1$plots[['savings_perc']] + ggplot2::labs(title = NULL)) +
-	patchwork::plot_layout(guides = "collect") &
-	ggplot2::theme(legend.position = "bottom")
-
-(cost_res2$plots[['cost']] + ggplot2::labs(title = NULL)) +
-	(cost_res2$plots[['savings_perc']] + ggplot2::labs(title = NULL)) +
-	patchwork::plot_layout(guides = "collect") &
-	ggplot2::theme(legend.position = "bottom")
-
-
-# =========================================================================
-# * Environmental ---------------------------------------------------------
+# * Time, Cost, and Environment -------------------------------------------
 # =========================================================================
 
 cost_per_hour <- 3.5
@@ -182,7 +129,7 @@ cost_data <- res[[df_nm]][['cost']]$data |>
 	dplyr::filter(type != 'SF') |>
 	dplyr::group_by(retrain_window) |>
 	dplyr::summarise('average' = mean(.data[['cost']]), .groups = 'drop') |>
-	dplyr::mutate(type = 'x', method = 'x', .before = 1) |>
+	dplyr::mutate(type = 'Average', method = 'Average', .before = 1) |>
 	purrr::set_names(c('type', 'method', 'retrain_window', 'cost')) |>
 	dplyr::mutate(
 		ct_hours = cost / cost_per_hour,
@@ -193,6 +140,29 @@ cost_data <- res[[df_nm]][['cost']]$data |>
 	)
 
 # ** Tables ---------------------------------------------------------------
+# time tables
+for (i in seq_along(time_metrics)) {
+	tm <- time_metrics[i]
+	tab_time <- dplyr::bind_rows(
+		res[[df_nm]][['time']][['results']][[mod_tps[1]]]$tables[[tm]]$x$data,
+		res[[df_nm]][['time']][['results']][[mod_tps[2]]]$tables[[tm]]$x$data
+	)
+	cat(paste(df_nm, tm, "\n\n"))
+	print(xtable::xtable(tab_time, digits = 3), include.rownames = FALSE)
+}
+
+# cost tables
+for (i in seq_along(cost_metrics)) {
+	cm <- cost_metrics[i]
+	tab_cost <- dplyr::bind_rows(
+		res[[df_nm]][['cost']][['results']][[mod_tps[1]]]$tables[[cm]]$x$data,
+		res[[df_nm]][['cost']][['results']][[mod_tps[2]]]$tables[[cm]]$x$data
+	)
+	cat(paste(df_nm, cm, "\n\n"))
+	print(xtable::xtable(tab_cost, digits = 3), include.rownames = FALSE)
+}
+
+# environmental impact table
 tab_env <- cost_data |>
 	dplyr::select(retrain_window, energy_mwh, carbon_tons) |>
 	tidyr::pivot_longer(
@@ -211,6 +181,28 @@ tab_env <- cost_data |>
 print(xtable::xtable(tab_env, digits = 3), include.rownames = FALSE)
 
 # ** Plots -----------------------------------------------------------------
+# time plots
+for (k in mod_tps) {
+	time_res <- res[[df_nm]][['time']][['results']][[k]]
+	tm <- time_metrics[1]
+	print(time_res$plots[[tm]] + ggplot2::labs(title = NULL))
+}
+
+# cost plots
+cost_res1 <- res[[df_nm]][['cost']][['results']][[mod_tps[1]]]
+cost_res2 <- res[[df_nm]][['cost']][['results']][[mod_tps[2]]]
+
+(cost_res1$plots[['cost']] + ggplot2::labs(title = NULL)) +
+	(cost_res1$plots[['savings_perc']] + ggplot2::labs(title = NULL)) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
+
+(cost_res2$plots[['cost']] + ggplot2::labs(title = NULL)) +
+	(cost_res2$plots[['savings_perc']] + ggplot2::labs(title = NULL)) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
+
+# evaluation of environmental impact
 cost_data |>
 	dplyr::select(retrain_window, energy_mwh, carbon_tons) |>
 	tidyr::pivot_longer(
@@ -244,6 +236,19 @@ cost_data |>
 		legend.position = 'bottom'
 	) +
 	ggplot2::guides(fill = ggplot2::guide_legend(title = 'Metric'))
+
+# time + savings
+for (k in mod_tps) {
+	time_res <- res[[df_nm]][['time']][['results']][[k]]
+	cost_res <- res[[df_nm]][['cost']][['results']][[k]]
+	tm <- time_metrics[1]
+	g <- ((time_res$plots[[tm]] + ggplot2::labs(title = NULL)) +
+		# (cost_res$plots[['cost']] + ggplot2::labs(title = NULL)) +
+		(cost_res$plots[['savings_perc']] + ggplot2::labs(title = NULL))) +
+		patchwork::plot_layout(guides = "collect") &
+		ggplot2::theme(legend.position = "bottom")
+	print(g)
+}
 
 
 # =========================================================================
