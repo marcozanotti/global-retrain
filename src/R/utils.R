@@ -272,7 +272,7 @@ compute_relative_metrics <- function(data, type, group_col = NULL) {
     dplyr::select(-dplyr::any_of(c('type', 'retrain_window'))) |>
     dplyr::rename_with(~ stringr::str_c(.x, "_ref"))
 
-  if (type == 'evaluation') {
+  if (type == 'evaluation' | type == 'evaluation_prepost') {
     relative_data <- relative_data |>
       dplyr::mutate(
         bias = abs(bias) / abs(bias_ref),
@@ -2060,52 +2060,58 @@ analyze_optimal_frequency <- function(config, adjust = 1, group_names = NULL) {
         stop(paste0("Unknown analysis type: ", at))
       }
 
-      if (at == "evaluation_prepost") {
-        test_breaks_df <- breaks_df |>
-          dplyr::filter(sample >= 0) |>
-          dplyr::group_by(unique_id) |>
-          dplyr::arrange(sample) |>
-          dplyr::mutate(group = seq_len(dplyr::n())) |>
-          dplyr::ungroup() |>
-          dplyr::select(unique_id, sample, group)
-        anal_df_tmp <- anal_df_tmp |>
-          dplyr::filter(!unique_id %in% unique_id_no_breaks_in_test) |>
-          dplyr::left_join(test_breaks_df, by = c('unique_id', 'sample')) |>
-          dplyr::group_by(
-            unique_id,
-            type,
-            method,
-            test_window,
-            horizon,
-            retrain_window
-          ) |>
-          tidyr::fill(group, .direction = "down") |>
-          dplyr::mutate(group = ifelse(is.na(group), 0, group)) |>
-          dplyr::ungroup() |>
-          dplyr::mutate(
-            group = factor(
-              group,
-              levels = c(0, sort(unique(group)[unique(group) != 0]))
+      if (!is.null(group_names)) {
+        if (at == "evaluation_prepost") {
+          test_breaks_df <- breaks_df |>
+            dplyr::filter(sample >= 0) |>
+            dplyr::group_by(unique_id) |>
+            dplyr::arrange(sample) |>
+            dplyr::mutate(group = seq_len(dplyr::n())) |>
+            dplyr::ungroup() |>
+            dplyr::select(unique_id, sample, group)
+          anal_df_tmp <- anal_df_tmp |>
+            dplyr::filter(!unique_id %in% unique_id_no_breaks_in_test) |>
+            dplyr::left_join(test_breaks_df, by = c('unique_id', 'sample')) |>
+            dplyr::group_by(
+              unique_id,
+              type,
+              method,
+              test_window,
+              horizon,
+              retrain_window
+            ) |>
+            tidyr::fill(group, .direction = "down") |>
+            dplyr::mutate(group = ifelse(is.na(group), 0, group)) |>
+            dplyr::ungroup() |>
+            dplyr::mutate(
+              group = factor(
+                group,
+                levels = c(0, sort(unique(test_breaks_df$group))),
+                labels = c(
+                  "T0",
+                  paste0("T", sort(unique(test_breaks_df$group)))
+                )
+              )
             )
-          )
-        anal_df_tmp <- anal_df_tmp |>
-          aggregate_data(
-            group_columns = c(
-              'unique_id',
-              'type',
-              'method',
-              'test_window',
-              'horizon',
-              'retrain_window',
-              'group'
-            ),
-            drop_columns = c('sample'),
-            function_name = 'mean',
-            adjust_metrics = TRUE
-          )
-      } else {
-        anal_df_tmp <- anal_df_tmp |>
-          dplyr::inner_join(groups_df, by = 'unique_id')
+          anal_df_tmp <- anal_df_tmp |>
+            aggregate_data(
+              group_columns = c(
+                'unique_id',
+                'type',
+                'method',
+                'test_window',
+                'horizon',
+                'retrain_window',
+                'group'
+              ),
+              drop_columns = c('sample'),
+              function_name = 'mean',
+              adjust_metrics = TRUE
+            )
+        } else {
+          anal_df_tmp <- anal_df_tmp |>
+            dplyr::inner_join(groups_df, by = 'unique_id')
+        }
       }
 
       for (mt in model_types) {
@@ -2273,7 +2279,7 @@ plot_optimal_retrain_results <- function(
     brks <- c(7, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360)
     lim <- c(1, 365)
   } else {
-    brks <- c(1, 4, 8, 12, 16, 24, 32, 40, 48, 52, 60, 68, 76, 84, 92, 100, 104)
+    brks <- c(1, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104) # WARN: breaking changes
     lim <- c(1, 105) # WARN: breaking changes depending on the dataset frequency (weekly vs. monthly)
   }
 
@@ -2894,7 +2900,14 @@ analyze_groups <- function(config, group_names = 'breaks') {
           ) |>
           tidyr::fill(group, .direction = "down") |>
           dplyr::mutate(group = ifelse(is.na(group), 0, group)) |>
-          dplyr::ungroup()
+          dplyr::ungroup() |>
+          dplyr::mutate(
+            group = factor(
+              group,
+              levels = c(0, sort(unique(test_breaks_df$group))),
+              labels = c("T0", paste0("T", sort(unique(test_breaks_df$group))))
+            )
+          )
         anal_df_tmp <- anal_df_tmp |>
           aggregate_data(
             group_columns = c(
@@ -2914,6 +2927,7 @@ analyze_groups <- function(config, group_names = 'breaks') {
         anal_df_tmp <- anal_df_tmp |>
           dplyr::inner_join(groups_df, by = 'unique_id')
       }
+
       anal_df_agg_tmp <- anal_df_tmp |>
         aggregate_data(
           group_columns = c('type', 'method', 'retrain_window', 'group'),

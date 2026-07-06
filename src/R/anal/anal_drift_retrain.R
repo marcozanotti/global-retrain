@@ -17,8 +17,11 @@ reticulate::source_python('src/Python/utils/utilities.py')
 # Load & prepare data -----------------------------------------------------
 
 # run twice, one for absolute and one for relative
-analysis_file_name <- 'docs/drift_retrain/absolute_evaltimecost_overlap_20260629_001122.RData'
-analysis_file_name <- 'docs/drift_retrain/relative_evaltimecost_overlap_20260629_001102.RData'
+analysis_file_name <- 'docs/drift_retrain/absolute_evalstab_overlap_20260705_092948.RData'
+analysis_file_name <- 'docs/drift_retrain/relative_evalstab_overlap_20260705_093024.RData'
+
+analysis_file_name <- 'docs/drift_retrain/absolute_evalstab_overlap_20260706_114749.RData'
+analysis_file_name <- 'docs/drift_retrain/relative_evalstab_overlap_20260706_114655.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results
@@ -32,6 +35,7 @@ rm(analysis_results)
 df_nm <- 'hapag_region_weekly'
 mod_tps <- c('SF', 'ML_DL')
 eval_metrics <- c('rmsse', 'scaled_mqloss')
+stab_metrics <- c('smapc', 'smqpc')
 time_metrics <- c('total_sample_time')
 cost_metrics <- c('cost', 'savings_perc')
 
@@ -103,46 +107,11 @@ for (k in mod_tps) {
 		g <- ge1 / ge2
 		print(g)
 	} else {
-		print(ge1)
-		print(ge2)
-	}
-}
-
-# 750x650 vertical
-for (k in mod_tps) {
-	eval_res <- res[[df_nm]][['evaluation']][['results']][[k]]
-	em1 <- eval_metrics[1]
-	em1_lbl <- toupper(gsub(
-		"_",
-		" ",
-		ifelse(em1 == "scaled_mqloss", "smql", em1)
-	))
-	em2 <- eval_metrics[2]
-	em2_lbl <- toupper(gsub(
-		"_",
-		" ",
-		ifelse(em2 == "scaled_mqloss", "smql", em2)
-	))
-	ge1 <- plot_test_results_facet(
-		data = eval_res$tests[[em1]],
-		.metric = em1,
-		by = "retrain_window",
-		metric_label = em1_lbl,
-		title = paste(em1_lbl, "- Nemenyi Test")
-	)
-	ge2 <- plot_test_results_facet(
-		data = eval_res$tests[[em2]],
-		.metric = em2,
-		by = "retrain_window",
-		metric_label = em2_lbl,
-		title = paste(em2_lbl, "- Nemenyi Test")
-	)
-	if (k == "SF") {
-		g <- ge1 + ge2
+		g <- ((ge1 + ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+			(ge2 + ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
+			patchwork::plot_layout(guides = "collect") &
+			ggplot2::theme(legend.position = "bottom")
 		print(g)
-	} else {
-		print(ge1)
-		print(ge2)
 	}
 }
 
@@ -327,9 +296,10 @@ em2_lbl <- toupper(gsub(
 # =========================================================================
 
 config <- get_config('config/anal/anal_drift_retrain_config.yaml')
-analysis <- 'evaluation_prepost' # 'evaluation', 'stability', 'evaluation_prepost'
 group_names <- c('breaks') # 'ABC', 'XYZ', 'breaks', 'breaks_multi', if c('ABC', 'breaks') then cartesian product
 group_res <- analyze_groups(config, group_names = group_names)
+
+analysis <- 'evaluation' # 'evaluation', 'stability', 'evaluation_prepost'
 anal_res <- group_res[[df_nm]][[analysis]][['results']]
 lvl <- group_res[[df_nm]][[analysis]][['data']][['group']] |> unique()
 
@@ -350,21 +320,75 @@ for (l in lvl) {
 }
 
 # ** Plots -----------------------------------------------------------------
+
+# 2 levels
 for (k in mod_tps) {
-	eval_res <- anal_res[[k]]
-	em1 <- eval_metrics[1]
-	em2 <- eval_metrics[2]
+	anal_res_k <- anal_res[[k]]
+	if (analysis %in% c('evaluation', 'evaluation_prepost')) {
+		m1 <- eval_metrics[1]
+		m2 <- eval_metrics[2]
+	} else if (analysis == 'stability') {
+		m1 <- stab_metrics[1]
+		m2 <- stab_metrics[2]
+	}
 	print(
-		(eval_res$plots[[em1]] + ggplot2::labs(title = NULL)) /
-			(eval_res$plots[[em2]] + ggplot2::labs(title = NULL)) +
+		(anal_res_k$plots[[m1]] + ggplot2::labs(title = NULL)) /
+			(anal_res_k$plots[[m2]] + ggplot2::labs(title = NULL)) +
+			patchwork::plot_layout(guides = "collect") &
+			ggplot2::theme(legend.position = "bottom")
+	)
+}
+
+# 3 levels
+for (k in mod_tps) {
+	anal_res_k <- anal_res[[k]]
+	if (analysis %in% c('evaluation', 'evaluation_prepost')) {
+		m1 <- eval_metrics[1]
+		m2 <- eval_metrics[2]
+	} else if (analysis == 'stability') {
+		m1 <- stab_metrics[1]
+		m2 <- stab_metrics[2]
+	}
+	print(
+		(anal_res_k$plots[[m1]] +
+			ggplot2::labs(title = NULL) +
+			ggplot2::facet_wrap(~group, ncol = 3, scales = "fixed")) /
+			(anal_res_k$plots[[m2]] +
+				ggplot2::labs(title = NULL) +
+				ggplot2::facet_wrap(~group, ncol = 3, scales = "fixed")) +
+			patchwork::plot_layout(guides = "collect") &
+			ggplot2::theme(legend.position = "bottom")
+	)
+}
+
+# 6 levels
+for (k in mod_tps) {
+	anal_res_k <- anal_res[[k]]
+	if (analysis %in% c('evaluation', 'evaluation_prepost')) {
+		m1 <- eval_metrics[1]
+		m2 <- eval_metrics[2]
+	} else if (analysis == 'stability') {
+		m1 <- stab_metrics[1]
+		m2 <- stab_metrics[2]
+	}
+	print(
+		(anal_res_k$plots[[m1]] +
+			ggplot2::labs(title = NULL) +
+			ggplot2::facet_wrap(~group, ncol = 2, scales = "fixed")) +
+			patchwork::plot_layout(guides = "collect") &
+			ggplot2::theme(legend.position = "bottom")
+	)
+	print(
+		(anal_res_k$plots[[m2]] +
+			ggplot2::labs(title = NULL) +
+			ggplot2::facet_wrap(~group, ncol = 2, scales = "fixed")) +
 			patchwork::plot_layout(guides = "collect") &
 			ggplot2::theme(legend.position = "bottom")
 	)
 }
 
 # ** Tests -----------------------------------------------------------------
-
-# 1000x700 horizontal
+g_list <- list()
 for (l in lvl) {
 	cat(paste("Group:", l, "\n"))
 	for (k in mod_tps) {
@@ -395,15 +419,139 @@ for (l in lvl) {
 			metric_label = em2_lbl,
 			title = paste(em2_lbl, "- Nemenyi Test")
 		)
-		if (k == "SF") {
-			g <- ge1 / ge2
-			print(g)
-		} else {
-			print(ge1)
-			print(ge2)
-		}
+		g_list[[paste(k, l, sep = "_")]] <- list(ge1 = ge1, ge2 = ge2)
 	}
 }
+
+# breaks
+((g_list$`SF_No breaks`$ge1 +
+	ggplot2::labs(title = paste0("No Breaks - ", em1_lbl), x = NULL)) +
+	(g_list$`SF_Breaks`$ge1 +
+		ggplot2::labs(title = paste0("Breaks - ", em1_lbl), x = NULL))) /
+	((g_list$`SF_No breaks`$ge2 +
+		ggplot2::labs(title = paste0("No Breaks - ", em2_lbl))) +
+		(g_list$`SF_Breaks`$ge2 +
+			ggplot2::labs(title = paste0("Breaks - ", em2_lbl)))) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
+
+((g_list$`ML_DL_No breaks`$ge1 +
+	ggplot2::labs(title = paste0("No Breaks - ", em1_lbl), x = NULL) +
+	ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+	(g_list$`ML_DL_Breaks`$ge1 +
+		ggplot2::labs(title = paste0("Breaks - ", em1_lbl), x = NULL) +
+		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
+
+((g_list$`ML_DL_No breaks`$ge2 +
+	ggplot2::labs(title = paste0("No Breaks - ", em2_lbl), x = NULL) +
+	ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+	(g_list$`ML_DL_Breaks`$ge2 +
+		ggplot2::labs(title = paste0("Breaks - ", em2_lbl), x = NULL) +
+		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
+
+
+# breaks multi
+((g_list$`SF_No breaks`$ge1 +
+	ggplot2::labs(title = paste0("No Breaks - ", em1_lbl), x = NULL) +
+	ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+	(g_list$`SF_One break`$ge1 +
+		ggplot2::labs(title = paste0("One break - ", em1_lbl), x = NULL) +
+		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+	(g_list$`SF_Two or more breaks`$ge1 +
+		ggplot2::labs(
+			title = paste0("Two or more breaks - ", em1_lbl),
+			x = NULL
+		) +
+		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) /
+	((g_list$`SF_No breaks`$ge2 +
+		ggplot2::labs(title = paste0("No Breaks - ", em2_lbl)) +
+		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+		(g_list$`SF_One break`$ge2 +
+			ggplot2::labs(title = paste0("One break - ", em2_lbl)) +
+			ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+		(g_list$`SF_Two or more breaks`$ge2 +
+			ggplot2::labs(title = paste0("Two or more breaks - ", em2_lbl)) +
+			ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
+
+((g_list$`ML_DL_No breaks`$ge1 +
+	ggplot2::labs(title = paste0("No Breaks - ", em1_lbl), x = NULL) +
+	ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+	(g_list$`ML_DL_One break`$ge1 +
+		ggplot2::labs(title = paste0("One break - ", em1_lbl), x = NULL) +
+		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+	(g_list$`ML_DL_Two or more breaks`$ge1 +
+		ggplot2::labs(title = paste0("Two or more breaks - ", em1_lbl)) +
+		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
+
+((g_list$`ML_DL_No breaks`$ge2 +
+	ggplot2::labs(title = paste0("No Breaks - ", em2_lbl), x = NULL) +
+	ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+	(g_list$`ML_DL_One break`$ge2 +
+		ggplot2::labs(title = paste0("One break - ", em2_lbl), x = NULL) +
+		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+	(g_list$`ML_DL_Two or more breaks`$ge2 +
+		ggplot2::labs(title = paste0("Two or more breaks - ", em2_lbl)) +
+		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
+
+
+# pre-post
+((g_list$`SF_T0`$ge1 +
+	ggplot2::labs(title = paste0("T0 - ", em1_lbl), x = NULL) +
+	ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+	(g_list$`SF_T1`$ge1 +
+		ggplot2::labs(title = paste0("T1 - ", em1_lbl), x = NULL) +
+		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+	(g_list$`SF_T2`$ge1 +
+		ggplot2::labs(
+			title = paste0("T2 - ", em1_lbl),
+			x = NULL
+		) +
+		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) /
+	((g_list$`SF_T0`$ge2 +
+		ggplot2::labs(title = paste0("T0 - ", em2_lbl)) +
+		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+		(g_list$`SF_T1`$ge2 +
+			ggplot2::labs(title = paste0("T1 - ", em2_lbl)) +
+			ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+		(g_list$`SF_T2`$ge2 +
+			ggplot2::labs(title = paste0("T2 - ", em2_lbl)) +
+			ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
+
+((g_list$`ML_DL_T0`$ge1 +
+	ggplot2::labs(title = paste0("T0 - ", em1_lbl), x = NULL) +
+	ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+	(g_list$`ML_DL_T1`$ge1 +
+		ggplot2::labs(title = paste0("T1 - ", em1_lbl), x = NULL) +
+		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+	(g_list$`ML_DL_T2`$ge1 +
+		ggplot2::labs(title = paste0("T2 - ", em1_lbl)) +
+		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
+
+((g_list$`ML_DL_T0`$ge2 +
+	ggplot2::labs(title = paste0("T0 - ", em2_lbl), x = NULL) +
+	ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+	(g_list$`ML_DL_T1`$ge2 +
+		ggplot2::labs(title = paste0("T1 - ", em2_lbl), x = NULL) +
+		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
+	(g_list$`ML_DL_T2`$ge2 +
+		ggplot2::labs(title = paste0("T2 - ", em2_lbl)) +
+		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
 
 
 # =========================================================================
@@ -411,13 +559,14 @@ for (l in lvl) {
 # =========================================================================
 
 config <- get_config('config/anal/anal_drift_retrain_config.yaml')
-analysis <- 'evaluation_prepost' # 'evaluation', 'stability', 'evaluation_prepost'
 group_names <- c('breaks') # 'ABC', 'XYZ', 'breaks', 'breaks_multi', if c('ABC', 'breaks') then cartesian product
 opt_freq_groups <- analyze_optimal_frequency(
 	config,
 	adjust = 2,
 	group_names = group_names
 )
+
+analysis <- 'evaluation_prepost' # 'evaluation', 'stability', 'evaluation_prepost'
 opt_res <- opt_freq_groups[[df_nm]][[analysis]][['results']]
 
 em1 <- eval_metrics[1]

@@ -7,7 +7,7 @@ analysis: {
         # 'time', 
         # 'cost'
     ],
-    'method': 'relative', # absolute / relative # run twice, one for absolute and one for relative
+    'method': 'absolute', # absolute / relative # run twice, one for absolute and one for relative
     'sample_type': 'overlap' # overlap / nooverlap
 }
 
@@ -24,16 +24,16 @@ models: {
         'LinearRegression', 
         'XGBRegressor',
         'LGBMRegressor', 
-        'MLP',
-        'NBEATSx'
+        # 'MLP',
+        # 'NBEATSx'
     ],
     'model_names_abbr': [
         'ETS',
         'LR', 
         'XGBoost', 
         'LGBM',
-        'MLP',
-        'NBEATSx'
+        # 'MLP',
+        # 'NBEATSx'
     ]
 }
 
