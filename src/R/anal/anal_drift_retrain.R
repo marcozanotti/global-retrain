@@ -363,7 +363,7 @@ config <- get_config('config/anal/anal_drift_retrain_config.yaml')
 group_names <- c('breaks') # 'ABC', 'XYZ', 'breaks', 'breaks_multi', if c('ABC', 'breaks') then cartesian product
 group_res <- analyze_groups(config, group_names = group_names)
 
-analysis <- 'evaluation' # 'evaluation', 'stability', 'evaluation_prepost'
+analysis <- 'evaluation_prepost' # 'evaluation', 'stability', 'evaluation_prepost'
 anal_res <- group_res[[df_nm]][[analysis]][['results']]
 lvl <- group_res[[df_nm]][[analysis]][['data']][['group']] |> unique()
 
@@ -566,7 +566,6 @@ for (l in lvl) {
 		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
 	patchwork::plot_layout(guides = "collect") &
 	ggplot2::theme(legend.position = "bottom")
-
 
 # pre-post
 ((g_list$`SF_T0`$ge1 +
