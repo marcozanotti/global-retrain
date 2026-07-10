@@ -72,6 +72,22 @@ for (k in mod_tps) {
 	)
 }
 
+eval_data <- res[[df_nm]][['evaluation']]$data
+em1 <- eval_metrics[1]
+em2 <- eval_metrics[2]
+(plot_retrain_results(
+	data = eval_data,
+	metric = em1,
+	metric_label = "RMSSE"
+) +
+	plot_retrain_results(
+		data = eval_data,
+		metric = em2,
+		metric_label = "SMQL"
+	)) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
+
 # ** Tests -----------------------------------------------------------------
 
 # 1000x700 horizontal
