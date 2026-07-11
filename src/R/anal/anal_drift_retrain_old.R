@@ -57,6 +57,17 @@ for (i in seq_along(eval_metrics)) {
 }
 
 # ** Plots -----------------------------------------------------------------
+# for (k in mod_tps) {
+# 	eval_res <- res[[df_nm]][['evaluation']][['results']][[k]]
+# 	em1 <- eval_metrics[1]
+# 	em2 <- eval_metrics[2]
+# 	print(
+# 		(eval_res$plots[[em1]] + ggplot2::labs(title = NULL)) +
+# 			(eval_res$plots[[em2]] + ggplot2::labs(title = NULL)) +
+# 			patchwork::plot_layout(guides = "collect") &
+# 			ggplot2::theme(legend.position = "bottom")
+# 	)
+# }
 eval_data <- res[[df_nm]][['evaluation']]$data |>
 	dplyr::mutate(type = ifelse(type == "SF", "Local", "Global"))
 em1 <- eval_metrics[1]
@@ -121,77 +132,27 @@ for (k in mod_tps) {
 
 
 # =========================================================================
-# * Optimal Retraining Scenario -------------------------------------------
-# =========================================================================
-
-config <- get_config('config/anal/anal_drift_retrain_config.yaml')
-opt_freq <- analyze_optimal_frequency(config, adjust = 2)
-
-em1 <- eval_metrics[1]
-em2 <- eval_metrics[2]
-
-opt_freq_data_em1 <- opt_freq[[df_nm]][['evaluation']][['data']] |>
-	dplyr::mutate(
-		type = factor(
-			ifelse(type == "SF", "Local", "Global"),
-			levels = c("Global", "Local")
-		)
-	) |>
-	dplyr::select(dplyr::all_of(c(
-		'type',
-		'method',
-		'retrain_window',
-		'unique_id',
-		em1
-	))) |>
-	dplyr::group_by(type, method, unique_id) |>
-	dplyr::arrange(type, method, unique_id, .data[[em1]]) |>
-	dplyr::slice_head(n = 1) |>
-	dplyr::ungroup()
-opt_freq_data_em2 <- opt_freq[[df_nm]][['evaluation']][['data']] |>
-	dplyr::mutate(
-		type = factor(
-			ifelse(type == "SF", "Local", "Global"),
-			levels = c("Global", "Local")
-		)
-	) |>
-	dplyr::select(dplyr::all_of(c(
-		'type',
-		'method',
-		'retrain_window',
-		'unique_id',
-		em2
-	))) |>
-	dplyr::group_by(type, method, unique_id) |>
-	dplyr::arrange(type, method, unique_id, .data[[em2]]) |>
-	dplyr::slice_head(n = 1) |>
-	dplyr::ungroup()
-
-(plot_optimal_retrain_results(
-	data = opt_freq_data_em1,
-	metric = em1,
-	title = 'RMSSE',
-	overall_only = FALSE,
-	adjust = 2,
-	by_type = TRUE
-) +
-	ggplot2::theme(legend.position = "bottom")) +
-	(plot_optimal_retrain_results(
-		data = opt_freq_data_em2,
-		metric = em2,
-		title = 'SMQL',
-		overall_only = FALSE,
-		adjust = 2,
-		by_type = TRUE
-	) +
-		ggplot2::theme(legend.position = "bottom")) +
-	patchwork::plot_layout(guides = "collect") &
-	ggplot2::theme(legend.position = "bottom")
-
-
-# =========================================================================
 # * Time, Cost, and Environment -------------------------------------------
 # =========================================================================
+
+cost_per_hour <- 3.5
+energy_coef <- 0.5 # energy coefficient at full utilization is approximately 0.18-0.30 kWh
+pue <- 1.54 # power usage effectiveness (PUE)
+carbon_intensity <- 0.38 # kg CO2 per kWh
+
+cost_data <- res[[df_nm]][['cost']]$data |>
+	dplyr::filter(type != 'SF') |>
+	dplyr::group_by(retrain_window) |>
+	dplyr::summarise('average' = mean(.data[['cost']]), .groups = 'drop') |>
+	dplyr::mutate(type = 'Average', method = 'Average', .before = 1) |>
+	purrr::set_names(c('type', 'method', 'retrain_window', 'cost')) |>
+	dplyr::mutate(
+		ct_hours = cost / cost_per_hour,
+		energy_kwh = ct_hours * energy_coef * pue,
+		carbon_kg = energy_kwh * carbon_intensity,
+		energy_mwh = energy_kwh / 1000,
+		carbon_tons = carbon_kg / 1000
+	)
 
 # ** Tables ---------------------------------------------------------------
 # time tables
@@ -216,7 +177,93 @@ for (i in seq_along(cost_metrics)) {
 	print(xtable::xtable(tab_cost, digits = 3), include.rownames = FALSE)
 }
 
+# environmental impact table
+# tab_env <- cost_data |>
+# 	dplyr::select(retrain_window, energy_mwh, carbon_tons) |>
+# 	tidyr::pivot_longer(
+# 		cols = c(energy_mwh, carbon_tons),
+# 		names_to = 'metric',
+# 		values_to = 'value'
+# 	) |>
+# 	dplyr::mutate(
+# 		metric = dplyr::case_when(
+# 			metric == 'energy_mwh' ~ 'Energy (MWh)',
+# 			metric == 'carbon_tons' ~ 'Carbon Emissions (tons CO2)',
+# 			TRUE ~ metric
+# 		)
+# 	) |>
+# 	tidyr::pivot_wider(names_from = retrain_window, values_from = value)
+# print(xtable::xtable(tab_env, digits = 3), include.rownames = FALSE)
+
 # ** Plots -----------------------------------------------------------------
+# time plots
+# for (k in mod_tps) {
+# 	time_res <- res[[df_nm]][['time']][['results']][[k]]
+# 	tm <- time_metrics[1]
+# 	print(time_res$plots[[tm]] + ggplot2::labs(title = NULL))
+# }
+
+# cost plots
+# cost_res1 <- res[[df_nm]][['cost']][['results']][[mod_tps[1]]]
+# cost_res2 <- res[[df_nm]][['cost']][['results']][[mod_tps[2]]]
+
+# (cost_res1$plots[['cost']] + ggplot2::labs(title = NULL)) +
+# 	(cost_res1$plots[['savings_perc']] + ggplot2::labs(title = NULL)) +
+# 	patchwork::plot_layout(guides = "collect") &
+# 	ggplot2::theme(legend.position = "bottom")
+
+# (cost_res2$plots[['cost']] + ggplot2::labs(title = NULL)) +
+# 	(cost_res2$plots[['savings_perc']] + ggplot2::labs(title = NULL)) +
+# 	patchwork::plot_layout(guides = "collect") &
+# 	ggplot2::theme(legend.position = "bottom")
+
+# evaluation of environmental impact
+# cost_data |>
+# 	dplyr::select(retrain_window, energy_mwh, carbon_tons) |>
+# 	tidyr::pivot_longer(
+# 		cols = c(energy_mwh, carbon_tons),
+# 		names_to = 'metric',
+# 		values_to = 'value'
+# 	) |>
+# 	dplyr::mutate(
+# 		metric = dplyr::case_when(
+# 			metric == 'energy_mwh' ~ 'Energy (MWh)',
+# 			metric == 'carbon_tons' ~ 'Carbon Emissions (tons CO2)',
+# 			TRUE ~ metric
+# 		)
+# 	) |>
+# 	dplyr::mutate(retrain_window = as.factor(retrain_window)) |>
+# 	ggplot2::ggplot(ggplot2::aes(
+# 		x = retrain_window,
+# 		y = value,
+# 		fill = metric
+# 	)) +
+# 	ggplot2::geom_bar(stat = 'identity', position = 'dodge') +
+# 	ggplot2::labs(
+# 		x = 'Retrain Scenario (r)',
+# 		y = '',
+# 		title = 'Environmental Impact of Retraining Scenarios',
+# 	) +
+# 	ggplot2::theme_minimal() +
+# 	ggplot2::scale_fill_manual(values = c('#129f4d', '#dc7114')) +
+# 	ggplot2::theme(
+# 		plot.title = ggplot2::element_text(hjust = 0.5),
+# 		legend.position = 'bottom'
+# 	) +
+# 	ggplot2::guides(fill = ggplot2::guide_legend(title = 'Metric'))
+
+# time + savings
+# for (k in mod_tps) {
+# 	time_res <- res[[df_nm]][['time']][['results']][[k]]
+# 	cost_res <- res[[df_nm]][['cost']][['results']][[k]]
+# 	tm <- time_metrics[1]
+# 	g <- ((time_res$plots[[tm]] + ggplot2::labs(title = NULL)) +
+# 		# (cost_res$plots[['cost']] + ggplot2::labs(title = NULL)) +
+# 		(cost_res$plots[['savings_perc']] + ggplot2::labs(title = NULL))) +
+# 		patchwork::plot_layout(guides = "collect") &
+# 		ggplot2::theme(legend.position = "bottom")
+# 	print(g)
+# }
 time_data <- res[[df_nm]][['time']]$data |>
 	dplyr::mutate(type = ifelse(type == "SF", "Local", "Global"))
 cost_data <- res[[df_nm]][['cost']]$data |>
@@ -237,6 +284,51 @@ cm2 <- cost_metrics[2]
 	)) +
 	patchwork::plot_layout(guides = "collect") &
 	ggplot2::theme(legend.position = "bottom")
+
+
+# =========================================================================
+# * Optimal Retraining Scenario -------------------------------------------
+# =========================================================================
+
+config <- get_config('config/anal/anal_drift_retrain_config.yaml')
+opt_freq <- analyze_optimal_frequency(config, adjust = 2)
+
+em1 <- eval_metrics[1]
+em1_lbl <- toupper(gsub(
+	"_",
+	" ",
+	ifelse(em1 == "scaled_mqloss", "smql", em1)
+))
+em2 <- eval_metrics[2]
+em2_lbl <- toupper(gsub(
+	"_",
+	" ",
+	ifelse(em2 == "scaled_mqloss", "smql", em2)
+))
+
+# SF
+(opt_freq[[df_nm]][['evaluation']][['results']][[mod_tps[1]]][['plots']][[
+	em1
+]][[
+	'overall'
+]] +
+	ggplot2::labs(title = em1_lbl)) +
+	(opt_freq[[df_nm]][['evaluation']][['results']][[mod_tps[1]]][['plots']][[
+		em2
+	]][['overall']] +
+		ggplot2::labs(title = em2_lbl))
+
+# ML_DL
+(opt_freq[[df_nm]][['evaluation']][['results']][[mod_tps[2]]][['plots']][[
+	em1
+]][[
+	'overall'
+]] +
+	ggplot2::labs(title = em1_lbl)) +
+	(opt_freq[[df_nm]][['evaluation']][['results']][[mod_tps[2]]][['plots']][[
+		em2
+	]][['overall']] +
+		ggplot2::labs(title = em2_lbl))
 
 
 # =========================================================================
@@ -757,67 +849,33 @@ opt_freq_groups <- analyze_optimal_frequency(
 )
 
 analysis <- 'evaluation' # 'evaluation', 'stability', 'evaluation_prepost'
+opt_res <- opt_freq_groups[[df_nm]][[analysis]][['results']]
+
 em1 <- eval_metrics[1]
+em1_lbl <- toupper(gsub(
+	"_",
+	" ",
+	ifelse(em1 == "scaled_mqloss", "smql", em1)
+))
 em2 <- eval_metrics[2]
+em2_lbl <- toupper(gsub(
+	"_",
+	" ",
+	ifelse(em2 == "scaled_mqloss", "smql", em2)
+))
 
-opt_freq_data_groups_em1 <- opt_freq_groups[[df_nm]][[analysis]][['data']] |>
-	dplyr::mutate(
-		type = factor(
-			ifelse(type == "SF", "Local", "Global"),
-			levels = c("Global", "Local")
-		)
-	) |>
-	dplyr::select(dplyr::all_of(c(
-		'type',
-		'method',
-		'retrain_window',
-		'unique_id',
-		'group',
-		em1
-	))) |>
-	dplyr::group_by(type, method, group, unique_id) |>
-	dplyr::arrange(type, method, group, unique_id, .data[[em1]]) |>
-	dplyr::slice_head(n = 1) |>
-	dplyr::ungroup()
-opt_freq_data_groups_em2 <- opt_freq_groups[[df_nm]][[analysis]][['data']] |>
-	dplyr::mutate(
-		type = factor(
-			ifelse(type == "SF", "Local", "Global"),
-			levels = c("Global", "Local")
-		)
-	) |>
-	dplyr::select(dplyr::all_of(c(
-		'type',
-		'method',
-		'retrain_window',
-		'unique_id',
-		'group',
-		em2
-	))) |>
-	dplyr::group_by(type, method, group, unique_id) |>
-	dplyr::arrange(type, method, group, unique_id, .data[[em2]]) |>
-	dplyr::slice_head(n = 1) |>
-	dplyr::ungroup()
+# SF
+((opt_res[[mod_tps[1]]][['plots']][[em1]][['overall']] +
+	ggplot2::labs(title = em1_lbl)) +
+	(opt_res[[mod_tps[1]]][['plots']][[em2]][['overall']] +
+		ggplot2::labs(title = em2_lbl))) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
 
-(plot_optimal_retrain_results(
-	data = opt_freq_data_groups_em1,
-	metric = em1,
-	title = 'RMSSE',
-	overall_only = FALSE,
-	adjust = 2,
-	group_col = 'group',
-	by_type = TRUE
-) +
-	ggplot2::theme(legend.position = "bottom")) +
-	(plot_optimal_retrain_results(
-		data = opt_freq_data_groups_em2,
-		metric = em2,
-		title = 'SMQL',
-		overall_only = FALSE,
-		adjust = 2,
-		group_col = 'group',
-		by_type = TRUE
-	) +
-		ggplot2::theme(legend.position = "bottom")) +
+# ML_DL
+((opt_res[[mod_tps[2]]][['plots']][[em1]][['overall']] +
+	ggplot2::labs(title = em1_lbl)) +
+	(opt_res[[mod_tps[2]]][['plots']][[em2]][['overall']] +
+		ggplot2::labs(title = em2_lbl))) +
 	patchwork::plot_layout(guides = "collect") &
 	ggplot2::theme(legend.position = "bottom")

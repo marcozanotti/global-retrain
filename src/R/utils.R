@@ -451,6 +451,7 @@ plot_retrain_results <- function(
   title = "",
   smooth = FALSE,
   add_average = FALSE,
+  by_type = TRUE,
   group_col = NULL
 ) {
   cat("Creating plot...\n")
@@ -510,16 +511,28 @@ plot_retrain_results <- function(
   data_plot <- data |>
     dplyr::mutate(retrain_window = factor(retrain_window, ordered = TRUE))
 
-  g <- data_plot |>
-    ggplot2::ggplot(
-      ggplot2::aes(
-        x = .data[['retrain_window']],
-        y = .data[[metric]],
-        color = .data[['method']],
-        linetype = .data[['type']],
-        group = .data[['method']]
+  if (by_type) {
+    g <- data_plot |>
+      ggplot2::ggplot(
+        ggplot2::aes(
+          x = .data[['retrain_window']],
+          y = .data[[metric]],
+          color = .data[['method']],
+          linetype = .data[['type']],
+          group = .data[['method']]
+        )
       )
-    )
+  } else {
+    g <- data_plot |>
+      ggplot2::ggplot(
+        ggplot2::aes(
+          x = .data[['retrain_window']],
+          y = .data[[metric]],
+          color = .data[['method']],
+          group = .data[['method']]
+        )
+      )
+  }
 
   if (smooth) {
     g <- g +
@@ -602,6 +615,164 @@ plot_retrain_results <- function(
     ) +
     ggplot2::theme_minimal() +
     ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+
+  return(g)
+}
+
+plot_retrain_results_differences <- function(
+  data,
+  metric,
+  scaling_fun = function(x) {
+    scales::number(x, accuracy = 0.001)
+  },
+  metric_label = "",
+  title = "",
+  aggregate_by = 'type',
+  group_col = 'group',
+  reference_level = 'No breaks',
+  metric_type = 'absolute'
+) {
+  cat("Creating plot...\n")
+
+  # method_lvls <- c(
+  #   'ETS',
+  #   'ARIMA',
+  #   'LR',
+  #   'RF',
+  #   'XGBoost',
+  #   'LGBM',
+  #   'CatBoost',
+  #   'MLP',
+  #   'LSTM',
+  #   'TCN',
+  #   'NBEATSx',
+  #   'NHITS',
+  #   'Ens2A',
+  #   'Ens3A',
+  #   'Ens4A',
+  #   'Ens5A',
+  #   'Ens2T',
+  #   'Ens3T',
+  #   'Ens4T',
+  #   'Ens5T'
+  # )
+  # colors_lbls <- c(
+  #   "ETS" = "#17BECF", "ARIMA" = "#FF6961",
+  # 	"LR" = "#003366", "RF" = "#17BECF", "XGBoost" = "#B3E5FC", "LGBM" = "#2CA02C", "CatBoost" = "#B2DF8A",
+  # 	"MLP" = "#FEE08B", "LSTM" = "#FFD700", "TCN" = "#FFA500", "NBEATSx" = "#FF6961", "NHITS" = "#E31A1C",
+  # 	"Ens2A" = "#003366", "Ens3A" = "#17BECF", "Ens4A" = "#2CA02C", "Ens5A" = "#B2DF8A",
+  # 	"Ens2T" = "#FFD700", "Ens3T" = "#FFA500",	"Ens4T" = "#FF6961", "Ens5T" = "#E31A1C"
+  # )
+  # colors_lbls <- c(
+  #   "ETS" = "#17BECF",
+  #   "ARIMA" = "#FF6961",
+  #   "LR" = "#003366",
+  #   "RF" = "#17BECF",
+  #   "XGBoost" = "#B3E5FC",
+  #   "LGBM" = "#2CA02C",
+  #   "CatBoost" = "#B2DF8A",
+  #   "MLP" = "#FEE08B",
+  #   "LSTM" = "#FFD700",
+  #   "TCN" = "#FFA500",
+  #   "NBEATSx" = "#FF6961",
+  #   "NHITS" = "#E31A1C",
+  #   "Ens2A" = "#FFB6C1",
+  #   "Ens3A" = "#E754B1",
+  #   "Ens4A" = "#9467BD",
+  #   "Ens5A" = "#6A0DAD",
+  #   "Ens2T" = "#F3D2B3",
+  #   "Ens3T" = "#E6AB8D",
+  #   "Ens4T" = "#C97B63",
+  #   "Ens5T" = "#8C564B"
+  # )
+
+  colors_lbls <- c("Local" = "#e4c40e", "Global" = "#1e9506")
+
+  data_plot <- data |>
+    dplyr::mutate(retrain_window = factor(retrain_window, ordered = TRUE))
+
+  aggregate_by <- c(aggregate_by, group_col, 'retrain_window')
+
+  non_reference_levels <- as.character(unique(data_plot[[group_col]]))
+  non_reference_levels <- non_reference_levels[
+    non_reference_levels != reference_level
+  ]
+
+  data_plot <- data_plot |>
+    aggregate_data(
+      group_columns = aggregate_by,
+      function_name = 'mean',
+      adjust_metrics = TRUE
+    ) |>
+    dplyr::select(dplyr::all_of(c(aggregate_by, metric))) |>
+    tidyr::pivot_wider(
+      names_from = dplyr::all_of(group_col),
+      values_from = dplyr::all_of(metric)
+    ) |>
+    dplyr::rowwise() |>
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(non_reference_levels),
+        ~ .x - .data[[reference_level]],
+        .names = "absolute_{.col}"
+      ),
+      dplyr::across(
+        dplyr::all_of(non_reference_levels),
+        ~ (.x - .data[[reference_level]]) / .data[[reference_level]],
+        .names = "relative_{.col}"
+      )
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::select(-dplyr::all_of(c(reference_level, non_reference_levels))) |>
+    tidyr::pivot_longer(
+      cols = -dplyr::any_of(aggregate_by),
+      names_to = 'metric',
+      values_to = 'value'
+    ) |>
+    tidyr::separate(metric, into = c('metric_tp', group_col), sep = '_') |>
+    dplyr::mutate(
+      group = factor(.data[[group_col]], levels = c(non_reference_levels))
+    ) |>
+    dplyr::filter(.data[['metric_tp']] == metric_type)
+
+  g <- data_plot |>
+    ggplot2::ggplot(
+      ggplot2::aes(
+        x = .data[['retrain_window']],
+        y = .data[['value']],
+        color = .data[[aggregate_by[1]]],
+        fill = .data[[aggregate_by[1]]],
+        group = .data[[aggregate_by[1]]]
+      )
+    )
+
+  g <- g +
+    ggplot2::geom_bar(stat = 'identity', position = 'dodge', alpha = 0.8)
+
+  facet_formula <- stats::as.formula(paste0("~", group_col))
+  facet_labeller <- ggplot2::as_labeller(function(x) {
+    paste0(x, " (vs ", reference_level, ")")
+  })
+
+  g <- g +
+    ggplot2::scale_y_continuous(labels = scaling_fun) +
+    ggplot2::scale_color_manual(values = colors_lbls) +
+    ggplot2::scale_fill_manual(values = colors_lbls) +
+    ggplot2::labs(
+      title = title,
+      x = 'Retrain Scenario (r)',
+      y = metric_label,
+      color = 'Type',
+      fill = 'Type',
+      group = 'Type'
+    ) +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)) +
+    ggplot2::facet_wrap(
+      facet_formula,
+      scales = 'fixed',
+      labeller = facet_labeller
+    )
 
   return(g)
 }
@@ -1309,7 +1480,7 @@ get_table_plot_params <- function(analysis_metric, analysis_method) {
     digits <- 0
     format <- 'dollar'
     label <- 'Cost ($)'
-    add_average <- TRUE
+    add_average <- FALSE # TRUE
     scaling_fun <- function(x) {
       scales::dollar(x, big.mark = ",", decimal.mark = '.', accuracy = 1)
     }
@@ -1317,7 +1488,7 @@ get_table_plot_params <- function(analysis_metric, analysis_method) {
     digits <- 0
     format <- 'dollar'
     label <- 'Savings ($)'
-    add_average <- TRUE
+    add_average <- FALSE # TRUE
     scaling_fun <- function(x) {
       scales::dollar(x, big.mark = ",", decimal.mark = '.', accuracy = 1)
     }
@@ -1325,7 +1496,7 @@ get_table_plot_params <- function(analysis_metric, analysis_method) {
     digits <- 0
     format <- 'percent'
     label <- 'Savings (%)'
-    add_average <- TRUE
+    add_average <- FALSE # TRUE
     scaling_fun <- function(x) {
       scales::percent(x, scale = 1, accuracy = 1)
     }
@@ -1871,7 +2042,7 @@ analyze_optimal_frequency <- function(config, adjust = 1, group_names = NULL) {
   # }
 
   # final analysis names
-  data_types <- c('results')
+  data_types <- c('data', 'results')
   final_analyses <- c('plots')
   analysis_results <- create_results_list(
     dataset_names_full,
@@ -2114,6 +2285,8 @@ analyze_optimal_frequency <- function(config, adjust = 1, group_names = NULL) {
         }
       }
 
+      analysis_results[[dn]][[at]][['data']] <- anal_df_tmp
+
       for (mt in model_types) {
         cat(paste0(
           "--- [ Model Types: ",
@@ -2221,10 +2394,12 @@ plot_optimal_retrain_results <- function(
   title = "",
   overall_only = TRUE,
   adjust = 1,
-  group_col = NULL
+  group_col = NULL,
+  by_type = FALSE
 ) {
   cat("Creating plot...\n")
 
+  type_lvl <- c("Local", "Global")
   method_lvls <- c(
     'ETS',
     'ARIMA',
@@ -2247,28 +2422,32 @@ plot_optimal_retrain_results <- function(
     'Ens4T',
     'Ens5T'
   )
-  colors_lbls <- c(
-    "ETS" = "#17BECF",
-    "ARIMA" = "#FF6961",
-    "LR" = "#003366",
-    "RF" = "#17BECF",
-    "XGBoost" = "#B3E5FC",
-    "LGBM" = "#2CA02C",
-    "CatBoost" = "#B2DF8A",
-    "MLP" = "#FEE08B",
-    "LSTM" = "#FFD700",
-    "TCN" = "#FFA500",
-    "NBEATSx" = "#FF6961",
-    "NHITS" = "#E31A1C",
-    "Ens2A" = "#FFB6C1",
-    "Ens3A" = "#E754B1",
-    "Ens4A" = "#9467BD",
-    "Ens5A" = "#6A0DAD",
-    "Ens2T" = "#F3D2B3",
-    "Ens3T" = "#E6AB8D",
-    "Ens4T" = "#C97B63",
-    "Ens5T" = "#8C564B"
-  )
+  if (by_type) {
+    colors_lbls <- c("Local" = "#e4c40e", "Global" = "#1e9506")
+  } else {
+    colors_lbls <- c(
+      "ETS" = "#17BECF",
+      "ARIMA" = "#FF6961",
+      "LR" = "#003366",
+      "RF" = "#17BECF",
+      "XGBoost" = "#B3E5FC",
+      "LGBM" = "#2CA02C",
+      "CatBoost" = "#B2DF8A",
+      "MLP" = "#FEE08B",
+      "LSTM" = "#FFD700",
+      "TCN" = "#FFA500",
+      "NBEATSx" = "#FF6961",
+      "NHITS" = "#E31A1C",
+      "Ens2A" = "#FFB6C1",
+      "Ens3A" = "#E754B1",
+      "Ens4A" = "#9467BD",
+      "Ens5A" = "#6A0DAD",
+      "Ens2T" = "#F3D2B3",
+      "Ens3T" = "#E6AB8D",
+      "Ens4T" = "#C97B63",
+      "Ens5T" = "#8C564B"
+    )
+  }
 
   data_plot <- data |>
     dplyr::mutate(
@@ -2296,14 +2475,91 @@ plot_optimal_retrain_results <- function(
         )
       g <- g + ggplot2::geom_density(adjust = adjust)
     } else {
+      if (by_type) {
+        g <- data_plot |>
+          ggplot2::ggplot(
+            ggplot2::aes(
+              x = .data[['retrain_window']],
+              y = ggplot2::after_stat(scaled),
+              color = .data[['type']],
+              linetype = .data[['type']],
+              group = .data[['type']],
+              key_glyph = "line"
+            )
+          )
+      } else {
+        g <- data_plot |>
+          ggplot2::ggplot(
+            ggplot2::aes(
+              x = .data[['retrain_window']],
+              y = ggplot2::after_stat(scaled),
+              color = .data[['method']],
+              linetype = .data[['type']],
+              group = .data[['method']],
+              key_glyph = "line"
+            )
+          )
+      }
+
+      g <- g +
+        ggplot2::geom_density(adjust = adjust, show.legend = FALSE) +
+        ggplot2::stat_density(
+          geom = "line",
+          position = "identity",
+          adjust = adjust
+        )
+    }
+
+    if (by_type) {
+      g <- g +
+        ggplot2::scale_x_continuous(breaks = brks, limits = lim) +
+        ggplot2::scale_color_manual(values = colors_lbls) +
+        ggplot2::labs(
+          title = title,
+          x = 'Retrain Scenario (r)',
+          y = 'Density',
+          color = 'Method Type',
+          linetype = 'Method Type',
+        ) +
+        ggplot2::theme_minimal() +
+        ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+    } else {
+      g <- g +
+        ggplot2::scale_x_continuous(breaks = brks, limits = lim) +
+        ggplot2::scale_color_manual(values = colors_lbls) +
+        ggplot2::labs(
+          title = title,
+          x = 'Retrain Scenario (r)',
+          y = 'Density',
+          color = 'Method',
+          linetype = 'Method Type',
+          group = 'Method'
+        ) +
+        ggplot2::theme_minimal() +
+        ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+    }
+
+    if (!overall_only) {
+      if (!by_type) {
+        g <- g +
+          ggplot2::facet_wrap(. ~ method, scales = 'free_x', ncol = 2) +
+          ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45))
+      }
+    }
+  } else {
+    if (overall_only) {
+      data_plot <- data_plot |>
+        dplyr::mutate(type = 'Overall', method = 'Overall')
+    }
+
+    if (by_type) {
       g <- data_plot |>
         ggplot2::ggplot(
           ggplot2::aes(
             x = .data[['retrain_window']],
             y = ggplot2::after_stat(scaled),
-            color = .data[['method']],
+            color = .data[[group_col]],
             linetype = .data[['type']],
-            group = .data[['method']],
             key_glyph = "line"
           )
         )
@@ -2314,68 +2570,57 @@ plot_optimal_retrain_results <- function(
           position = "identity",
           adjust = adjust
         )
-    }
-
-    g <- g +
-      ggplot2::scale_x_continuous(breaks = brks, limits = lim) +
-      ggplot2::scale_color_manual(values = colors_lbls) +
-      ggplot2::labs(
-        title = title,
-        x = 'Retrain Scenario (r)',
-        y = 'Density',
-        color = 'Method',
-        linetype = 'Method Type',
-        group = 'Method'
-      ) +
-      ggplot2::theme_minimal() +
-      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
-
-    if (!overall_only) {
       g <- g +
-        ggplot2::facet_wrap(. ~ method, scales = 'free_x', ncol = 2) +
-        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45))
-    }
-  } else {
-    if (overall_only) {
-      data_plot <- data_plot |>
-        dplyr::mutate(type = 'Overall', method = 'Overall')
-    }
-
-    g <- data_plot |>
-      ggplot2::ggplot(
-        ggplot2::aes(
-          x = .data[['retrain_window']],
-          y = ggplot2::after_stat(scaled),
-          color = .data[[group_col]],
-          group = .data[[group_col]],
-          key_glyph = "line"
+        ggplot2::scale_x_continuous(breaks = brks, limits = lim) +
+        # ggplot2::scale_color_manual(values = colors_lbls) +
+        ggplot2::labs(
+          title = title,
+          x = 'Retrain Scenario (r)',
+          y = 'Density',
+          color = 'Group',
+          linetype = 'Method Type',
+        ) +
+        ggplot2::theme_minimal() +
+        ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+    } else {
+      g <- data_plot |>
+        ggplot2::ggplot(
+          ggplot2::aes(
+            x = .data[['retrain_window']],
+            y = ggplot2::after_stat(scaled),
+            color = .data[[group_col]],
+            group = .data[[group_col]],
+            key_glyph = "line"
+          )
         )
-      )
-    g <- g +
-      ggplot2::geom_density(adjust = adjust, show.legend = FALSE) +
-      ggplot2::stat_density(
-        geom = "line",
-        position = "identity",
-        adjust = adjust
-      )
+      g <- g +
+        ggplot2::geom_density(adjust = adjust, show.legend = FALSE) +
+        ggplot2::stat_density(
+          geom = "line",
+          position = "identity",
+          adjust = adjust
+        )
 
-    g <- g +
-      ggplot2::scale_x_continuous(breaks = brks, limits = lim) +
-      # ggplot2::scale_color_manual(values = colors_lbls) +
-      ggplot2::labs(
-        title = title,
-        x = 'Retrain Scenario (r)',
-        y = 'Density',
-        color = 'Group',
-        group = 'Group'
-      ) +
-      ggplot2::theme_minimal() +
-      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+      g <- g +
+        ggplot2::scale_x_continuous(breaks = brks, limits = lim) +
+        # ggplot2::scale_color_manual(values = colors_lbls) +
+        ggplot2::labs(
+          title = title,
+          x = 'Retrain Scenario (r)',
+          y = 'Density',
+          color = 'Group',
+          group = 'Group'
+        ) +
+        ggplot2::theme_minimal() +
+        ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+    }
 
     if (!overall_only) {
-      g <- g +
-        ggplot2::facet_wrap(. ~ method, scales = 'free_x', ncol = 2) +
-        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45))
+      if (!by_type) {
+        g <- g +
+          ggplot2::facet_wrap(. ~ method, scales = 'free_x', ncol = 2) +
+          ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45))
+      }
     }
   }
 
@@ -2656,7 +2901,11 @@ plot_optimal_retrain_results_combined <- function(
   return(g)
 }
 
-analyze_groups <- function(config, group_names = 'breaks') {
+analyze_groups <- function(
+  config,
+  group_names = 'breaks',
+  group_levels = NULL
+) {
   # analysis config
   analysis_name <- config$analysis$name
   analysis_types <- config$analysis$types[
@@ -2773,11 +3022,15 @@ analyze_groups <- function(config, group_names = 'breaks') {
     if (length(group_names) > 1) {
       groups_df <- groups_df |>
         tidyr::unite("group", dplyr::all_of(group_names), sep = " - ") |>
-        dplyr::mutate(group = factor(group)) |>
         dplyr::select(dplyr::all_of(c('unique_id', 'group')))
     } else {
       groups_df <- groups_df |>
         purrr::set_names(c('unique_id', 'group'))
+    }
+
+    if (!is.null(group_levels)) {
+      groups_df <- groups_df |>
+        dplyr::mutate(group = factor(group, levels = group_levels))
     }
 
     for (at in analysis_types) {
