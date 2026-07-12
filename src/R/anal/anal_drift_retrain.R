@@ -17,8 +17,8 @@ reticulate::source_python('src/Python/utils/utilities.py')
 # Load & prepare data -----------------------------------------------------
 
 # run twice, one for absolute and one for relative
-analysis_file_name <- 'docs/drift_retrain/absolute_evalstabtimecost_overlap_20260711_084833.RData'
-analysis_file_name <- 'docs/drift_retrain/relative_evalstabtimecost_overlap_20260711_084815.RData'
+analysis_file_name <- 'docs/drift_retrain/absolute_evalstabtimecost_overlap_20260712_100211.RData'
+analysis_file_name <- 'docs/drift_retrain/relative_evalstabtimecost_overlap_20260712_100156.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results
@@ -303,7 +303,9 @@ pareto_data |>
 # =========================================================================
 
 config <- get_config('config/anal/anal_drift_retrain_config.yaml')
+
 group_names <- c('breaks') # 'ABC', 'XYZ', 'breaks', 'breaks_multi', if c('ABC', 'breaks') then cartesian product
+
 group_levels <- NULL
 # group_levels <- c(
 # 	'A - No breaks',
@@ -313,10 +315,15 @@ group_levels <- NULL
 # 	'C - No breaks',
 # 	'C - Breaks'
 # )
+
+# breaks_params <- NULL
+breaks_params <- c('260', 'sequential') # only for breaks and breaks_multi, otherwise NULL
+
 group_res <- analyze_groups(
 	config,
 	group_names = group_names,
-	group_levels = group_levels
+	group_levels = group_levels,
+	breaks_params = breaks_params
 )
 
 analysis <- 'evaluation' # 'evaluation', 'stability', 'evaluation_prepost'
@@ -749,14 +756,20 @@ for (l in lvl) {
 # =========================================================================
 
 config <- get_config('config/anal/anal_drift_retrain_config.yaml')
+
 group_names <- c('breaks') # 'ABC', 'XYZ', 'breaks', 'breaks_multi', if c('ABC', 'breaks') then cartesian product
+
+# breaks_params <- NULL
+breaks_params <- c('260', 'lwz') # only for breaks and breaks_multi, otherwise NULL
+
 opt_freq_groups <- analyze_optimal_frequency(
 	config,
 	adjust = 2,
-	group_names = group_names
+	group_names = group_names,
+	breaks_params = breaks_params
 )
 
-analysis <- 'evaluation' # 'evaluation', 'stability', 'evaluation_prepost'
+analysis <- 'evaluation_prepost' # 'evaluation', 'stability', 'evaluation_prepost'
 em1 <- eval_metrics[1]
 em2 <- eval_metrics[2]
 

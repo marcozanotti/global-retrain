@@ -2007,7 +2007,12 @@ plot_scatter_results <- function(
   return(g)
 }
 
-analyze_optimal_frequency <- function(config, adjust = 1, group_names = NULL) {
+analyze_optimal_frequency <- function(
+  config,
+  adjust = 1,
+  group_names = NULL,
+  breaks_params = c('260', 'bic')
+) {
   # analysis config
   analysis_name <- config$analysis$name
   analysis_types <- config$analysis$types
@@ -2068,7 +2073,7 @@ analyze_optimal_frequency <- function(config, adjust = 1, group_names = NULL) {
         tibble::as_tibble()
       breaks_df <- load_data(
         path_list = c('results', dataset_name_tmp, freq_tmp, 'breaks'),
-        name_list = c(dataset_name_tmp, freq_tmp, 'breaks'),
+        name_list = c(dataset_name_tmp, freq_tmp, 'breaks', breaks_params),
         ext = '.parquet'
       ) |>
         tibble::as_tibble()
@@ -2904,7 +2909,8 @@ plot_optimal_retrain_results_combined <- function(
 analyze_groups <- function(
   config,
   group_names = 'breaks',
-  group_levels = NULL
+  group_levels = NULL,
+  breaks_params = c('260', 'bic')
 ) {
   # analysis config
   analysis_name <- config$analysis$name
@@ -2966,7 +2972,7 @@ analyze_groups <- function(
       tibble::as_tibble()
     breaks_df <- load_data(
       path_list = c('results', dataset_name_tmp, freq_tmp, 'breaks'),
-      name_list = c(dataset_name_tmp, freq_tmp, 'breaks'),
+      name_list = c(dataset_name_tmp, freq_tmp, 'breaks', breaks_params),
       ext = '.parquet'
     ) |>
       tibble::as_tibble()

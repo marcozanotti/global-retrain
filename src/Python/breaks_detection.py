@@ -16,7 +16,8 @@ data = load_data(['data/hapag_region/'], ['hapag_region_weekly_prep'])
 data = data[['unique_id', 'ds', 'y']]
 data['ds'] = pd.to_datetime(data['ds'])
 nobs = 52*5
-res = get_breaks(df=data, nobs=nobs, max_breaks=10, selection='bic', exog=None)
+criterion = 'bic' # 'bic', 'lwz', 'sequential'
+res = get_breaks(df=data, nobs=nobs, max_breaks=10, selection=criterion, exog=None) 
 stop_logger(logger)
 
 # add sample information
@@ -33,7 +34,7 @@ data_br['break'] = data_br['break'].fillna('no break')
 save_data(
     data_br, 
     path_list=['results/hapag_region/weekly/breaks/'], 
-    name_list=[f'hapag_region_weekly_breaks_full_{nobs}']
+    name_list=[f'hapag_region_weekly_breaks_full_{nobs}_{criterion}']
 )
 
 data_br_light = res[res['break'] == 'break'][['unique_id', 'ds', 'sample']]
@@ -41,5 +42,5 @@ data_br_light.reset_index(drop=True, inplace=True)
 save_data(
     data_br_light, 
     path_list=['results/hapag_region/weekly/breaks/'], 
-    name_list=[f'hapag_region_weekly_breaks_{nobs}']
+    name_list=[f'hapag_region_weekly_breaks_{nobs}_{criterion}']
 )

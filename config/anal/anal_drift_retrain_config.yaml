@@ -1,11 +1,11 @@
 analysis: {
     'name': 'drift_retrain',
     'types': [
-        #'evaluation', 
-        'evaluation_prepost',
-        # 'stability', 
-        # 'time', 
-        # 'cost'
+        'evaluation', 
+        # 'evaluation_prepost',
+        'stability', 
+        'time', 
+        'cost'
     ],
     'method': 'absolute', # absolute / relative # run twice, one for absolute and one for relative
     'sample_type': 'overlap' # overlap / nooverlap
@@ -56,7 +56,7 @@ stability_params: {
 cost_params: {
     'metrics': ['cost', 'savings', 'savings_perc'],
     'time_var': 'total_sample_time',
-    'n_skus': 130000,
+    'n_skus': 637400, # 12748 porto-to-port connections * 25 container types * 2 directions
     'cost_datasets_n_skus': ['hapag_region_weekly': 657],
     'cost_per_hour': [1, 3.5], # cost of machines for SF models first
     'adjust_time_for_sf': True, # adjust value with: total_fit_time / n_skus_sf * n_skus / n_cores,
