@@ -123,7 +123,7 @@ def get_prediction_intervals(intervals, model_class = 'ml'):
 
     return intervals_new
 
-def retrain_sf_model(
+def retrain_sf_model_old(
     train_df, 
     test_df,
     dataset_name,
@@ -187,7 +187,7 @@ def retrain_sf_model(
 
     # define the fitting time series
     series = list(train_df['unique_id'].unique())
-    # series = series[837:] # NOTE: TEMPORARY for testing purposes
+    # series = series[837:] # NOTE: for testing purposes
     n_series = len(series)
     module_logger.info(f'[ Num series: {n_series} ]')
 
@@ -284,6 +284,216 @@ def retrain_sf_model(
             time_df = pd.concat([time_df, time_df_tmp], axis = 0)
 
             del train_df_tmp, out_sample_df_tmp, time_df_tmp, out_sample_s, s_id
+            if (i % 10) == 0:
+                gc.collect() # call gc once every 10 iterations to avoid overhead
+
+    # add additional columns to the dataframes for tracking parameters
+    time_df = time_df \
+        .drop(columns = ['unique_id']) \
+        .groupby(['sample']) \
+        .agg('sum') \
+        .reset_index()
+    time_df['method'] = model_name
+    time_df['test_window'] = test_window
+    time_df['horizon'] = horizon
+    time_df['retrain_window'] = retrain_window
+    time_df.reset_index(drop = True, inplace = True)
+    # save to file
+    save_data(
+        data = time_df, 
+        path_list = ['results', dataset_name, frequency, model_name, 'time', 'byretrain'],
+        name_list = [dataset_name, frequency, model_name, retrain_window, 'time'],
+        ext = ext
+    )
+
+    end_time = time.time()
+    tot_time = end_time - start_time
+    module_logger.info(f'Total computing time: {tot_time:.1f} seconds')
+
+    return
+
+def retrain_sf_model(
+    train_df, 
+    test_df,
+    dataset_name,
+    frequency,
+    model_name,
+    engine, 
+    test_window,
+    horizon, 
+    retrain_window,
+    features,
+    intervals = None,
+    levels = [50, 60, 70, 80, 90, 95, 99],
+    store_in_sample_results = False,
+    save_model = False,
+    ext = '.parquet'
+):
+
+    """Function to retrain the SF model and predict with retrained model.
+
+    Args:
+        train_df (pd.DataFrame): training data in Nixtla's format.
+        test_df (pd.DataFrame): testing data in Nixtla's format.
+        dataset_name (str): name of the dataset (e.g., 'm5', 'm4').
+        frequency (str): frequency of the data (e.g., 'daily', 'weekly').
+        model_name (str): name of the model.
+        engine (StatsForecast class): SF model engine.
+        test_window (int): length of the test window.
+        horizon (int): forecasting horizon.
+        retrain_window (int, optional): window for retraining.
+        features (dict): features to be used for training.
+        intervals (fun): intervals to be used for predictions. Defaults to None.
+        levels (list): confidence levels for the predictions. Defaults to
+        [60, 70, 80, 85, 90, 95, 99].
+        store_in_sample_results (bool, optional): store in-sample results. Defaults to False.
+        save_model (bool, optional): whether to save the model. Defaults to False.
+        ext (str, optional): file extension for storing results. Defaults to '.parquet'.
+
+    Returns:
+        pd.DataFrame: predictions made by the retrained models.
+    """
+
+    module_logger.info('---------------------------------------------------------------')
+    start_time = time.time()
+
+    # define the model name
+    # model_name = get_model_name(engine)
+    module_logger.info(f'[ Model: {model_name} | Retrain Window: {retrain_window} ]')
+
+    # intervals
+    # horizon_sf = horizon + retrain_window - 1
+    # intervals['h'] = horizon_sf
+    pred_intervals = get_prediction_intervals(intervals, model_class = 'sf')
+
+    # keep only the necessary columns 
+    # TODO: add features for SF models
+    train_df = train_df[['unique_id', 'ds', 'y']]
+    test_df = test_df[['unique_id', 'ds', 'y']]
+
+    module_logger.info(f'Train dataset contains: {list(train_df.columns)}...')
+    module_logger.info(f'Test dataset contains: {list(test_df.columns)}...')
+
+    # define the fitting time series
+    series = list(train_df['unique_id'].unique())
+    # series = series[837:] # NOTE: for testing purposes
+    n_series = len(series)
+    module_logger.info(f'[ Num series: {n_series} ]')
+
+    # initialize the time dataframe (the only auto-incremental df with save at the end)
+    time_df = pd.DataFrame()
+
+    for ts in series:
+        
+        i_series = series.index(ts) + 1
+        module_logger.info(f'[ Series: {ts} ({i_series} of {n_series}) ]')
+        train_df_ts = train_df.query(f'unique_id == "{ts}"')
+        test_df_ts = test_df.query(f'unique_id == "{ts}"')
+        module_logger.info(f"Train size: {len(train_df_ts)} obs, Test size: {len(test_df_ts)} obs")
+
+        # define the fitting times
+        fitting_ids = get_retrain_ids(test_window, horizon, retrain_window)
+        n_fitting = len(fitting_ids)
+        n_samples = test_window - horizon + 1
+        module_logger.info(f'[ Retrain ids: {fitting_ids} ] | Num fitting: {n_fitting} | Num iterations: {n_samples} ]')
+
+        for i in range(n_samples):
+        
+            module_logger.info(f'Step {i + 1} of {n_samples}')
+
+            # define the training data
+            train_df_tmp = combine_train_test(train_df_ts, test_df_ts.head(i))
+            # define the testing data
+            test_df_tmp = test_df_ts.head(i + horizon).tail(horizon)
+            test_df_tmp.reset_index(drop = True, inplace = True)
+            
+            if i in fitting_ids:
+
+                # train the model
+                module_logger.info(f'Fitting: t = {i}, {int(i / retrain_window + 1)} of {n_fitting}...')
+                start_fit_time = time.time()
+                engine.fit(df = train_df_tmp, prediction_intervals = pred_intervals)
+                end_fit_time = time.time()
+
+                # predict out-of-sample with the model        
+                module_logger.info('Predicting...')
+                start_predict_time = time.time()
+                out_sample_df_tmp = engine.predict(h = horizon, level = levels)
+                end_predict_time = time.time()
+
+                tot_sample_time = end_predict_time - start_fit_time
+
+                if store_in_sample_results:
+                    # FIXME: not working (must be fitted with fit_predict and access fitted values in fitted_ attribute)
+                    # extract in-sample results from the model only when fitting
+                    module_logger.info('Extracting fitted values...')
+                    raise ValueError('Not yet implemented for SF models.')
+
+            else:
+
+                # update the y array object with the new data (ndarray necessary for SF models)
+                # NOTE: fundamental to roll predictions without fitting !!!!!
+                y_updated = train_df_tmp[['y']].values.flatten()
+                
+                module_logger.info('Predicting with pre-trained model...')
+                start_predict_time = time.time()
+                out_sample_df_tmp = engine.fitted_[0][0].forward(
+                    y = y_updated, h = horizon, level = levels
+                )
+                end_predict_time = time.time()
+                
+                tot_sample_time = end_predict_time - start_predict_time
+
+                # convert back the numpy array to a dataframe
+                out_sample_df_tmp = pd.DataFrame(out_sample_df_tmp)
+                out_sample_df_tmp.columns = [f'{model_name}_{col}' for col in out_sample_df_tmp.columns]
+                out_sample_df_tmp.rename(columns = {f'{model_name}_mean': f'{model_name}'}, inplace = True)
+                out_sample_df_tmp = pd.concat(
+                    [test_df_tmp[['unique_id', 'ds']], out_sample_df_tmp], axis = 1
+                )
+                
+            # add additional columns to the dataframes for tracking parameters
+            out_sample_df_tmp['sample'] = i
+            out_sample_df_tmp['method'] = model_name
+            out_sample_df_tmp['test_window'] = test_window
+            out_sample_df_tmp['horizon'] = horizon
+            out_sample_df_tmp['retrain_window'] = retrain_window
+            # add actual out-of-sample to results
+            out_sample_df_tmp = out_sample_df_tmp.merge(
+                test_df_ts, how = 'left', on = ['unique_id', 'ds'], copy = False
+            )
+            # format column names and reset index values
+            out_sample_df_tmp.columns = out_sample_df_tmp.columns.str.replace(model_name, 'fcst')
+            out_sample_df_tmp.reset_index(drop = True, inplace = True)
+            # save to file # NOTE: if not first series, append to the existing file
+            if ts == series[0]:
+                save_data(
+                    data = out_sample_df_tmp, 
+                    path_list = ['results', dataset_name, frequency, model_name, retrain_window, 'outsample', 'tmp'],
+                    name_list = [dataset_name, frequency, model_name, retrain_window, 'outsample', i],
+                    ext = ext,
+                    append = False # first series do not append
+                ) 
+            else:                    
+                save_data(
+                    data = out_sample_df_tmp, 
+                    path_list = ['results', dataset_name, frequency, model_name, retrain_window, 'outsample', 'tmp'],
+                    name_list = [dataset_name, frequency, model_name, retrain_window, 'outsample', i],
+                    ext = ext,
+                    append = True # append for other series
+                ) 
+            
+            # store computing time information for each sample
+            time_df_tmp = pd.DataFrame({
+                'unique_id': ts,
+                'sample': i,
+                'total_fit_time': [end_fit_time - start_fit_time],
+                'total_predict_time': [end_predict_time - start_predict_time],
+                'total_sample_time': tot_sample_time
+            })
+            time_df = pd.concat([time_df, time_df_tmp], axis = 0)
+
+            del train_df_tmp, out_sample_df_tmp, time_df_tmp
             if (i % 10) == 0:
                 gc.collect() # call gc once every 10 iterations to avoid overhead
 
@@ -789,6 +999,7 @@ def retrain_model(config):
         model_type = get_model_type(m)
         module_logger.info(f'[ Model type: {model_type} | Model name: {m} ]')
         
+        # rs = retrain_window = retrain_scenarios[0] # NOTE: for testing purposes
         for rs in retrain_scenarios:
 
             # NOTE: set the engine within the loop to reset the engine for each retraining scenario
