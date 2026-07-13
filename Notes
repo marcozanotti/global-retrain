@@ -10,3 +10,11 @@ https://nixtlaverse.nixtla.io/mlforecast/docs/how-to-guides/sklearn_pipelines.ht
 
 
 export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
+
+
+
+# TODO:
+- run naive
+- run arima
+- look at results of mlp
+- test .forward method for ETS

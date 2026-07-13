@@ -317,7 +317,7 @@ group_levels <- NULL
 # )
 
 # breaks_params <- NULL
-breaks_params <- c('260', 'sequential') # only for breaks and breaks_multi, otherwise NULL
+breaks_params <- c('260', 'lwz') # only for breaks and breaks_multi, otherwise NULL
 
 group_res <- analyze_groups(
 	config,
@@ -328,7 +328,8 @@ group_res <- analyze_groups(
 
 analysis <- 'evaluation' # 'evaluation', 'stability', 'evaluation_prepost'
 anal_res <- group_res[[df_nm]][[analysis]][['results']]
-lvl <- group_res[[df_nm]][[analysis]][['data']][['group']] |> unique()
+lvl <- group_res[[df_nm]][[analysis]][['data']][['aggregated']][['group']] |>
+	unique()
 
 # ** Tables ---------------------------------------------------------------
 # for (l in lvl) {
@@ -347,7 +348,7 @@ lvl <- group_res[[df_nm]][[analysis]][['data']][['group']] |> unique()
 # }
 
 # ** Plots -----------------------------------------------------------------
-groups_plot_data <- group_res[[df_nm]][[analysis]]$data |>
+groups_plot_data <- group_res[[df_nm]][[analysis]][['data']][['aggregated']] |>
 	dplyr::mutate(
 		type = factor(
 			ifelse(type == "SF", "Local", "Global"),
@@ -586,169 +587,78 @@ plot_retrain_results_differences(
 	ggplot2::theme(legend.position = "bottom")
 
 # ** Tests -----------------------------------------------------------------
-g_list <- list()
-for (l in lvl) {
-	cat(paste("Group:", l, "\n"))
-	for (k in mod_tps) {
-		eval_res <- anal_res[[k]]
-		em1 <- eval_metrics[1]
-		em1_lbl <- toupper(gsub(
-			"_",
-			" ",
-			ifelse(em1 == "scaled_mqloss", "smql", em1)
-		))
-		em2 <- eval_metrics[2]
-		em2_lbl <- toupper(gsub(
-			"_",
-			" ",
-			ifelse(em2 == "scaled_mqloss", "smql", em2)
-		))
-		ge1 <- plot_test_results_facet(
-			data = eval_res$tests[[em1]] |> dplyr::filter(group == l),
-			.metric = em1,
-			by = "retrain_window",
-			metric_label = em1_lbl,
-			title = paste(em1_lbl, "- Nemenyi Test")
+group_test_data <- group_res[[df_nm]][[analysis]][['data']][['raw']] |>
+	dplyr::mutate(
+		type = factor(
+			ifelse(type == "SF", "Local", "Global"),
+			levels = c("Global", "Local")
 		)
-		ge2 <- plot_test_results_facet(
-			data = eval_res$tests[[em2]] |> dplyr::filter(group == l),
-			.metric = em2,
-			by = "retrain_window",
-			metric_label = em2_lbl,
-			title = paste(em2_lbl, "- Nemenyi Test")
-		)
-		g_list[[paste(k, l, sep = "_")]] <- list(ge1 = ge1, ge2 = ge2)
-	}
-}
+	) |>
+	aggregate_data(
+		group_columns = c('type', 'retrain_window', 'unique_id', 'group'),
+		drop_columns = c('method', 'test_window', 'horizon'),
+		function_name = 'mean',
+		adjust_metrics = TRUE
+	) |>
+	dplyr::select(dplyr::all_of(c(
+		'type',
+		'retrain_window',
+		'group',
+		eval_metrics
+	)))
+
 
 # breaks
-((g_list$`SF_No breaks`$ge1 +
-	ggplot2::labs(title = paste0("No Breaks - ", em1_lbl), x = NULL)) +
-	(g_list$`SF_Breaks`$ge1 +
-		ggplot2::labs(title = paste0("Breaks - ", em1_lbl), x = NULL))) /
-	((g_list$`SF_No breaks`$ge2 +
-		ggplot2::labs(title = paste0("No Breaks - ", em2_lbl))) +
-		(g_list$`SF_Breaks`$ge2 +
-			ggplot2::labs(title = paste0("Breaks - ", em2_lbl)))) +
-	patchwork::plot_layout(guides = "collect") &
-	ggplot2::theme(legend.position = "bottom")
-
-((g_list$`ML_DL_No breaks`$ge1 +
-	ggplot2::labs(title = paste0("No Breaks - ", em1_lbl), x = NULL) +
-	ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-	(g_list$`ML_DL_Breaks`$ge1 +
-		ggplot2::labs(title = paste0("Breaks - ", em1_lbl), x = NULL) +
-		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
-	patchwork::plot_layout(guides = "collect") &
-	ggplot2::theme(legend.position = "bottom")
-
-((g_list$`ML_DL_No breaks`$ge2 +
-	ggplot2::labs(title = paste0("No Breaks - ", em2_lbl), x = NULL) +
-	ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-	(g_list$`ML_DL_Breaks`$ge2 +
-		ggplot2::labs(title = paste0("Breaks - ", em2_lbl), x = NULL) +
-		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
-	patchwork::plot_layout(guides = "collect") &
-	ggplot2::theme(legend.position = "bottom")
-
+group_test_res <- test_group_differences(
+	data = group_test_data,
+	group_col = 'group',
+	type_col = 'type',
+	scenario_col = 'retrain_window',
+	metrics = eval_metrics,
+	ref_group = "No breaks",
+	conf_level = 0.95,
+	p_adjust = "holm",
+	dunn_p_adjust = "holm",
+	dunn_always = FALSE,
+	alpha = 0.05
+)
+tabs <- report_group_tests(group_test_res)
+names(tabs)
+invisible(lapply(tabs, cat, "\n\n")) # print all
 
 # breaks multi
-((g_list$`SF_No breaks`$ge1 +
-	ggplot2::labs(title = paste0("No Breaks - ", em1_lbl), x = NULL) +
-	ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-	(g_list$`SF_One break`$ge1 +
-		ggplot2::labs(title = paste0("One break - ", em1_lbl), x = NULL) +
-		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-	(g_list$`SF_Two or more breaks`$ge1 +
-		ggplot2::labs(
-			title = paste0("Two or more breaks - ", em1_lbl),
-			x = NULL
-		) +
-		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) /
-	((g_list$`SF_No breaks`$ge2 +
-		ggplot2::labs(title = paste0("No Breaks - ", em2_lbl)) +
-		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-		(g_list$`SF_One break`$ge2 +
-			ggplot2::labs(title = paste0("One break - ", em2_lbl)) +
-			ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-		(g_list$`SF_Two or more breaks`$ge2 +
-			ggplot2::labs(title = paste0("Two or more breaks - ", em2_lbl)) +
-			ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
-	patchwork::plot_layout(guides = "collect") &
-	ggplot2::theme(legend.position = "bottom")
-
-((g_list$`ML_DL_No breaks`$ge1 +
-	ggplot2::labs(title = paste0("No Breaks - ", em1_lbl), x = NULL) +
-	ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-	(g_list$`ML_DL_One break`$ge1 +
-		ggplot2::labs(title = paste0("One break - ", em1_lbl), x = NULL) +
-		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-	(g_list$`ML_DL_Two or more breaks`$ge1 +
-		ggplot2::labs(title = paste0("Two or more breaks - ", em1_lbl)) +
-		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
-	patchwork::plot_layout(guides = "collect") &
-	ggplot2::theme(legend.position = "bottom")
-
-((g_list$`ML_DL_No breaks`$ge2 +
-	ggplot2::labs(title = paste0("No Breaks - ", em2_lbl), x = NULL) +
-	ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-	(g_list$`ML_DL_One break`$ge2 +
-		ggplot2::labs(title = paste0("One break - ", em2_lbl), x = NULL) +
-		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-	(g_list$`ML_DL_Two or more breaks`$ge2 +
-		ggplot2::labs(title = paste0("Two or more breaks - ", em2_lbl)) +
-		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
-	patchwork::plot_layout(guides = "collect") &
-	ggplot2::theme(legend.position = "bottom")
+group_test_res <- test_group_differences(
+	data = group_test_data,
+	group_col = 'group',
+	type_col = 'type',
+	scenario_col = 'retrain_window',
+	metrics = eval_metrics,
+	ref_group = "No breaks",
+	conf_level = 0.95,
+	p_adjust = "holm",
+	dunn_p_adjust = "holm",
+	dunn_always = FALSE,
+	alpha = 0.05
+)
+tabs <- report_group_tests(group_test_res)
+invisible(lapply(tabs, cat, "\n\n")) # print all
 
 # pre-post
-((g_list$`SF_T0`$ge1 +
-	ggplot2::labs(title = paste0("T0 - ", em1_lbl), x = NULL) +
-	ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-	(g_list$`SF_T1`$ge1 +
-		ggplot2::labs(title = paste0("T1 - ", em1_lbl), x = NULL) +
-		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-	(g_list$`SF_T2`$ge1 +
-		ggplot2::labs(
-			title = paste0("T2 - ", em1_lbl),
-			x = NULL
-		) +
-		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) /
-	((g_list$`SF_T0`$ge2 +
-		ggplot2::labs(title = paste0("T0 - ", em2_lbl)) +
-		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-		(g_list$`SF_T1`$ge2 +
-			ggplot2::labs(title = paste0("T1 - ", em2_lbl)) +
-			ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-		(g_list$`SF_T2`$ge2 +
-			ggplot2::labs(title = paste0("T2 - ", em2_lbl)) +
-			ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
-	patchwork::plot_layout(guides = "collect") &
-	ggplot2::theme(legend.position = "bottom")
-
-((g_list$`ML_DL_T0`$ge1 +
-	ggplot2::labs(title = paste0("T0 - ", em1_lbl), x = NULL) +
-	ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-	(g_list$`ML_DL_T1`$ge1 +
-		ggplot2::labs(title = paste0("T1 - ", em1_lbl), x = NULL) +
-		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-	(g_list$`ML_DL_T2`$ge1 +
-		ggplot2::labs(title = paste0("T2 - ", em1_lbl)) +
-		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
-	patchwork::plot_layout(guides = "collect") &
-	ggplot2::theme(legend.position = "bottom")
-
-((g_list$`ML_DL_T0`$ge2 +
-	ggplot2::labs(title = paste0("T0 - ", em2_lbl), x = NULL) +
-	ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-	(g_list$`ML_DL_T1`$ge2 +
-		ggplot2::labs(title = paste0("T1 - ", em2_lbl), x = NULL) +
-		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed")) +
-	(g_list$`ML_DL_T2`$ge2 +
-		ggplot2::labs(title = paste0("T2 - ", em2_lbl)) +
-		ggplot2::facet_wrap(~method, ncol = 1, scales = "fixed"))) +
-	patchwork::plot_layout(guides = "collect") &
-	ggplot2::theme(legend.position = "bottom")
+group_test_res <- test_group_differences(
+	data = group_test_data,
+	group_col = 'group',
+	type_col = 'type',
+	scenario_col = 'retrain_window',
+	metrics = eval_metrics,
+	ref_group = "T0",
+	conf_level = 0.95,
+	p_adjust = "holm",
+	dunn_p_adjust = "holm",
+	dunn_always = TRUE,
+	alpha = 0.05
+)
+tabs <- report_group_tests(group_test_res)
+invisible(lapply(tabs, cat, "\n\n")) # print all
 
 
 # =========================================================================

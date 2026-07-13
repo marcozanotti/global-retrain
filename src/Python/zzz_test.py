@@ -274,13 +274,13 @@ metrics_df = pd.read_csv('logs/lightning_logs/version_0/metrics.csv')
 
 
 ####
-# import sys
-# sys.path.insert(0, 'src/Python/utils')
-# import pandas as pd
-# from utilities import load_data
+import sys
+sys.path.insert(0, 'src/Python/utils')
+import pandas as pd
+from utilities import load_data
 
-# preds_df = load_data(['results/hapag_region/weekly/preds/'], ['hapag_region_weekly_preds'])
-# eval_df = load_data(['results/hapag_region/weekly/preds/'], ['hapag_region_weekly_preds_eval_overlap'])
+preds_df = load_data(['results/hapag_region/weekly/preds/'], ['hapag_region_weekly_preds'])
+eval_df = load_data(['results/hapag_region/weekly/preds/'], ['hapag_region_weekly_preds_eval_overlap'])
 
 
 import sys

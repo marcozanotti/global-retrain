@@ -3,7 +3,7 @@ analysis: {
     'types': [
         'evaluation', 
         # 'evaluation_prepost',
-        'stability', 
+        # 'stability', 
         'time', 
         'cost'
     ],

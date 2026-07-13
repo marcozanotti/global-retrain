@@ -2947,7 +2947,7 @@ analyze_groups <- function(
   # }
 
   # final analysis names
-  data_types <- c('results')
+  data_types <- c('data', 'results')
   final_analyses <- c('tables', 'plots', 'tests')
   analysis_results <- create_results_list(
     dataset_names_full,
@@ -3206,7 +3206,8 @@ analyze_groups <- function(
       }
 
       # store data of the analysis
-      analysis_results[[dn]][[at]][['data']] <- anal_df_agg_tmp
+      analysis_results[[dn]][[at]][['data']][['raw']] <- anal_df_tmp
+      analysis_results[[dn]][[at]][['data']][['aggregated']] <- anal_df_agg_tmp
 
       for (mt in model_types) {
         cat(paste0(
@@ -3298,4 +3299,472 @@ analyze_groups <- function(
 
   cat("Done!\n")
   return(invisible(analysis_results))
+}
+
+#' Test group differences in forecasting accuracy at fixed retraining scenarios
+#'
+#' For each combination of model type, retraining scenario, and metric, compares
+#' the metric distributions across the levels of `group`:
+#'   - 2 levels: Wilcoxon-Mann-Whitney rank-sum test, with Hodges-Lehmann shift
+#'     estimate and rank-biserial effect size.
+#'   - 3+ levels: Kruskal-Wallis omnibus test, followed by Dunn's post-hoc
+#'     pairwise comparisons (only when the omnibus is significant or
+#'     `dunn_always = TRUE`), with pairwise rank-biserial effect sizes.
+#' P-values are corrected for multiplicity across scenarios within each
+#' type-metric family; Dunn's pairwise p-values are additionally corrected
+#' within each omnibus test.
+#'
+#' @param data          A dataframe containing the columns specified below.
+#' @param group_col     Name of the grouping column (default "group").
+#' @param type_col      Name of the model type column (default "type").
+#' @param scenario_col  Name of the retraining scenario column (default "retrain_window").
+#' @param metrics       Character vector of metric column names to test
+#'                      (default c("rmsse", "scaled_mqloss")).
+#' @param ref_group     Reference group level (e.g. "No breaks"). In the 2-level
+#'                      case, shifts are (other - reference). In the 3-level case,
+#'                      it is used only to order the pairwise comparisons so that
+#'                      the reference appears first in each pair label.
+#' @param conf_level    Confidence level for the Hodges-Lehmann CI (default 0.95),
+#'                      2-level case only.
+#' @param p_adjust      Method for multiplicity correction across scenarios within
+#'                      each type-metric family (default "holm").
+#' @param dunn_p_adjust Method for correcting Dunn's pairwise p-values within each
+#'                      omnibus test (default "holm").
+#' @param dunn_always   If TRUE, run Dunn's post-hoc regardless of the omnibus
+#'                      p-value (default FALSE: post-hoc only when omnibus
+#'                      adjusted p < alpha).
+#' @param alpha         Significance threshold used to gate the post-hoc (default 0.05).
+#'
+#' @return A dataframe with one row per test. For 2-level groups: one row per
+#'         (type, scenario, metric). For 3+ level groups: one omnibus row plus
+#'         one row per Dunn pairwise comparison, distinguished by the `test`
+#'         and `comparison` columns.
+test_group_differences <- function(
+  data,
+  group_col = "group",
+  type_col = "type",
+  scenario_col = "retrain_window",
+  metrics = c("rmsse", "scaled_mqloss"),
+  ref_group = NULL,
+  conf_level = 0.95,
+  p_adjust = "holm",
+  dunn_p_adjust = "holm",
+  dunn_always = FALSE,
+  alpha = 0.05
+) {
+  # ── Input checks ────────────────────────────────────────────────────────────
+  required <- c(group_col, type_col, scenario_col, metrics)
+  missing_cols <- setdiff(required, names(data))
+  if (length(missing_cols) > 0) {
+    stop("Columns not found in data: ", paste(missing_cols, collapse = ", "))
+  }
+
+  group_levels <- unique(as.character(data[[group_col]]))
+  n_levels <- length(group_levels)
+  if (n_levels < 2) {
+    stop("The group variable has fewer than 2 levels; nothing to test.")
+  }
+
+  # ── Reference group handling ────────────────────────────────────────────────
+  if (is.null(ref_group)) {
+    ref_group <- group_levels[1]
+    message("No reference group specified; using '", ref_group, "'.")
+  } else if (!ref_group %in% group_levels) {
+    stop(
+      "Reference group '",
+      ref_group,
+      "' not found. Available: ",
+      paste(group_levels, collapse = ", ")
+    )
+  }
+  # Order levels with the reference first (affects pair labels and signs)
+  ordered_levels <- c(ref_group, setdiff(group_levels, ref_group))
+
+  # ── Helper: rank-biserial from a two-sample Wilcoxon U ─────────────────────
+  rb_from_U <- function(U, n1, n2) 2 * U / (n1 * n2) - 1
+
+  # ── Helper: Dunn's test (base R implementation) ────────────────────────────
+  # Returns a dataframe of pairwise z statistics and raw p-values.
+  dunn_test <- function(values, groups, levels_order) {
+    groups <- factor(as.character(groups), levels = levels_order)
+    ok <- is.finite(values) & !is.na(groups)
+    values <- values[ok]
+    groups <- groups[ok]
+
+    N <- length(values)
+    rk <- rank(values) # midranks (ties averaged)
+    n_g <- tapply(rk, groups, length)
+    rbar <- tapply(rk, groups, mean)
+
+    # Tie correction term
+    ties <- table(values)
+    tie_c <- sum(ties^3 - ties) / (12 * (N - 1))
+
+    pairs <- utils::combn(levels(groups), 2, simplify = FALSE)
+    do.call(
+      rbind,
+      lapply(pairs, function(pr) {
+        g1 <- pr[1]
+        g2 <- pr[2]
+        se <- sqrt((N * (N + 1) / 12 - tie_c) * (1 / n_g[g1] + 1 / n_g[g2]))
+        z <- (rbar[g1] - rbar[g2]) / se
+        data.frame(
+          comparison = paste(g1, "vs", g2),
+          z = unname(z),
+          p_raw = 2 * pnorm(-abs(unname(z))),
+          stringsAsFactors = FALSE
+        )
+      })
+    )
+  }
+
+  # ── Iterate over type x scenario x metric ───────────────────────────────────
+  types <- unique(data[[type_col]])
+  scenarios <- unique(data[[scenario_col]])
+  grid <- expand.grid(
+    type = types,
+    scenario = scenarios,
+    metric = metrics,
+    stringsAsFactors = FALSE
+  )
+
+  results <- lapply(seq_len(nrow(grid)), function(i) {
+    tp <- grid$type[i]
+    sc <- grid$scenario[i]
+    mt <- grid$metric[i]
+    sub <- data[data[[type_col]] == tp & data[[scenario_col]] == sc, ]
+
+    vals <- sub[[mt]]
+    grps <- as.character(sub[[group_col]])
+    ok <- is.finite(vals) & !is.na(grps)
+    vals <- vals[ok]
+    grps <- grps[ok]
+
+    counts <- table(factor(grps, levels = ordered_levels))
+    if (any(counts < 2)) {
+      warning(sprintf(
+        "Skipping %s / r=%s / %s: insufficient data in some group.",
+        tp,
+        sc,
+        mt
+      ))
+      return(NULL)
+    }
+
+    base_cols <- data.frame(
+      type = tp,
+      scenario = sc,
+      metric = mt,
+      stringsAsFactors = FALSE
+    )
+
+    # ════════════ 2-LEVEL CASE: Wilcoxon-Mann-Whitney ════════════
+    if (n_levels == 2) {
+      other_group <- ordered_levels[2]
+      x <- vals[grps == other_group] # non-reference
+      y <- vals[grps == ref_group] # reference
+
+      wt <- wilcox.test(
+        x,
+        y,
+        alternative = "two.sided",
+        exact = FALSE,
+        correct = TRUE,
+        conf.int = TRUE,
+        conf.level = conf_level
+      )
+      U <- unname(wt$statistic)
+
+      return(cbind(
+        base_cols,
+        data.frame(
+          test = "wilcoxon",
+          comparison = paste(other_group, "vs", ref_group),
+          n_ref = length(y),
+          n_other = length(x),
+          median_ref = median(y),
+          median_other = median(x),
+          hl_shift = unname(wt$estimate),
+          ci_low = wt$conf.int[1],
+          ci_high = wt$conf.int[2],
+          statistic = U,
+          p_value = wt$p.value,
+          r_rank_biserial = rb_from_U(U, length(x), length(y)),
+          stringsAsFactors = FALSE
+        )
+      ))
+    }
+
+    # ════════════ 3+ LEVEL CASE: Kruskal-Wallis + Dunn ════════════
+    kw <- kruskal.test(vals, factor(grps, levels = ordered_levels))
+
+    omnibus_row <- cbind(
+      base_cols,
+      data.frame(
+        test = "kruskal-wallis",
+        comparison = "omnibus",
+        n_ref = NA,
+        n_other = NA,
+        median_ref = NA,
+        median_other = NA,
+        hl_shift = NA,
+        ci_low = NA,
+        ci_high = NA,
+        statistic = unname(kw$statistic),
+        p_value = kw$p.value,
+        r_rank_biserial = NA,
+        stringsAsFactors = FALSE
+      )
+    )
+
+    # Post-hoc gate: run Dunn if requested always, or provisionally on raw p
+    # (final gating on adjusted p happens after the family-wise correction)
+    dn <- dunn_test(vals, grps, ordered_levels)
+    dn$p_dunn_adj <- p.adjust(dn$p_raw, method = dunn_p_adjust)
+
+    dunn_rows <- do.call(
+      rbind,
+      lapply(seq_len(nrow(dn)), function(j) {
+        pr <- strsplit(dn$comparison[j], " vs ")[[1]]
+        x <- vals[grps == pr[2]]
+        y <- vals[grps == pr[1]]
+        # pairwise rank-biserial via pairwise U
+        U <- sum(rank(c(x, y))[seq_along(x)]) - length(x) * (length(x) + 1) / 2
+        cbind(
+          base_cols,
+          data.frame(
+            test = "dunn",
+            comparison = dn$comparison[j],
+            n_ref = length(y),
+            n_other = length(x),
+            median_ref = median(y),
+            median_other = median(x),
+            hl_shift = NA,
+            ci_low = NA,
+            ci_high = NA,
+            statistic = dn$z[j],
+            p_value = dn$p_dunn_adj[j], # already Dunn-corrected
+            r_rank_biserial = rb_from_U(U, length(x), length(y)),
+            stringsAsFactors = FALSE
+          )
+        )
+      })
+    )
+
+    rbind(omnibus_row, dunn_rows)
+  })
+
+  out <- do.call(rbind, results[!vapply(results, is.null, logical(1))])
+  rownames(out) <- NULL
+
+  # ── Family-wise correction across scenarios ────────────────────────────────
+  # Applied to the primary tests only (wilcoxon rows or kruskal-wallis omnibus
+  # rows); Dunn rows are already corrected within their own omnibus.
+  primary <- out$test %in% c("wilcoxon", "kruskal-wallis")
+  out$p_adj <- NA_real_
+  out$p_adj[primary] <- ave(
+    out$p_value[primary],
+    interaction(out$type[primary], out$metric[primary]),
+    FUN = function(p) p.adjust(p, method = p_adjust)
+  )
+  out$p_adj[!primary] <- out$p_value[!primary] # Dunn: keep within-omnibus correction
+
+  # ── Gate Dunn rows on the adjusted omnibus significance ───────────────────
+  if (!dunn_always && n_levels > 2) {
+    keep <- rep(TRUE, nrow(out))
+    for (i in which(out$test == "kruskal-wallis")) {
+      if (out$p_adj[i] >= alpha) {
+        same_cell <- out$type == out$type[i] &
+          out$scenario == out$scenario[i] &
+          out$metric == out$metric[i] &
+          out$test == "dunn"
+        keep[same_cell] <- FALSE
+      }
+    }
+    out <- out[keep, ]
+  }
+
+  out$sig <- cut(
+    out$p_adj,
+    breaks = c(-Inf, 0.001, 0.01, 0.05, Inf),
+    labels = c("***", "**", "*", "")
+  )
+
+  # Order rows: type, metric, numeric scenario, omnibus before pairwise
+  sc_num <- suppressWarnings(as.numeric(as.character(out$scenario)))
+  ord_sc <- if (!anyNA(sc_num)) sc_num else as.character(out$scenario)
+  out <- out[
+    order(out$type, out$metric, ord_sc, out$test != "kruskal-wallis"),
+  ]
+  rownames(out) <- NULL
+
+  out <- tibble::as_tibble(out)
+  return(out)
+}
+
+#' Create LaTeX reporting tables from test_group_differences output
+#'
+#' Produces one LaTeX table per (type, metric) combination.
+#'
+#' @param results     Output dataframe from test_group_differences().
+#' @param digits      Number of decimal digits for numeric columns (default 3).
+#' @param p_digits    Number of decimal digits for p-values (default 4).
+#' @param caption_fmt A sprintf template for the caption, receiving type and
+#'                    metric labels (default provided).
+#' @param label_fmt   A sprintf template for the LaTeX label (default provided).
+#' @param metric_labels Optional named vector mapping metric column names to
+#'                    pretty labels, e.g. c(rmsse = "RMSSE", scaled_mqloss = "SMQL").
+#'
+#' @return A named list of character strings, each a complete LaTeX table;
+#'         names are "type_metric". Print with cat() or writeLines().
+report_group_tests <- function(
+  results,
+  digits = 3,
+  p_digits = 4,
+  caption_fmt = "%s tests comparing %s distributions between groups (%s models), for each retraining scenario. Positive shifts indicate higher errors in the non-reference group.",
+  label_fmt = "tab:groupdiff_%s_%s",
+  metric_labels = c(rmsse = "RMSSE", scaled_mqloss = "SMQL")
+) {
+  fmt_num <- function(x, d = digits) {
+    ifelse(is.na(x), "", formatC(x, format = "f", digits = d))
+  }
+  fmt_p <- function(p) {
+    ifelse(
+      is.na(p),
+      "",
+      ifelse(
+        p < 10^(-p_digits),
+        paste0("$<$", formatC(10^(-p_digits), format = "f", digits = p_digits)),
+        formatC(p, format = "f", digits = p_digits)
+      )
+    )
+  }
+  esc <- function(s) gsub("%", "\\\\%", s)
+
+  is_two_level <- all(results$test %in% "wilcoxon")
+
+  combos <- unique(results[, c("type", "metric")])
+  out <- list()
+
+  for (i in seq_len(nrow(combos))) {
+    tp <- combos$type[i]
+    mt <- combos$metric[i]
+    sub <- results[results$type == tp & results$metric == mt, ]
+    mt_lab <- if (mt %in% names(metric_labels)) metric_labels[[mt]] else mt
+
+    if (is_two_level) {
+      # ── 2-group table: scenario | HL shift | W | r_rb | p_adj | sig ──────
+      hdr <- paste0(
+        "\\begin{table}[!ht]\n\\centering\n",
+        "\\begin{tabular}{rrrrrl}\n\\toprule\n",
+        "$r$ & HL shift & $W$ & $r_{rb}$ & $p$ & \\\\\n\\midrule\n"
+      )
+      rows <- paste0(
+        sub$scenario,
+        " & ",
+        fmt_num(sub$hl_shift),
+        " & ",
+        formatC(sub$statistic, format = "d", big.mark = "{,}"),
+        " & ",
+        fmt_num(sub$r_rank_biserial, 2),
+        " & ",
+        fmt_p(sub$p_adj),
+        " & ",
+        as.character(sub$sig),
+        " \\\\",
+        collapse = "\n"
+      )
+      cap <- sprintf(caption_fmt, "Wilcoxon--Mann--Whitney", mt_lab, tp)
+      ftr <- paste0(
+        "\n\\bottomrule\n\\end{tabular}\n",
+        "\\caption{",
+        esc(cap),
+        "}\n",
+        "\\label{",
+        sprintf(label_fmt, tolower(tp), tolower(mt)),
+        "}\n",
+        "\\end{table}"
+      )
+      out[[paste(tp, mt, sep = "_")]] <- paste0(hdr, rows, ftr)
+    } else {
+      # ── 3-group table: see structure suggestion below ────────────────────
+      omn <- sub[sub$test == "kruskal-wallis", ]
+      dun <- sub[sub$test == "dunn", ]
+      pairs <- unique(dun$comparison)
+
+      # one column pair (z, sig) per Dunn comparison
+      col_spec <- paste0("rrl", paste(rep("rl", length(pairs)), collapse = ""))
+      pair_hdr <- paste(
+        vapply(pairs, function(p) sprintf("\\multicolumn{2}{c}{%s}", p), ""),
+        collapse = " & "
+      )
+
+      hdr <- paste0(
+        "\\begin{table}[!ht]\n\\centering\n\\small\n",
+        "\\begin{tabular}{",
+        col_spec,
+        "}\n\\toprule\n",
+        " & \\multicolumn{2}{c}{Omnibus (KW)} & ",
+        pair_hdr,
+        " \\\\\n",
+        "$r$ & $H$ & & ",
+        paste(rep("$z$ & ", length(pairs)), collapse = ""),
+        "\\\\\n\\midrule\n"
+      )
+
+      scen <- unique(sub$scenario)
+      rows <- vapply(
+        scen,
+        function(s) {
+          o <- omn[omn$scenario == s, ]
+          line <- paste0(
+            s,
+            " & ",
+            fmt_num(o$statistic, 1),
+            " & ",
+            as.character(o$sig)
+          )
+          for (p in pairs) {
+            d <- dun[dun$scenario == s & dun$comparison == p, ]
+            line <- if (nrow(d) == 1) {
+              paste0(
+                line,
+                " & ",
+                fmt_num(d$statistic, 2),
+                " & ",
+                as.character(d$sig)
+              )
+            } else {
+              paste0(line, " & & ")
+            }
+          }
+          paste0(line, " \\\\")
+        },
+        ""
+      )
+
+      cap <- sprintf(
+        caption_fmt,
+        "Kruskal--Wallis and Dunn post-hoc",
+        mt_lab,
+        tp
+      )
+      ftr <- paste0(
+        "\n\\bottomrule\n\\end{tabular}\n",
+        "\\caption{",
+        esc(cap),
+        "}\n",
+        "\\label{",
+        sprintf(label_fmt, tolower(tp), tolower(mt)),
+        "}\n",
+        "\\end{table}"
+      )
+      out[[paste(tp, mt, sep = "_")]] <- paste0(
+        hdr,
+        paste(rows, collapse = "\n"),
+        ftr
+      )
+    }
+  }
+  return(out)
 }
