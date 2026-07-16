@@ -13,11 +13,11 @@ dataset: {
 }
 
 model_names: [
-    # 'Naive',
+    'Naive',
     # 'SeasonalNaive',
     # 'WindowAverage',
     'ETS',
-    # 'ARIMA', # no m5
+    'ARIMA', # no m5
     'LinearRegression', 
     # 'RandomForestRegressor', # no m5
     'XGBRegressor', 

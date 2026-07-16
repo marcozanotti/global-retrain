@@ -15,7 +15,9 @@ dataset: {
 types: ['preds'] # , 'eval', 'time'
 
 model_names: [
+    'Naive',
     'ETS',
+    'ARIMA',
     'LinearRegression', 
     'XGBRegressor', 
     'LGBMRegressor', 
