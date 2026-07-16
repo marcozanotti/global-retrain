@@ -376,7 +376,8 @@ def retrain_sf_model(
 
     # define the fitting time series
     series = list(train_df['unique_id'].unique())
-    # series = series[837:] # NOTE: for testing purposes
+    series_0 = series[0]
+    # series = series[196:] # NOTE: for testing purposes
     n_series = len(series)
     module_logger.info(f'[ Num series: {n_series} ]')
 
@@ -446,8 +447,12 @@ def retrain_sf_model(
 
                 # convert back the numpy array to a dataframe
                 out_sample_df_tmp = pd.DataFrame(out_sample_df_tmp)
-                out_sample_df_tmp.columns = [f'{model_name}_{col}' for col in out_sample_df_tmp.columns]
-                out_sample_df_tmp.rename(columns = {f'{model_name}_mean': f'{model_name}'}, inplace = True)
+                rename_map = {'mean': 'fcst'}
+                if levels is not None:
+                    for l in levels:
+                        rename_map[f'lo-{l}'] = f'fcst-lo-{l}'
+                        rename_map[f'hi-{l}'] = f'fcst-hi-{l}'
+                out_sample_df_tmp.rename(columns=rename_map, inplace=True)
                 out_sample_df_tmp = pd.concat(
                     [test_df_tmp[['unique_id', 'ds']], out_sample_df_tmp], axis = 1
                 )
@@ -466,7 +471,7 @@ def retrain_sf_model(
             out_sample_df_tmp.columns = out_sample_df_tmp.columns.str.replace(model_name, 'fcst')
             out_sample_df_tmp.reset_index(drop = True, inplace = True)
             # save to file # NOTE: if not first series, append to the existing file
-            if ts == series[0]:
+            if ts == series_0:
                 save_data(
                     data = out_sample_df_tmp, 
                     path_list = ['results', dataset_name, frequency, model_name, retrain_window, 'outsample', 'tmp'],
