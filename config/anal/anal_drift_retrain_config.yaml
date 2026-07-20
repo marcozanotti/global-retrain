@@ -20,7 +20,9 @@ dataset: {
 models: {
     'types': [['SF'], ['ML', 'DL']], # ML and DL together
     'model_names': [
+        'Naive',
         'ETS',
+        'ARIMA',
         'LinearRegression', 
         'XGBRegressor',
         'LGBMRegressor', 
@@ -28,7 +30,9 @@ models: {
         # 'NBEATSx'
     ],
     'model_names_abbr': [
+        'Naive',
         'ETS',
+        'ARIMA',
         'LR', 
         'XGBoost', 
         'LGBM',

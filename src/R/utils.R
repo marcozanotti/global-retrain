@@ -89,7 +89,7 @@ aggregate_data <- function(
 }
 
 get_model_type <- function(model_name) {
-  sf <- c('ETS', 'ARIMA')
+  sf <- c('Naive', 'ETS', 'ARIMA')
   ml <- c(
     'LinearRegression',
     'Lasso',
@@ -127,6 +127,7 @@ get_model_type <- function(model_name) {
 
 get_model_name_abbr <- function(model_name) {
   model_name_abbr <- dplyr::case_when(
+    model_name == 'Naive' ~ 'Naive',
     model_name == 'ETS' ~ 'ETS',
     model_name == 'ARIMA' ~ 'ARIMA',
     model_name == 'LinearRegression' ~ 'LR',

@@ -19,6 +19,7 @@ reticulate::source_python('src/Python/utils/utilities.py')
 # run twice, one for absolute and one for relative
 analysis_file_name <- 'docs/drift_retrain/absolute_evalstabtimecost_overlap_20260712_100211.RData'
 analysis_file_name <- 'docs/drift_retrain/relative_evalstabtimecost_overlap_20260712_100156.RData'
+analysis_file_name <- 'docs/drift_retrain/absolute_'
 
 res <- load(analysis_file_name)
 res <- analysis_results
