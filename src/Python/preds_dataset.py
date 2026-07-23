@@ -4,7 +4,7 @@ import os
 from utilities import (
     get_config, configure_logging, create_logger, stop_logger
 )
-from predictions import combine_dataset_predictions
+from predictions import combine_dataset_predictions, evaluate_dataset_predictions
 
 os.environ['NIXTLA_ID_AS_COL'] = '1'
 
@@ -18,5 +18,10 @@ configure_logging(
     ]
 )
 logger = create_logger()
+
 combine_dataset_predictions(config = config)
+
+config_dataset = get_config('config/preds/hapag_weekly_preds.yaml')
+evaluate_dataset_predictions(config = config_dataset)
+
 stop_logger(logger)

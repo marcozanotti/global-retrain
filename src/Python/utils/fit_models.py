@@ -123,7 +123,7 @@ def get_prediction_intervals(intervals, model_class = 'ml'):
 
     return intervals_new
 
-def retrain_sf_model_old(
+def retrain_sf_model_noforward(
     train_df, 
     test_df,
     dataset_name,

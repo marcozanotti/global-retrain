@@ -27,8 +27,8 @@ fitting: {
 }
 
 model_names: [
-    'Naive',
-    # 'ETS',
+    # 'Naive',
+    'ETS',
     'ARIMA',
     # 'LinearRegression',  
     # 'XGBRegressor', 

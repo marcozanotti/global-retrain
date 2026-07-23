@@ -1,12 +1,8 @@
 dataset: {
     'dataset_names': [
-        # 'm5', 
-        # 'vn1',
-        # 'm4',
         'hapag_region'
     ],
     'frequencies': [ 
-        # 'daily',
         'weekly'
     ],
     'ext': '.parquet'
@@ -27,7 +23,9 @@ model_names: [
 
 model_names_new: null
 # model_names_new: {
+#     'Naive': 'Naive',
 #     'ETS': 'ETS',
+#     'ARIMA': 'ARIMA',
 #     'LinearRegression': 'LR',
 #     'XGBRegressor': 'XGBoost',
 #     'LGBMRegressor': 'LGBM',
