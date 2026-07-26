@@ -17,9 +17,8 @@ reticulate::source_python('src/Python/utils/utilities.py')
 # Load & prepare data -----------------------------------------------------
 
 # run twice, one for absolute and one for relative
-analysis_file_name <- 'docs/drift_retrain/absolute_evalstabtimecost_overlap_20260712_100211.RData'
-analysis_file_name <- 'docs/drift_retrain/relative_evalstabtimecost_overlap_20260712_100156.RData'
-analysis_file_name <- 'docs/drift_retrain/absolute_'
+analysis_file_name <- 'docs/drift_retrain/absolute_evaltimecost_overlap_20260724_113915.RData'
+analysis_file_name <- 'docs/drift_retrain/relative_evaltimecost_overlap_20260724_113832.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results
@@ -264,7 +263,7 @@ pareto_data <- dplyr::left_join(
 	) |>
 	dplyr::ungroup()
 
-metrics_plot <- c('rmsse', 'cost')
+metrics_plot <- c('scaled_mqloss', 'cost')
 params <- purrr::map(metrics_plot, ~ get_table_plot_params(.x, 'absolute'))
 names(params) <- c('x', 'y')
 
@@ -327,7 +326,7 @@ group_res <- analyze_groups(
 	breaks_params = breaks_params
 )
 
-analysis <- 'evaluation' # 'evaluation', 'stability', 'evaluation_prepost'
+analysis <- 'evaluation_prepost' # 'evaluation', 'stability', 'evaluation_prepost'
 anal_res <- group_res[[df_nm]][[analysis]][['results']]
 lvl <- group_res[[df_nm]][[analysis]][['data']][['aggregated']][['group']] |>
 	unique()
@@ -668,7 +667,7 @@ invisible(lapply(tabs, cat, "\n\n")) # print all
 
 config <- get_config('config/anal/anal_drift_retrain_config.yaml')
 
-group_names <- c('breaks') # 'ABC', 'XYZ', 'breaks', 'breaks_multi', if c('ABC', 'breaks') then cartesian product
+group_names <- c('breaks_multi') # 'ABC', 'XYZ', 'breaks', 'breaks_multi', if c('ABC', 'breaks') then cartesian product
 
 # breaks_params <- NULL
 breaks_params <- c('260', 'lwz') # only for breaks and breaks_multi, otherwise NULL
@@ -680,7 +679,7 @@ opt_freq_groups <- analyze_optimal_frequency(
 	breaks_params = breaks_params
 )
 
-analysis <- 'evaluation_prepost' # 'evaluation', 'stability', 'evaluation_prepost'
+analysis <- 'evaluation' # 'evaluation', 'stability', 'evaluation_prepost'
 em1 <- eval_metrics[1]
 em2 <- eval_metrics[2]
 
