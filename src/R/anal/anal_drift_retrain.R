@@ -304,7 +304,7 @@ pareto_data |>
 
 config <- get_config('config/anal/anal_drift_retrain_config.yaml')
 
-group_names <- c('breaks') # 'ABC', 'XYZ', 'breaks', 'breaks_multi', if c('ABC', 'breaks') then cartesian product
+group_names <- c('breaks_multi') # 'ABC', 'XYZ', 'breaks', 'breaks_multi', if c('ABC', 'breaks') then cartesian product
 
 group_levels <- NULL
 # group_levels <- c(
@@ -584,6 +584,28 @@ plot_retrain_results_differences(
 ) +
 	ggplot2::labs(title = NULL) +
 	ggplot2::facet_wrap(~group, ncol = 2, scales = "fixed") +
+	ggplot2::theme(legend.position = "bottom")
+
+# relative combined with average
+groups_plot_data_average <- groups_plot_data |>
+	dplyr::group_by(type, group, retrain_window) |>
+	dplyr::summarise(
+		em1 = mean(.data[[em1]], na.rm = TRUE),
+		em2 = mean(.data[[em2]], na.rm = TRUE),
+		.groups = "drop"
+	) |>
+	dplyr::rename(!!em1 := em1, !!em2 := em2)
+((plot_retrain_results_group_averages(
+	data = groups_plot_data_average,
+	metric = em1,
+	metric_label = "RMSSE"
+)) +
+	(plot_retrain_results_group_averages(
+		data = groups_plot_data_average,
+		metric = em2,
+		metric_label = "SMQL"
+	))) +
+	patchwork::plot_layout(guides = "collect") &
 	ggplot2::theme(legend.position = "bottom")
 
 # ** Tests -----------------------------------------------------------------

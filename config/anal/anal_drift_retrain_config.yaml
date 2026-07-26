@@ -7,7 +7,7 @@ analysis: {
         'time', 
         'cost'
     ],
-    'method': 'absolute', # absolute / relative # run twice, one for absolute and one for relative
+    'method': 'relative', # absolute / relative # run twice, one for absolute and one for relative
     'sample_type': 'overlap' # overlap / nooverlap
 }
 

@@ -620,6 +620,47 @@ plot_retrain_results <- function(
   return(g)
 }
 
+plot_retrain_results_group_averages <- function(
+  data,
+  metric,
+  scaling_fun = function(x) {
+    scales::number(x, accuracy = 0.001)
+  },
+  metric_label = "",
+  title = ""
+) {
+  cat("Creating plot...\n")
+
+  data_plot <- data |>
+    dplyr::mutate(retrain_window = factor(retrain_window, ordered = TRUE))
+
+  g <- data_plot |>
+    ggplot2::ggplot(
+      ggplot2::aes(
+        x = .data[['retrain_window']],
+        y = .data[[metric]],
+        color = .data[['group']],
+        linetype = .data[['type']],
+        group = interaction(.data[["group"]], .data[["type"]])
+      )
+    ) +
+    ggplot2::geom_point(size = 2) +
+    ggplot2::geom_line(linewidth = 1) +
+    ggplot2::scale_y_continuous(labels = scaling_fun) +
+    # ggplot2::scale_color_manual(values = colors_lbls) +
+    ggplot2::labs(
+      title = title,
+      x = 'Retrain Scenario (r)',
+      y = metric_label,
+      color = 'Group',
+      linetype = 'Method Type'
+    ) +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+
+  return(g)
+}
+
 plot_retrain_results_differences <- function(
   data,
   metric,
