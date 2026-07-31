@@ -89,7 +89,7 @@ aggregate_data <- function(
 }
 
 get_model_type <- function(model_name) {
-  sf <- c('Naive', 'ETS', 'ARIMA')
+  sf <- c('Naive', 'SeasonalNaive', 'WindowAverage', 'ETS', 'ARIMA')
   ml <- c(
     'LinearRegression',
     'Lasso',
@@ -130,6 +130,8 @@ get_model_name_abbr <- function(model_name) {
     model_name == 'Naive' ~ 'Naive',
     model_name == 'ETS' ~ 'ETS',
     model_name == 'ARIMA' ~ 'ARIMA',
+    model_name == 'SeasonalNaive' ~ 'SeasonalNaive',
+    model_name == 'WindowAverage' ~ 'MA',
     model_name == 'LinearRegression' ~ 'LR',
     model_name == 'RandomForestRegressor' ~ 'RF',
     model_name == 'XGBRegressor' ~ 'XGBoost',
@@ -458,6 +460,9 @@ plot_retrain_results <- function(
   cat("Creating plot...\n")
 
   method_lvls <- c(
+    'Naive',
+    'SeasonalNaive',
+    'MA',
     'ETS',
     'ARIMA',
     'LR',
@@ -487,6 +492,9 @@ plot_retrain_results <- function(
   # 	"Ens2T" = "#FFD700", "Ens3T" = "#FFA500",	"Ens4T" = "#FF6961", "Ens5T" = "#E31A1C"
   # )
   colors_lbls <- c(
+    "Naive" = "#E6AB8D",
+    "SeasonalNaive" = "#C97B63",
+    "MA" = "#8C564B",
     "ETS" = "#17BECF",
     "ARIMA" = "#FF6961",
     "LR" = "#003366",
