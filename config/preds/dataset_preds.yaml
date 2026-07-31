@@ -12,6 +12,8 @@ types: ['preds'] # , 'eval', 'time'
 
 model_names: [
     'Naive',
+    'SeasonalNaive',
+    'WindowAverage',
     'ETS',
     'ARIMA',
     'LinearRegression', 
@@ -24,6 +26,8 @@ model_names: [
 model_names_new: null
 # model_names_new: {
 #     'Naive': 'Naive',
+#     'SeasonalNaive': 'SeasonalNaive',
+#     'WindowAverage': 'WindowAverage',
 #     'ETS': 'ETS',
 #     'ARIMA': 'ARIMA',
 #     'LinearRegression': 'LR',

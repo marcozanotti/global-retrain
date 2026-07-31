@@ -408,7 +408,7 @@ def retrain_sf_model(
             test_df_tmp = test_df_ts.head(i + horizon).tail(horizon)
             test_df_tmp.reset_index(drop = True, inplace = True)
             
-            if i in fitting_ids:
+            if i in fitting_ids: # or model_name in ['WindowAverage'] NOTE: WindowAverage does not have a forward method, so it must be fitted every time
 
                 # train the model
                 module_logger.info(f'Fitting: t = {i}, {int(i / retrain_window + 1)} of {n_fitting}...')

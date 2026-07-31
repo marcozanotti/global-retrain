@@ -28,8 +28,10 @@ fitting: {
 
 model_names: [
     # 'Naive',
-    'ETS',
-    'ARIMA',
+    # 'SeasonalNaive',
+    'WindowAverage',
+    # 'ETS',
+    # 'ARIMA',
     # 'LinearRegression',
     # 'XGBRegressor',
     # 'LGBMRegressor',

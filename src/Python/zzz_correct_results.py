@@ -15,9 +15,9 @@ logger = create_logger()
 
 dataset_name = 'hapag_region'
 frequency = 'weekly'
-model_name = 'ARIMA'
-retrain_scenarios = [2, 3, 4, 6, 8, 10, 13, 26, 52, 104]
-levels = [50, 60, 70, 80, 90, 95, 99]
+model_name = 'WindowAverage'
+retrain_scenarios = [1, 2, 3, 4, 6, 8, 10, 13, 26, 52, 104]
+levels = None # [50, 60, 70, 80, 90, 95, 99]
 
 for rs in retrain_scenarios:
     logger.info(f"Processing retrain scenario: {rs}")
@@ -35,6 +35,15 @@ for rs in retrain_scenarios:
             [f]
         )
         # WARN: added check for a bug in model naming solved via setting the alias: 'model_name' in the fit config file.
+        # check if column names contains 'fcst4' then rename it to 'fcst', 'fcst-lo-level' and 'fcst-hi-level'
+        if 'fcst4' in results_df.columns:
+            results_df.rename(columns = {'fcst4': 'fcst'}, inplace = True)
+            if levels is not None:
+                for l in levels:
+                    results_df.rename(columns = {f'fcst4-lo-{l}': f'fcst-lo-{l}'}, inplace = True)
+                    results_df.rename(columns = {f'fcst4-hi-{l}': f'fcst-hi-{l}'}, inplace = True)
+        
+        # WARN: added check for a bug in model naming solved via setting the alias: 'model_name' in the fit config file.
         # check if column names contains 'Autofcst' then rename it to 'fcst', 'fcst-lo-level' and 'fcst-hi-level'
         # if 'Autofcst' in results_df.columns:
         #     results_df.rename(columns = {'Autofcst': 'fcst'}, inplace = True)
@@ -44,15 +53,15 @@ for rs in retrain_scenarios:
         #             results_df.rename(columns = {f'Autofcst-hi-{l}': f'fcst-hi-{l}'}, inplace = True)
              
         # WARN: added check for a bug in retrain_sf_model naming when using .forward() method and fixed via renaming
-        rename_map = {}
-        for l in levels:
-            rename_map[f'{model_name}_lo-{l}'] = f'fcst-lo-{l}'
-            rename_map[f'{model_name}_hi-{l}'] = f'fcst-hi-{l}'
-            rename_map[f'fcst_lo-{l}'] = f'fcst-lo-{l}'
-            rename_map[f'fcst_hi-{l}'] = f'fcst-hi-{l}'
-        if model_name in results_df.columns:
-            rename_map[model_name] = 'fcst'
-        results_df.rename(columns=rename_map, inplace=True)
+        # rename_map = {}
+        # for l in levels:
+        #     rename_map[f'{model_name}_lo-{l}'] = f'fcst-lo-{l}'
+        #     rename_map[f'{model_name}_hi-{l}'] = f'fcst-hi-{l}'
+        #     rename_map[f'fcst_lo-{l}'] = f'fcst-lo-{l}'
+        #     rename_map[f'fcst_hi-{l}'] = f'fcst-hi-{l}'
+        # if model_name in results_df.columns:
+        #     rename_map[model_name] = 'fcst'
+        # results_df.rename(columns=rename_map, inplace=True)
 
         save_data(
             results_df, 

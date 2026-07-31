@@ -28,6 +28,8 @@ fitting: {
 
 model_names: [
     'Naive',
+    'SeasonalNaive',
+    'WindowAverage',
     'ETS',
     'ARIMA',
     'LinearRegression', 
