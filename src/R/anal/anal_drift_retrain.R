@@ -17,8 +17,8 @@ reticulate::source_python('src/Python/utils/utilities.py')
 # Load & prepare data -----------------------------------------------------
 
 # run twice, one for absolute and one for relative
-analysis_file_name <- 'docs/drift_retrain/absolute_evaltimecost_overlap_20260731_093010.RData'
-analysis_file_name <- 'docs/drift_retrain/relative_evaltimecost_overlap_20260731_094329.RData'
+analysis_file_name <- 'docs/drift_retrain/absolute_evaltimecost_overlap_20260811_100905.RData'
+analysis_file_name <- 'docs/drift_retrain/relative_evaltimecost_overlap_20260811_100926.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results
@@ -33,7 +33,7 @@ df_nm <- 'hapag_region_weekly'
 mod_tps <- c('SF', 'ML_DL')
 eval_metrics <- c('rmsse', 'scaled_mqloss')
 stab_metrics <- c('smapc', 'smqpc')
-time_metrics <- c('total_sample_time')
+time_metrics <- c('total_fit_time', 'total_predict_time', 'total_sample_time')
 cost_metrics <- c('cost', 'savings_perc')
 
 
@@ -234,6 +234,25 @@ cm2 <- cost_metrics[2]
 		metric = cm2,
 		metric_label = "Savings (%)",
 		by_type = TRUE
+	)) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
+
+time_data_filtered <- time_data |>
+	dplyr::filter(!method %in% c('Naive', 'SeasonalNaive', 'MA'))
+(plot_retrain_results(
+	data = time_data_filtered,
+	metric = 'total_fit_time',
+	metric_label = "Training Time",
+	by_type = TRUE, 
+	scaling_fun = function(x) {scales::number(x, accuracy = 1)}
+) +
+	plot_retrain_results(
+		data = time_data_filtered,
+		metric = 'total_predict_time',
+		metric_label = "Inference Time",
+		by_type = TRUE,
+		scaling_fun = function(x) {scales::number(x, accuracy = 1)}
 	)) +
 	patchwork::plot_layout(guides = "collect") &
 	ggplot2::theme(legend.position = "bottom")

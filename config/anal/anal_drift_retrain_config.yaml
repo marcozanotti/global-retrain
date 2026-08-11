@@ -52,7 +52,7 @@ evaluation_params: {
 }
 
 time_params: {
-    'metrics': ['total_sample_time']
+    'metrics': ['total_fit_time', 'total_predict_time', 'total_sample_time']
 }
 
 stability_params: {
