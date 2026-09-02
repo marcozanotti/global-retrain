@@ -100,3 +100,131 @@ hapag_eval_df |>
     rmsse = mean(rmsse)
   ) |>
   arrange(mase)
+
+
+# preds eval by sample
+hapag_preds_eval_df <- load_data(
+  c('results', 'hapag_region', 'weekly', 'preds', 'old'),
+  list('hapag_region_weekly_preds_eval_overlap')
+) |>
+  as_tibble()
+hapag_preds_eval_df |> count(sample) |> tail()
+sample_map <- readr::read_csv(
+  'data/hapag_region/hapag_region_sample_mapping.csv'
+)
+
+hapag_preds_eval_df |>
+  group_by(method, retrain_window, sample) |>
+  summarise(
+    rmsse = mean(rmsse, na.rm = TRUE),
+    scaled_mqloss = mean(scaled_mqloss, na.rm = TRUE),
+  ) |>
+  ungroup() |>
+  dplyr::filter(!method %in% c('Naive', 'SeasonalNaive', 'WindowAverage')) |>
+  dplyr::mutate(retrain_window = as.factor(retrain_window)) |>
+  dplyr::left_join(sample_map, by = c('sample' = 'sample')) |>
+  ggplot(aes(x = ds, y = rmsse, color = retrain_window)) +
+  geom_line() +
+  facet_wrap(~method, scales = 'fixed') +
+  theme_bw() +
+  labs(
+    title = 'RMSSE by Sample',
+    x = 'Sample',
+    y = 'RMSSE'
+  )
+
+# hapag_preds_eval_df |>
+#   group_by(method, retrain_window, sample) |>
+#   summarise(
+#     rmsse = mean(rmsse, na.rm = TRUE),
+#     scaled_mqloss = mean(scaled_mqloss, na.rm = TRUE),
+#   ) |>
+#   ungroup() |>
+#   dplyr::filter(!method %in% c('Naive', 'SeasonalNaive', 'WindowAverage')) |>
+#   dplyr::mutate(retrain_window = as.factor(retrain_window)) |>
+#   ggplot(aes(x = sample, y = scaled_mqloss, color = retrain_window)) +
+#   geom_line() +
+#   facet_wrap(~method, scales = 'fixed') +
+#   theme_bw() +
+#   labs(
+#     title = 'SMQL by Sample',
+#     x = 'Sample',
+#     y = 'SMQL'
+#   )
+
+hapag_preds_eval_df |>
+  group_by(method, retrain_window, sample) |>
+  summarise(
+    rmsse = mean(rmsse, na.rm = TRUE),
+    scaled_mqloss = mean(scaled_mqloss, na.rm = TRUE),
+  ) |>
+  ungroup() |>
+  dplyr::filter(method == 'MLP') |>
+  dplyr::mutate(retrain_window = as.factor(retrain_window)) |>
+  dplyr::left_join(sample_map, by = c('sample' = 'sample')) |>
+  ggplot(aes(x = ds, y = rmsse, color = retrain_window)) +
+  geom_line() +
+  facet_wrap(~method, scales = 'fixed') +
+  theme_bw() +
+  labs(
+    title = 'RMSSE by Sample',
+    x = 'Sample',
+    y = 'RMSSE'
+  )
+
+hapag_preds_eval_df |>
+  group_by(method, retrain_window, sample) |>
+  summarise(
+    rmsse = mean(rmsse, na.rm = TRUE),
+    scaled_mqloss = mean(scaled_mqloss, na.rm = TRUE),
+  ) |>
+  ungroup() |>
+  dplyr::filter(method == 'NBEATSx') |>
+  dplyr::mutate(retrain_window = as.factor(retrain_window)) |>
+  dplyr::left_join(sample_map, by = c('sample' = 'sample')) |>
+  ggplot(aes(x = ds, y = rmsse, color = retrain_window)) +
+  geom_line() +
+  facet_wrap(~method, scales = 'fixed') +
+  theme_bw() +
+  labs(
+    title = 'RMSSE by Sample',
+    x = 'Sample',
+    y = 'RMSSE'
+  )
+
+hapag_preds_eval_df |>
+  group_by(method, retrain_window, sample) |>
+  summarise(
+    rmsse = mean(rmsse, na.rm = TRUE),
+    scaled_mqloss = mean(scaled_mqloss, na.rm = TRUE),
+  ) |>
+  ungroup() |>
+  dplyr::filter(method == 'MLP', retrain_window %in% c(1, 2, 52, 104)) |>
+  dplyr::mutate(retrain_window = as.factor(retrain_window)) |>
+  dplyr::left_join(sample_map, by = c('sample' = 'sample')) |>
+  ggplot(aes(x = ds, y = rmsse, color = retrain_window)) +
+  geom_line() +
+  facet_wrap(~retrain_window, scales = 'fixed', ncol = 2) +
+  theme_bw() +
+  labs(
+    title = 'RMSSE by Sample',
+    x = 'Sample',
+    y = 'RMSSE'
+  )
+
+
+hapag_preds_eval_df |>
+  dplyr::filter(method == 'MLP', retrain_window %in% c(1, 104)) |>
+  dplyr::mutate(
+    retrain_window = as.factor(retrain_window),
+    sample = as.factor(sample)
+  ) |>
+  ggplot(aes(x = sample, y = rmsse, color = retrain_window)) +
+  geom_boxplot() +
+  facet_wrap(~retrain_window, scales = 'fixed', ncol = 1) +
+  theme_bw() +
+  labs(
+    title = 'RMSSE by Sample',
+    x = 'Sample',
+    y = 'RMSSE'
+  )

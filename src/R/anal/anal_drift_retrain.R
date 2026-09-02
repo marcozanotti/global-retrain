@@ -17,8 +17,8 @@ reticulate::source_python('src/Python/utils/utilities.py')
 # Load & prepare data -----------------------------------------------------
 
 # run twice, one for absolute and one for relative
-analysis_file_name <- 'docs/drift_retrain/absolute_evaltimecost_overlap_20260811_100905.RData'
-analysis_file_name <- 'docs/drift_retrain/relative_evaltimecost_overlap_20260811_100926.RData'
+analysis_file_name <- 'docs/drift_retrain/absolute_evaltimecost_overlap_20260901_185749.RData'
+analysis_file_name <- 'docs/drift_retrain/relative_evaltimecost_overlap_20260901_185733.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results
@@ -218,41 +218,51 @@ for (i in seq_along(cost_metrics)) {
 
 # ** Plots -----------------------------------------------------------------
 time_data <- res[[df_nm]][['time']]$data |>
-	dplyr::mutate(type = ifelse(type == "SF", "Local", "Global"))
+	dplyr::mutate(type = ifelse(type == "SF", "Local", "Global")) |>
+	dplyr::filter(!method %in% c('Naive', 'SeasonalNaive', 'MA'))
 cost_data <- res[[df_nm]][['cost']]$data |>
-	dplyr::mutate(type = ifelse(type == "SF", "Local", "Global"))
-tm1 <- time_metrics[1]
+	dplyr::mutate(type = ifelse(type == "SF", "Local", "Global")) |>
+	dplyr::filter(!method %in% c('Naive', 'SeasonalNaive', 'MA'))
+tm1 <- time_metrics[3]
 cm2 <- cost_metrics[2]
 (plot_retrain_results(
 	data = time_data,
 	metric = tm1,
 	metric_label = "Computating Time",
-	by_type = TRUE
+	by_type = TRUE,
+	scaling_fun = function(x) {
+		scales::number(x, accuracy = 0.1)
+	}
 ) +
 	plot_retrain_results(
 		data = cost_data,
 		metric = cm2,
 		metric_label = "Savings (%)",
-		by_type = TRUE
+		by_type = TRUE,
+		scaling_fun = function(x) {
+			scales::number(x, accuracy = 1)
+		}
 	)) +
 	patchwork::plot_layout(guides = "collect") &
 	ggplot2::theme(legend.position = "bottom")
 
-time_data_filtered <- time_data |>
-	dplyr::filter(!method %in% c('Naive', 'SeasonalNaive', 'MA'))
 (plot_retrain_results(
-	data = time_data_filtered,
+	data = time_data,
 	metric = 'total_fit_time',
 	metric_label = "Training Time",
-	by_type = TRUE, 
-	scaling_fun = function(x) {scales::number(x, accuracy = 1)}
+	by_type = TRUE,
+	scaling_fun = function(x) {
+		scales::number(x, accuracy = 0.1)
+	}
 ) +
 	plot_retrain_results(
-		data = time_data_filtered,
+		data = time_data,
 		metric = 'total_predict_time',
 		metric_label = "Inference Time",
 		by_type = TRUE,
-		scaling_fun = function(x) {scales::number(x, accuracy = 1)}
+		scaling_fun = function(x) {
+			scales::number(x, accuracy = 1)
+		}
 	)) +
 	patchwork::plot_layout(guides = "collect") &
 	ggplot2::theme(legend.position = "bottom")
@@ -271,21 +281,22 @@ pareto_data <- dplyr::left_join(
 	cost_data,
 	by = c('type', 'method', 'retrain_window')
 ) |>
+	dplyr::filter(!method %in% c('Naive', 'SeasonalNaive', 'MA')) |>
 	dplyr::mutate(retrain_window = as.factor(retrain_window)) |>
 	dplyr::select(type, method, retrain_window, dplyr::all_of(metrics)) |>
-	dplyr::group_by(method) |>
 	dplyr::mutate(
-		dplyr::across(
-			cost,
-			~ (.x - min(.x)) / (max(.x) - min(.x)) * 100
-		)
+		cost_abs = cost,
+		accuracy_cost = ((rmsse - 1) * 100) * 2000000 # 2M for each % point of accuracy loss
+	) |>
+	dplyr::group_by(type, method) |>
+	dplyr::mutate(
+		cost = (cost - min(cost)) / (max(cost) - min(cost)) * 100
 	) |>
 	dplyr::ungroup()
 
-metrics_plot <- c('scaled_mqloss', 'cost')
+metrics_plot <- c('rmsse', 'cost')
 params <- purrr::map(metrics_plot, ~ get_table_plot_params(.x, 'absolute'))
 names(params) <- c('x', 'y')
-
 pareto_data |>
 	ggplot2::ggplot(
 		ggplot2::aes(
@@ -315,6 +326,100 @@ pareto_data |>
 		axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)
 	) +
 	ggplot2::facet_wrap(~method, ncol = 2, scales = "fixed")
+
+metrics_plot <- c('accuracy_cost', 'cost_abs')
+params <- purrr::map(metrics_plot, ~ get_table_plot_params(.x, 'absolute'))
+names(params) <- c('x', 'y')
+pareto_data |>
+	ggplot2::ggplot(
+		ggplot2::aes(
+			x = .data[[metrics_plot[1]]],
+			y = .data[[metrics_plot[2]]],
+			# color = .data[['retrain_window']]
+		)
+	) +
+	ggplot2::geom_point() +
+	ggrepel::geom_text_repel(
+		ggplot2::aes(label = .data[['retrain_window']]),
+		col = 'black',
+		vjust = -0.25
+	) +
+	ggplot2::scale_x_continuous(labels = scales::comma_format()) +
+	ggplot2::scale_y_continuous(labels = scales::comma_format()) +
+	# ggplot2::scale_color_manual(values = colors_lbls_2) +
+	ggplot2::labs(
+		title = paste0('Pareto Frontier: Accuracy Cost - Computing Time Cost'),
+		x = 'Accuracy Cost',
+		y = 'Computing Time Cost'
+	) +
+	ggplot2::theme_bw() +
+	ggplot2::theme(
+		plot.title = ggplot2::element_text(hjust = 0.5),
+		legend.position = "bottom",
+		axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)
+	) +
+	ggplot2::facet_wrap(~method, ncol = 2, scales = "fixed")
+
+
+pareto_data_grouped <- dplyr::left_join(
+	acc_data,
+	cost_data,
+	by = c('type', 'method', 'retrain_window')
+) |>
+	dplyr::filter(!method %in% c('Naive', 'SeasonalNaive', 'MA')) |>
+	dplyr::mutate(type = ifelse(type == "SF", "Local", "Global")) |>
+	dplyr::mutate(
+		type = factor(type, levels = c("Local", "Global")),
+		retrain_window = as.factor(retrain_window)
+	) |>
+	dplyr::select(type, method, retrain_window, dplyr::all_of(metrics)) |>
+	dplyr::group_by(type, retrain_window) |>
+	dplyr::summarise(
+		rmsse = mean(rmsse, na.rm = TRUE),
+		cost = mean(cost, na.rm = TRUE),
+		scaled_mqloss = mean(scaled_mqloss, na.rm = TRUE)
+	) |>
+	dplyr::ungroup() |>
+	dplyr::mutate(
+		cost_abs = cost,
+		accuracy_cost = ((rmsse - 1) * 100) * 2000000 # 2M for each % point of accuracy loss
+	) |>
+	dplyr::group_by(type) |>
+	dplyr::mutate(
+		cost = (cost - min(cost)) / (max(cost) - min(cost)) * 100
+	) |>
+	dplyr::ungroup()
+
+pareto_data_grouped |>
+	ggplot2::ggplot(
+		ggplot2::aes(
+			x = .data[['accuracy_cost']],
+			y = .data[['cost_abs']],
+			# color = .data[['retrain_window']]
+		)
+	) +
+	ggplot2::geom_point() +
+	ggrepel::geom_text_repel(
+		ggplot2::aes(label = .data[['retrain_window']]),
+		col = 'black',
+		vjust = -0.25
+	) +
+	# set x in millions and y in thousands
+	ggplot2::scale_x_continuous(labels = scales::comma_format()) +
+	ggplot2::scale_y_continuous(labels = scales::comma_format()) +
+	# ggplot2::scale_color_manual(values = colors_lbls_2) +
+	ggplot2::labs(
+		title = 'Pareto Frontier: Accuracy Cost - Computing Time Cost',
+		x = 'Accuracy Cost',
+		y = 'Computing Time Cost'
+	) +
+	ggplot2::theme_bw() +
+	ggplot2::theme(
+		plot.title = ggplot2::element_text(hjust = 0.5),
+		legend.position = "bottom",
+		axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)
+	) +
+	ggplot2::facet_wrap(~type, ncol = 2, scales = "fixed")
 
 
 # =========================================================================

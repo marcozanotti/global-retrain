@@ -1746,7 +1746,6 @@ analyze_results <- function(config) {
       } else if (at == "cost") {
         cat("Loading and preparing the time data for cost analysis...\n")
         cost_dataset_n_skus_tmp <- cost_datasets_n_skus[[dn]]
-
         anal_df_tmp <- load_data(
           path_list = c('results', dataset_name_tmp, freq_tmp, 'evaluation'),
           name_list = c(dataset_name_tmp, freq_tmp, 'time'),
