@@ -68,4 +68,4 @@ lightning_logs/
 
 logs/
 
-src/Python/zzz_correct_results.py
+src/corrections/
