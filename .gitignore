@@ -68,4 +68,5 @@ lightning_logs/
 
 logs/
 
+docs/drift_retrain/old/
 src/corrections/
