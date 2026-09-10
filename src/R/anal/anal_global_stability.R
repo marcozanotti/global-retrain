@@ -11,181 +11,451 @@ source('src/R/utils.R')
 reticulate::source_python('src/Python/utils/utilities.py')
 
 # NOTE:
-# plot andamenti 1120x525
-# plot test 730x635
-# plot test doppio 1120x525
-# plot overall 800x800 or 900x800
-
+# plot andamenti 700x700
+# plot test 750x650
 
 # Load & prepare data -----------------------------------------------------
 
 # run twice, one for absolute and one for relative
-analysis_file_name <- 'docs/global_stability/absolute_evaltimestab_overlap_20250911_141355.RData'
-analysis_file_name <- 'docs/global_stability/relative_evaltimestab_overlap_20250911_142718.RData'
+analysis_file_name <- 'docs/global_stability/absolute_evalstab_overlap_20260614_092806.RData'
+analysis_file_name <- 'docs/global_stability/relative_evalstab_overlap_20260614_092002.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results
 rm(analysis_results)
 
 
-
-# Parameters --------------------------------------------------------------
-
-dataset_name1 <- 'm5_daily'
-dataset_name2 <- 'vn1_weekly'
-
-models_type <- 'ML_DL'
-models_type <- 'ENSACC'
-
-
-
 # Analysis ----------------------------------------------------------------
 
-# =========================================================================
-# * Stability -------------------------------------------------------------
-# =========================================================================
+# * Parameters ------------------------------------------------------------
 
-stab_res1 <- res[[dataset_name1]][['stability']][['results']][[models_type]]
-stab_res2 <- res[[dataset_name2]][['stability']][['results']][[models_type]]
-stab_metrics <- c('smapc', 'smqc')
+df_nms <- c('m4_daily', 'm5_daily', 'vn1_weekly')
+mod_tps <- c('SF', 'ML_DL')
+eval_metrics <- c('rmsse', 'scaled_mqloss')
+stab_metrics <- c('smapc', 'smqpc')
+
+
+# =========================================================================
+# * Evaluation & Stability ------------------------------------------------
+# =========================================================================
 
 # ** Tables ---------------------------------------------------------------
-for (m in stab_metrics) {
-	cat(paste(dataset_name1, m, "\n\n"))
-	print(xtable::xtable(stab_res1$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
-	cat(paste(dataset_name2, m, "\n\n"))
-	print(xtable::xtable(stab_res2$tables[[m]]$x$data, digits = 3), include.rownames = FALSE)
-	cat("\n\n")
+for (i in seq_along(eval_metrics)) {
+	em <- eval_metrics[i]
+	sm <- stab_metrics[i]
+	for (j in seq_along(df_nms)) {
+		df_nm <- df_nms[j]
+		tab_eval <- dplyr::bind_rows(
+			res[[df_nm]][['evaluation']][['results']][[mod_tps[1]]]$tables[[
+				em
+			]]$x$data,
+			res[[df_nm]][['evaluation']][['results']][[mod_tps[2]]]$tables[[
+				em
+			]]$x$data
+		)
+		tab_stab <- dplyr::bind_rows(
+			res[[df_nm]][['stability']][['results']][[mod_tps[1]]]$tables[[
+				sm
+			]]$x$data,
+			res[[df_nm]][['stability']][['results']][[mod_tps[2]]]$tables[[
+				sm
+			]]$x$data
+		)
+		cat(paste(df_nms[j], em, "\n\n"))
+		print(xtable::xtable(tab_eval, digits = 3), include.rownames = FALSE)
+		cat("\n\n")
+		cat(paste(df_nms[j], sm, "\n\n"))
+		print(xtable::xtable(tab_stab, digits = 3), include.rownames = FALSE)
+		cat("\n\n")
+	}
 }
 
 # ** Plots -----------------------------------------------------------------
-for (m in stab_metrics) {
-	print(
-		stab_res1$plots[[m]] + stab_res2$plots[[m]] +
-			patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
-	)
+for (k in mod_tps) {
+	eval_res1 <- res[[df_nms[1]]][['evaluation']][['results']][[k]]
+	eval_res2 <- res[[df_nms[2]]][['evaluation']][['results']][[k]]
+	eval_res3 <- res[[df_nms[3]]][['evaluation']][['results']][[k]]
+	stab_res1 <- res[[df_nms[1]]][['stability']][['results']][[k]]
+	stab_res2 <- res[[df_nms[2]]][['stability']][['results']][[k]]
+	stab_res3 <- res[[df_nms[3]]][['stability']][['results']][[k]]
+	for (i in seq_along(eval_metrics)) {
+		em <- eval_metrics[i]
+		sm <- stab_metrics[i]
+		print(
+			((eval_res1$plots[[em]] +
+				ggplot2::guides(col = FALSE) +
+				ggplot2::labs(x = NULL)) +
+				(stab_res1$plots[[sm]] +
+					ggplot2::guides(col = FALSE) +
+					ggplot2::labs(x = NULL))) /
+				((eval_res2$plots[[em]] +
+					ggplot2::guides(col = FALSE) +
+					ggplot2::labs(x = NULL)) +
+					(stab_res2$plots[[sm]] +
+						ggplot2::guides(col = FALSE) +
+						ggplot2::labs(x = NULL))) /
+				((eval_res3$plots[[em]]) +
+					(stab_res3$plots[[sm]])) +
+				patchwork::plot_layout(guides = "collect") &
+				ggplot2::theme(legend.position = "bottom")
+		)
+	}
+}
+
+# 600 x 400
+{
+	eval_res2 <- res[[df_nms[2]]][['evaluation']][['results']][["SF"]]
+	stab_res2 <- res[[df_nms[2]]][['stability']][['results']][["SF"]]
+	((eval_res2$plots[["rmsse"]] +
+		ggplot2::theme(
+			plot.title = ggplot2::element_blank(),
+			axis.title.x = ggplot2::element_blank(),
+			axis.text.x = ggplot2::element_blank(),
+			axis.ticks.x = ggplot2::element_blank()
+		)) +
+		(stab_res2$plots[["smapc"]] +
+			ggplot2::theme(
+				plot.title = ggplot2::element_blank(),
+				axis.title.x = ggplot2::element_blank(),
+				axis.text.x = ggplot2::element_blank(),
+				axis.ticks.x = ggplot2::element_blank()
+			))) /
+		((eval_res2$plots[["scaled_mqloss"]] + ggplot2::labs(title = NULL)) +
+			(stab_res2$plots[["smqpc"]] + ggplot2::labs(title = NULL))) +
+		patchwork::plot_layout(guides = "collect") &
+		patchwork::plot_annotation(
+			'ETS - M5',
+			theme = ggplot2::theme(
+				plot.title = ggplot2::element_text(hjust = 0.5)
+			)
+		) &
+		ggplot2::theme(legend.position = "none") &
+		ggplot2::scale_color_manual(values = c("#3b3b3b"))
+}
+
+# 900x500
+# for ISF2026 presentation
+for (k in mod_tps) {
+	eval_res1 <- res[[df_nms[1]]][['evaluation']][['results']][[k]]
+	eval_res2 <- res[[df_nms[2]]][['evaluation']][['results']][[k]]
+	eval_res3 <- res[[df_nms[3]]][['evaluation']][['results']][[k]]
+	stab_res1 <- res[[df_nms[1]]][['stability']][['results']][[k]]
+	stab_res2 <- res[[df_nms[2]]][['stability']][['results']][[k]]
+	stab_res3 <- res[[df_nms[3]]][['stability']][['results']][[k]]
+	for (i in seq_along(eval_metrics)) {
+		em <- eval_metrics[i]
+		sm <- stab_metrics[i]
+		print(
+			((eval_res1$plots[[em]] +
+				ggplot2::guides(col = FALSE) +
+				ggplot2::labs(x = NULL)) +
+				(eval_res2$plots[[em]] +
+					ggplot2::guides(col = FALSE) +
+					ggplot2::labs(x = NULL)) +
+				(eval_res3$plots[[em]] + ggplot2::labs(x = NULL))) /
+				((stab_res1$plots[[sm]] +
+					ggplot2::guides(col = FALSE) +
+					ggplot2::labs(title = NULL)) +
+					(stab_res2$plots[[sm]] +
+						ggplot2::guides(col = FALSE) +
+						ggplot2::labs(title = NULL)) +
+					(stab_res3$plots[[sm]] + ggplot2::labs(title = NULL))) +
+				patchwork::plot_layout(guides = "collect") &
+				ggplot2::theme(legend.position = "bottom")
+		)
+	}
+}
+
+# 700x400
+for (k in mod_tps) {
+	df_nm <- df_nms[2]
+	eval_resx <- res[[df_nm]][['evaluation']][['results']][[k]]
+	stab_resx <- res[[df_nm]][['stability']][['results']][[k]]
+	for (i in seq_along(eval_metrics)) {
+		em <- eval_metrics[i]
+		sm <- stab_metrics[i]
+		print(
+			(eval_resx$plots[[em]] + ggplot2::guides(col = FALSE)) +
+				(stab_resx$plots[[sm]]) +
+				patchwork::plot_layout(guides = "collect") &
+				ggplot2::theme(legend.position = "bottom")
+		)
+	}
 }
 
 # ** Tests -----------------------------------------------------------------
-for (m in stab_metrics) {
-	g1 <- plot_test_results_facet(
-		data = stab_res1$tests[[m]],
-		.metric = m, 
-		by = 'retrain_window', 
-		metric_label = toupper(gsub("_", " ", m)),
-		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name1), "_.*", ""), "- Nemenyi Test"))
-	)
-	print(g1)
-	g2 <- plot_test_results_facet(
-		data = stab_res2$tests[[m]],
-		.metric = m, 
-		by = 'retrain_window', 
-		metric_label = toupper(gsub("_", " ", m)),
-		title = toupper(paste(stringr::str_replace_all(toupper(dataset_name2), "_.*", ""), "- Nemenyi Test"))
-	)
-	print(g2)
+
+# 1000x700
+# for SF models
+for (k in mod_tps[1]) {
+	for (nm in df_nms) {
+		eval_res <- res[[nm]][['evaluation']][['results']][[k]]
+		stab_res <- res[[nm]][['stability']][['results']][[k]]
+		df_nm <- stringr::str_replace_all(toupper(nm), "_.*", "")
+		g_list <- vector("list", length(eval_metrics))
+		for (i in seq_along(eval_metrics)) {
+			em <- eval_metrics[i]
+			em_nm <- toupper(gsub(
+				"_",
+				" ",
+				ifelse(em == "scaled_mqloss", "smql", em)
+			))
+			sm <- stab_metrics[i]
+			sm_nm <- toupper(gsub("_", " ", sm))
+			ge <- plot_test_results_facet(
+				data = eval_res$tests[[em]],
+				.metric = em,
+				by = "retrain_window",
+				metric_label = em_nm,
+				title = paste(df_nm, "-", em_nm, "- Nemenyi Test")
+			)
+			gs <- plot_test_results_facet(
+				data = stab_res$tests[[sm]],
+				.metric = sm,
+				by = "retrain_window",
+				metric_label = sm_nm,
+				title = paste(df_nm, "-", sm_nm, "- Nemenyi Test")
+			)
+			g_list[[i]] <- ge + gs
+		}
+		g <- g_list[[1]] / g_list[[2]]
+		print(g)
+	}
 }
+
+# 750x650
+# for ML_DL models
+for (k in mod_tps[2]) {
+	eval_res1 <- res[[df_nms[1]]][['evaluation']][['results']][[k]]
+	eval_res2 <- res[[df_nms[2]]][['evaluation']][['results']][[k]]
+	eval_res3 <- res[[df_nms[3]]][['evaluation']][['results']][[k]]
+	stab_res1 <- res[[df_nms[1]]][['stability']][['results']][[k]]
+	stab_res2 <- res[[df_nms[2]]][['stability']][['results']][[k]]
+	stab_res3 <- res[[df_nms[3]]][['stability']][['results']][[k]]
+	for (i in seq_along(eval_metrics)) {
+		em <- eval_metrics[i]
+		em_nm <- toupper(gsub(
+			"_",
+			" ",
+			ifelse(em == "scaled_mqloss", "smql", em)
+		))
+		sm <- stab_metrics[i]
+		sm_nm <- toupper(gsub("_", " ", sm))
+		d1_nm <- stringr::str_replace_all(toupper(df_nms[1]), "_.*", "")
+		d2_nm <- stringr::str_replace_all(toupper(df_nms[2]), "_.*", "")
+		d3_nm <- stringr::str_replace_all(toupper(df_nms[3]), "_.*", "")
+		ge1 <- plot_test_results_facet(
+			data = eval_res1$tests[[em]],
+			.metric = em,
+			by = "retrain_window",
+			metric_label = em_nm,
+			title = paste(d1_nm, "-", em_nm, "- Nemenyi Test")
+		)
+		ge2 <- plot_test_results_facet(
+			data = eval_res2$tests[[em]],
+			.metric = em,
+			by = "retrain_window",
+			metric_label = em_nm,
+			title = paste(d2_nm, "-", em_nm, "- Nemenyi Test")
+		)
+		ge3 <- plot_test_results_facet(
+			data = eval_res3$tests[[em]],
+			.metric = em,
+			by = "retrain_window",
+			metric_label = em_nm,
+			title = paste(d3_nm, "-", em_nm, "- Nemenyi Test")
+		)
+		gs1 <- plot_test_results_facet(
+			data = stab_res1$tests[[sm]],
+			.metric = sm,
+			by = "retrain_window",
+			metric_label = sm_nm,
+			title = paste(d1_nm, "-", sm_nm, "- Nemenyi Test")
+		)
+		gs2 <- plot_test_results_facet(
+			data = stab_res2$tests[[sm]],
+			.metric = sm,
+			by = "retrain_window",
+			metric_label = sm_nm,
+			title = paste(d2_nm, "-", sm_nm, "- Nemenyi Test")
+		)
+		gs3 <- plot_test_results_facet(
+			data = stab_res3$tests[[sm]],
+			.metric = sm,
+			by = "retrain_window",
+			metric_label = sm_nm,
+			title = paste(d3_nm, "-", sm_nm, "- Nemenyi Test")
+		)
+		print(ge1)
+		print(ge2)
+		print(ge3)
+		print(gs1)
+		print(gs2)
+		print(gs3)
+	}
+}
+
 
 # =========================================================================
-# * Ensemble Comparisons --------------------------------------------------
+# * Optimal Retraining Scenario -------------------------------------------
 # =========================================================================
 
-models_types <- c('ML_DL', 'ENSACC')
+config <- get_config('config/anal/anal_iifsas_retrain_config.yaml')
+opt_freq <- analyze_optimal_frequency_combined(config, adjust = 2)
 
-# Overall Results ---------------------------------------------------------
+((opt_freq$m4_daily$ML_DL[[1]]$overall + ggplot2::labs(x = NULL)) +
+	(opt_freq$m4_daily$ML_DL[[2]]$overall + ggplot2::labs(x = NULL))) /
+	((opt_freq$m5_daily$ML_DL[[1]]$overall + ggplot2::labs(x = NULL)) +
+		(opt_freq$m5_daily$ML_DL[[2]]$overall + ggplot2::labs(x = NULL))) /
+	(opt_freq$vn1_weekly$ML_DL[[1]]$overall +
+		opt_freq$vn1_weekly$ML_DL[[2]]$overall) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
 
-# * Evaluation ------------------------------------------------------------
-eval_res1 <- res[[dataset_name1]][['evaluation']][['results']]
-eval_res2 <- res[[dataset_name2]][['evaluation']][['results']]
-eval_metrics <- c('rmsse', 'scaled_mqloss')
+((opt_freq$m4_daily$SF[[1]]$overall + ggplot2::labs(x = NULL)) +
+	(opt_freq$m4_daily$SF[[2]]$overall + ggplot2::labs(x = NULL))) /
+	((opt_freq$m5_daily$SF[[1]]$overall + ggplot2::labs(x = NULL)) +
+		(opt_freq$m5_daily$SF[[2]]$overall + ggplot2::labs(x = NULL))) /
+	(opt_freq$vn1_weekly$SF[[1]]$overall +
+		opt_freq$vn1_weekly$SF[[2]]$overall) +
+	patchwork::plot_layout(guides = "collect") &
+	ggplot2::theme(legend.position = "bottom")
 
-for (m in eval_metrics) {
-	cat(paste(m, "\n\n"))
-	print(
-		xtable::xtable(
-			dplyr::bind_rows(
-				eval_res2[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
-				eval_res2[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
-			) |>
-				dplyr::left_join(
-					dplyr::bind_rows(
-						eval_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
-						eval_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
+
+# =========================================================================
+# * Pareto Trade-off -------------------------------------------
+# =========================================================================
+
+metricsx <- c(eval_metrics, stab_metrics)
+
+for (d in df_nms) {
+	df_nm <- d
+	df_nm_lbl <- stringr::str_replace_all(toupper(df_nm), "_.*", "")
+	eval_datax <- res[[df_nm]][['evaluation']]$data
+	stab_datax <- res[[df_nm]][['stability']]$data
+	pareto_data <- dplyr::left_join(
+		eval_datax,
+		stab_datax,
+		by = c('type', 'method', 'retrain_window')
+	) |>
+		dplyr::mutate(retrain_window = as.factor(retrain_window)) |>
+		dplyr::select(type, method, retrain_window, dplyr::all_of(metricsx))
+	for (i in seq_along(eval_metrics)) {
+		em <- eval_metrics[i]
+		sm <- stab_metrics[i]
+		metrics_plot <- c(em, sm)
+		params <- purrr::map(metrics_plot, ~ get_table_plot_params(.x, 'absolute'))
+		names(params) <- c('x', 'y')
+		print(
+			pareto_data |>
+				ggplot2::ggplot(
+					ggplot2::aes(
+						x = .data[[metrics_plot[1]]],
+						y = .data[[metrics_plot[2]]],
+						# color = .data[['retrain_window']]
+					)
+				) +
+				ggplot2::geom_point() +
+				ggrepel::geom_text_repel(
+					ggplot2::aes(label = .data[['retrain_window']]),
+					col = 'black',
+					vjust = -0.25
+				) +
+				# ggplot2::scale_x_continuous(labels = params$x$scaling_fun) +
+				# ggplot2::scale_y_continuous(labels = params$y$scaling_fun) +
+				# ggplot2::scale_color_manual(values = colors_lbls_2) +
+				ggplot2::labs(
+					title = paste0(
+						'Pareto Frontier: ',
+						df_nm_lbl,
+						', ',
+						params$x$label,
+						' - ',
+						params$y$label
 					),
-					by = 'Method'
-				) |> 
-				dplyr::rename('M5' = `7`, 'VN1' = `1`) |>
-				dplyr::relocate("M5", .after = "Method"),	
-			digits = 3
-		), 
-		include.rownames = FALSE
-	)
-	cat("\n\n")
-}
-
-# * Stability -------------------------------------------------------------
-stab_res1 <- res[[dataset_name1]][['stability']][['results']]
-stab_res2 <- res[[dataset_name2]][['stability']][['results']]
-stab_metrics <- c('smapc', 'smqc')
-
-for (m in stab_metrics) {
-	cat(paste(m, "\n\n"))
-	print(
-		xtable::xtable(
-			dplyr::bind_rows(
-				stab_res2[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
-				stab_res2[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
-			) |>
-				dplyr::left_join(
-					dplyr::bind_rows(
-						stab_res1[[models_types[[1]]]]$tables[[m]]$x$data |> dplyr::select(1:2),
-						stab_res1[[models_types[[2]]]]$tables[[m]]$x$data |> dplyr::select(1:2)
-					),
-					by = 'Method'
-				) |> 
-				dplyr::rename('M5' = `7`, 'VN1' = `1`) |>
-				dplyr::relocate("M5", .after = "Method"),	
-			digits = 3
-		), 
-		include.rownames = FALSE
-	)
-	cat("\n\n")
-}
-
-# * Evaluation - Stability ------------------------------------------------
-
-metrics <- list(c('rmsse', 'smapc'), c('scaled_mqloss', 'smqc'))
-for (m in metrics) {
-	g1 <- dplyr::bind_rows(
-		eval_res1[[models_types[[1]]]]$plots[[m[1]]]$data,
-		eval_res1[[models_types[[2]]]]$plots[[m[1]]]$data |> dplyr::filter(!type %in% c('ENSTIME')),
-	) |> 
-		dplyr::left_join(
-			dplyr::bind_rows(
-				stab_res1[[models_types[[1]]]]$plots[[m[2]]]$data,
-				stab_res1[[models_types[[2]]]]$plots[[m[2]]]$data,
-			),
-			by = c('type', 'method', 'retrain_window')
-		) |> 
-		plot_scatter_results(
-			metrics = m, .retrain_window = 7, title = "M5",
+					x = params$x$label,
+					y = params$y$label
+				) +
+				ggplot2::theme_bw() +
+				ggplot2::theme(
+					plot.title = ggplot2::element_text(hjust = 0.5),
+					legend.position = "bottom",
+					axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)
+				) +
+				ggplot2::facet_wrap(~method, ncol = 2, scales = "fixed")
 		)
-	g2 <- dplyr::bind_rows(
-		eval_res2[[models_types[[1]]]]$plots[[m[1]]]$data,
-		eval_res2[[models_types[[2]]]]$plots[[m[1]]]$data |> dplyr::filter(!type %in% c('ENSTIME')),
-	) |> 
-		dplyr::left_join(
-			dplyr::bind_rows(
-				stab_res2[[models_types[[1]]]]$plots[[m[2]]]$data,
-				stab_res2[[models_types[[2]]]]$plots[[m[2]]]$data,
-			),
-			by = c('type', 'method', 'retrain_window')
-		) |> 
-		plot_scatter_results(
-			metrics = m, .retrain_window = 1, title = "VN1",
-		)
-	g3 <- g1 + g2 + 
-		patchwork::plot_layout(guides = "collect") & ggplot2::theme(legend.position = "bottom")
-	print(g3)
+	}
 }
+
+
+# =========================================================================
+### CHECK INTERMITTENT SERIES ---------------------------------------------
+# =========================================================================
+
+m5 <- load_data(list('data/m5/'), list('m5_daily_prep')) |> as_tibble()
+
+inter <- m5 |>
+	dplyr::select(unique_id, y) |>
+	group_by(unique_id) |>
+	summarise(
+		n_zero = sum(y == 0),
+		n_total = n(),
+		perc_zero = n_zero / n_total
+	)
+inter |> arrange(desc(perc_zero)) |> View()
+
+ids_less_25 <- inter |> filter(perc_zero <= 0.25) |> pull(unique_id)
+length(ids_less_25)
+
+ids_more_75 <- inter |> filter(perc_zero >= 0.75) |> pull(unique_id)
+length(ids_more_75)
+
+
+# =========================================================================
+### CHECK RESULTS FOR EACH QUANTILE ---------------------------------------
+# =========================================================================
+path_list <- list('results/m4/daily/stability/')
+name_list <- list('m4_daily_stab')
+path_list <- list('results/m5/daily/stability/')
+name_list <- list('m5_daily_stab')
+path_list <- list('results/vn1/weekly/stability/')
+name_list <- list('vn1_weekly_stab')
+
+res <- load_data(path_list, name_list) |> as_tibble()
+
+metrics <- c(
+	'smqpc',
+	'smqpc-lo-99',
+	'smqpc-lo-95',
+	'smqpc-lo-90',
+	'smqpc-lo-80',
+	'smqpc-lo-70',
+	'smqpc-lo-60',
+	'smqpc-lo-50',
+	'smqpc-hi-50',
+	'smqpc-hi-60',
+	'smqpc-hi-70',
+	'smqpc-hi-80',
+	'smqpc-hi-90',
+	'smqpc-hi-95',
+	'smqpc-hi-99'
+)
+
+res_agg <- res |>
+	# dplyr::filter(unique_id %in% ids_less_25) |>
+	# dplyr::filter(unique_id %in% ids_more_75) |>
+	aggregate_data(
+		group_columns = c('method', 'retrain_window'),
+		drop_columns = c('unique_id', 'test_window', 'horizon'),
+		function_name = 'mean',
+		adjust_metrics = TRUE
+	)
+res_agg_rel <- compute_relative_metrics(res_agg, type = 'stability')
+
+res_agg |>
+	dplyr::select(method, retrain_window, all_of(metrics)) |>
+	View()
+
+res_agg_rel |>
+	dplyr::select(method, retrain_window, all_of(metrics)) |>
+	View()
