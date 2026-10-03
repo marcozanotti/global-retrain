@@ -9,10 +9,10 @@ from evaluate_forecasts import evaluate_model
 os.environ['NIXTLA_ID_AS_COL'] = '1'
 
 
-# config = get_config('config/eval/vn1_weekly_eval.yaml')
+config = get_config('config/eval/vn1_weekly_eval.yaml')
 # config = get_config('config/eval/m5_daily_eval.yaml')
 # config = get_config('config/eval/m4_daily_eval.yaml')
-config = get_config('config/eval/hapag_weekly_eval.yaml')
+# config = get_config('config/eval/hapag_weekly_eval.yaml')
 configure_logging(
     config_file = 'config/log_config.yaml', 
     name_list = [

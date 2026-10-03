@@ -19,7 +19,7 @@ fitting: {
         120,
         150,
         180,
-        364
+        # 364
     ],
     levels: [50, 60, 70, 80, 90, 95, 99],
     combine_only: False
@@ -43,7 +43,9 @@ model_names: [
 ]
 
 evaluation: {
-    metrics: ['bias', 'mae', 'mse', 'rmse', 'mase', 'msse', 'rmsse', 'mql', 'smql', 'scrps'], # 'ql', 'cal', 'cov', 'sql'
+    metrics: ['cov', 'sharp'],
     evaluation_frequency: 'daily', # frequency for mase, msse, rmsse
-    evaluation_sample_type: 'overlap' # nooverlap
+    evaluation_sample_type: 'overlap', # nooverlap
+    weighted_metrics: null,
+    weights: 'auto'
 }

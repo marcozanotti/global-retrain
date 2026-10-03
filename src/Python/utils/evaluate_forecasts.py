@@ -21,6 +21,37 @@ from fit_models import get_retrain_ids
 import logging
 module_logger = logging.getLogger('evaluate_forecasts')
 
+def sharpness(df, models, level, id_col="unique_id", target_col="y", cutoff_col="cutoff"):
+    # mean width of the prediction interval (hi - lo), per series
+    out = df[[id_col]].copy()
+    for m in models:
+        out[m] = df[f"{m}-hi-{level}"] - df[f"{m}-lo-{level}"]
+    keys = [id_col]
+    if cutoff_col in df.columns:
+        out[cutoff_col] = df[cutoff_col]
+        keys = [id_col, cutoff_col]
+    return out.groupby(keys, as_index=False).mean()
+
+def scaled_sharpness(
+    df, models, level, train_df, id_col="unique_id", target_col="y",
+    cutoff_col="cutoff", time_col="ds"
+):
+    # mean interval width as % of the in-sample mean of |y|, per series
+    keys = [id_col]
+    if cutoff_col in df.columns:
+        keys = [id_col, cutoff_col]
+    out = df[keys].copy()
+    for m in models:
+        out[m] = df[f"{m}-hi-{level}"] - df[f"{m}-lo-{level}"]
+    out = out.groupby(keys, as_index=False).mean()
+    scale = train_df[[id_col]].copy()
+    scale["scale"] = train_df[target_col].abs()
+    scale = scale.groupby(id_col, as_index=False).mean()
+    out = out.merge(scale, on=id_col, how="left")
+    for m in models:
+        out[m] = out[m] / out["scale"]
+    return out.drop(columns="scale")
+
 def get_aggregate_function(function_name):
     """Function to get the aggregate function.
 
@@ -178,6 +209,8 @@ def get_metrics(metric_names, frequency = None):
         metrics.append(calibration)
     if 'scrps' in metric_names:
         metrics.append(scaled_crps)
+    if 'sharp' in metric_names:
+        metrics.append(scaled_sharpness)
     # stability metrics
     if 'stab_bias' in metric_names:
         metrics.append(bias)
@@ -205,7 +238,7 @@ def get_metric_type(metric_name):
         'stab_bias', 'mac', 'masc', 'rmsc', 'rmssc', 'smapc'
     ]
     prob = [
-        'ql', 'mql', 'cal', 'cov', 'sql', 'smql', 'scrps',
+        'ql', 'mql', 'cal', 'cov', 'sql', 'smql', 'scrps', 'sharp',
         'smqpc', 'rmssqc'
     ]
     if metric_name in point:
