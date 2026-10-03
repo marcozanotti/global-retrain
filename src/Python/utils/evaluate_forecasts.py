@@ -32,25 +32,44 @@ def sharpness(df, models, level, id_col="unique_id", target_col="y", cutoff_col=
         keys = [id_col, cutoff_col]
     return out.groupby(keys, as_index=False).mean()
 
+# def scaled_sharpness(
+#     df, models, level, train_df, id_col="unique_id", target_col="y",
+#     cutoff_col="cutoff", time_col="ds"
+# ):
+#     # mean interval width as % of the in-sample mean of |y|, per series
+#     keys = [id_col]
+#     if cutoff_col in df.columns:
+#         keys = [id_col, cutoff_col]
+#     out = df[keys].copy()
+#     for m in models:
+#         out[m] = df[f"{m}-hi-{level}"] - df[f"{m}-lo-{level}"]
+#     out = out.groupby(keys, as_index=False).mean()
+#     scale = train_df[[id_col]].copy()
+#     scale["scale"] = train_df[target_col].abs()
+#     scale = scale.groupby(id_col, as_index=False).mean()
+#     out = out.merge(scale, on=id_col, how="left")
+#     for m in models:
+#         out[m] = out[m] / out["scale"]
+#     return out.drop(columns="scale")
+
+import narwhals as nw
+from utilsforecast.losses import _create_train_with_cutoffs, _get_group_cols, _nw_agg_expr, _scale_loss
+
 def scaled_sharpness(
-    df, models, level, train_df, id_col="unique_id", target_col="y",
-    cutoff_col="cutoff", time_col="ds"
+    df, models, level, seasonality, train_df, id_col="unique_id",
+    target_col="y", cutoff_col="cutoff", time_col="ds"
 ):
-    # mean interval width as % of the in-sample mean of |y|, per series
-    keys = [id_col]
-    if cutoff_col in df.columns:
-        keys = [id_col, cutoff_col]
-    out = df[keys].copy()
-    for m in models:
-        out[m] = df[f"{m}-hi-{level}"] - df[f"{m}-lo-{level}"]
-    out = out.groupby(keys, as_index=False).mean()
-    scale = train_df[[id_col]].copy()
-    scale["scale"] = train_df[target_col].abs()
-    scale = scale.groupby(id_col, as_index=False).mean()
-    out = out.merge(scale, on=id_col, how="left")
-    for m in models:
-        out[m] = out[m] / out["scale"]
-    return out.drop(columns="scale")
+    # sharpness divided by the in-sample MAE of the seasonal naive (same scale as mase)
+    sharp_df = sharpness(df, models, level, id_col=id_col, target_col=target_col, cutoff_col=cutoff_col)
+    train_df = _create_train_with_cutoffs(train_df=train_df, df=df, id_col=id_col, time_col=time_col, cutoff_col=cutoff_col)
+    group_cols = _get_group_cols(df=df, id_col=id_col, cutoff_col=cutoff_col)
+
+    def scale_expr(_m):
+        lagged = nw.col(target_col).shift(seasonality).over(group_cols)
+        return (nw.col(target_col) - lagged).abs().alias("scale")
+
+    scales = _nw_agg_expr(df=train_df, models=["unused"], id_col=id_col, gen_expr=scale_expr, cutoff_col=cutoff_col)
+    return _scale_loss(df=sharp_df, models=models, scales=scales, id_col=id_col, cutoff_col=cutoff_col)
 
 def get_aggregate_function(function_name):
     """Function to get the aggregate function.
@@ -210,7 +229,7 @@ def get_metrics(metric_names, frequency = None):
     if 'scrps' in metric_names:
         metrics.append(scaled_crps)
     if 'sharp' in metric_names:
-        metrics.append(scaled_sharpness)
+        metrics.append(partial(scaled_sharpness, seasonality = freq))
     # stability metrics
     if 'stab_bias' in metric_names:
         metrics.append(bias)
