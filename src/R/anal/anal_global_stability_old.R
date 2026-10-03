@@ -20,8 +20,8 @@ reticulate::source_python('src/Python/utils/utilities.py')
 # Load & prepare data -----------------------------------------------------
 
 # run twice, one for absolute and one for relative
-analysis_file_name <- 'docs/global_stability/absolute_evaltimestab_overlap_20250911_141355.RData'
-analysis_file_name <- 'docs/global_stability/relative_evaltimestab_overlap_20250911_142718.RData'
+analysis_file_name <- 'docs/global_stability/absolute_evalstab_overlap_20260614_092806.RData'
+analysis_file_name <- 'docs/global_stability/relative_evalstab_overlap_20260614_092002.RData'
 
 res <- load(analysis_file_name)
 res <- analysis_results
