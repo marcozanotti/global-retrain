@@ -5,7 +5,8 @@ dataset: {
     'max_series_length': 728, # 14 years of weekly data 
     'samples': null, 
     'ext': '.parquet',
-    'seed': 1992
+    'seed': 1992,
+    'sample_outsample_data': False
 }
 
 fitting: {
