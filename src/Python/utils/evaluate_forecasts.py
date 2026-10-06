@@ -397,6 +397,7 @@ def evaluate_model(config):
     samples = config['dataset']['samples']
     ext = config['dataset']['ext']
     seed = config['dataset']['seed']
+    sample_outsample_data = config['dataset']['sample_outsample_data']
     # fitting parameters    
     retrain_scenarios = config['fitting']['retrain_scenarios']
     levels = config['fitting']['levels']
@@ -422,6 +423,7 @@ def evaluate_model(config):
         samples = samples
     )
     train_df = train_df[['unique_id', 'ds', 'y']]
+    sampled_ids = list(train_df['unique_id'].unique())
 
     for m in model_names:
 
@@ -447,6 +449,9 @@ def evaluate_model(config):
                         name_list = [file_names_tmp[i]],
                         ext = ext
                     )
+                    if (sample_outsample_data):
+                        module_logger.info(f'Sampling out-of-sample data for evaluation...')
+                        eval_df_tmp = eval_df_tmp.loc[eval_df_tmp['unique_id'].isin(sampled_ids)]
 
                     if eval_sample_type == 'nooverlap':
                         if i == 0: 
